@@ -248,3 +248,24 @@ export const analiseGeral = mysqlTable("analise_geral", {
 
 export type AnaliseGeral = typeof analiseGeral.$inferSelect;
 export type InsertAnaliseGeral = typeof analiseGeral.$inferInsert;
+
+// ==================== RELATÓRIOS ====================
+export const relatorios = mysqlTable("relatorios", {
+  id: int("id").autoincrement().primaryKey(),
+  titulo: varchar("titulo", { length: 500 }).notNull(),
+  categoria: varchar("categoria", { length: 100 }).notNull(),
+  subcategoria: varchar("subcategoria", { length: 255 }),
+  descricao: text("descricao"),
+  tipoRelatorio: varchar("tipoRelatorio", { length: 100 }).notNull(),
+  formato: varchar("formato", { length: 20 }).default("PDF"),
+  storageKey: varchar("storageKey", { length: 500 }),
+  storageUrl: text("storageUrl"),
+  tamanho: int("tamanho"),
+  dadosJson: json("dadosJson"),
+  geradoPor: varchar("geradoPor", { length: 100 }).default("Sistema"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Relatorio = typeof relatorios.$inferSelect;
+export type InsertRelatorio = typeof relatorios.$inferInsert;

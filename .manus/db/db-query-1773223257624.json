@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `relatorios` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`titulo` varchar(500) NOT NULL,\n\t`categoria` varchar(100) NOT NULL,\n\t`subcategoria` varchar(255),\n\t`descricao` text,\n\t`tipoRelatorio` varchar(100) NOT NULL,\n\t`formato` varchar(20) DEFAULT 'PDF',\n\t`storageKey` varchar(500),\n\t`storageUrl` text,\n\t`tamanho` int,\n\t`dadosJson` json,\n\t`geradoPor` varchar(100) DEFAULT 'Sistema',\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `relatorios_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute CREATE TABLE IF NOT EXISTS `relatorios` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`titulo` varchar(500) NOT NULL,\n\t`categoria` varchar(100) NOT NULL,\n\t`subcategoria` varchar(255),\n\t`descricao` text,\n\t`tipoRelatorio` varchar(100) NOT NULL,\n\t`formato` varchar(20) DEFAULT 'PDF',\n\t`storageKey` varchar(500),\n\t`storageUrl` text,\n\t`tamanho` int,\n\t`dadosJson` json,\n\t`geradoPor` varchar(100) DEFAULT 'Sistema',\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `relatorios_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 605
+}

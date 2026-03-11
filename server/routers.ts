@@ -7,7 +7,7 @@ import { getDb } from "./db";
 import {
   clientes, processos, dadosFinanceiros, emprestimosConsignados,
   estrategias, partesProcessuais, movimentacoes, documentos,
-  conhecimentos, cumprimentosSentenca, analiseGeral
+  conhecimentos, cumprimentosSentenca, analiseGeral, relatorios
 } from "../drizzle/schema";
 import { eq, like, desc, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -184,6 +184,109 @@ async function buildClientFolder(clienteId: number, nome: string, cpf: string) {
       bancoCompleto: bancoUrl.url,
     },
   };
+}
+
+// Helper: Atualizar automaticamente o relatório cadastral após importação de processo
+async function autoUpdateRelatorioCadastral(db: any) {
+  const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+  const clientesPF = allClientes.filter((c: any) => c.tipoPessoa === "PF" && !c.cpfCnpj.startsWith("PENDENTE"));
+
+  const dadosRelatorio = await Promise.all(clientesPF.map(async (cli: any) => {
+    const procs = await db.select().from(processos).where(eq(processos.clienteId, cli.id)).orderBy(desc(processos.updatedAt));
+    const financeiro = await db.select().from(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, cli.id)).limit(1);
+    const emprestimosData = await db.select().from(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, cli.id));
+
+    return {
+      id: cli.id,
+      nomeCompleto: cli.nomeCompleto,
+      cpfCnpj: cli.cpfCnpj,
+      rg: cli.rg,
+      profissao: cli.profissao,
+      cargo: cli.cargo,
+      orgaoEmpregador: cli.orgaoEmpregador,
+      vinculoFuncional: cli.vinculoFuncional,
+      endereco: cli.endereco,
+      cidade: cli.cidade,
+      estado: cli.estado,
+      cep: cli.cep,
+      telefone: cli.telefone,
+      email: cli.email,
+      dataNascimento: cli.dataNascimento,
+      estadoCivil: cli.estadoCivil,
+      nacionalidade: cli.nacionalidade,
+      totalProcessos: procs.length,
+      processosAtivos: procs.filter((p: any) => p.statusProcesso === "Ativo").length,
+      processos: procs.map((p: any) => ({
+        numeroCnj: p.numeroCnj,
+        tribunal: p.tribunal,
+        vara: p.vara,
+        comarca: p.comarca,
+        tipoAcao: p.tipoAcao,
+        faseAtual: p.faseAtual,
+        statusProcesso: p.statusProcesso,
+        valorCausa: p.valorCausa,
+        dataDistribuicao: p.dataDistribuicao,
+        poloPassivo: p.poloPassivo,
+      })),
+      dadosFinanceiros: financeiro[0] ? {
+        remuneracaoBruta: financeiro[0].remuneracaoBruta,
+        remuneracaoLiquida: financeiro[0].remuneracaoLiquida,
+        margemConsignavelPerc: financeiro[0].margemConsignavelPerc,
+        margemConsignavelValor: financeiro[0].margemConsignavelValor,
+        fonteRenda: financeiro[0].fonteRenda,
+      } : null,
+      totalEmprestimos: emprestimosData.length,
+      emprestimosAtivos: emprestimosData.filter((e: any) => e.status === "Ativo").length,
+    };
+  }));
+
+  const totalProcessosCount = await db.select({ count: sql<number>`COUNT(*)` }).from(processos);
+  const valorTotal = await db.select({ total: sql<string>`COALESCE(SUM(valorCausa), 0)` }).from(processos);
+
+  const relatorioData = {
+    titulo: "Relat\u00f3rio de Dados Cadastrais - Clientes Pessoa F\u00edsica",
+    dataGeracao: new Date().toISOString(),
+    escritorio: "Melo & Preda Advogados",
+    resumo: {
+      totalClientesPF: clientesPF.length,
+      totalClientesGeral: allClientes.length,
+      totalProcessos: totalProcessosCount[0]?.count || 0,
+      valorTotalCausas: valorTotal[0]?.total || "0",
+    },
+    clientes: dadosRelatorio,
+  };
+
+  const storageKey = `relatorios/cadastral/RELATORIO_CADASTRAL_${new Date().toISOString().split('T')[0].replace(/-/g, '')}.json`;
+  const { url } = await storagePut(storageKey, JSON.stringify(relatorioData, null, 2), "application/json");
+
+  // Upsert no banco
+  const existingReport = await db.select().from(relatorios)
+    .where(eq(relatorios.tipoRelatorio, "cadastral_pf")).limit(1);
+
+  if (existingReport.length > 0) {
+    await db.update(relatorios).set({
+      titulo: "Relat\u00f3rio de Dados Cadastrais - Clientes PF",
+      descricao: `Relat\u00f3rio atualizado automaticamente com ${clientesPF.length} clientes PF e ${totalProcessosCount[0]?.count || 0} processos. Atualizado em ${new Date().toLocaleString('pt-BR')}.`,
+      storageKey,
+      storageUrl: url,
+      dadosJson: relatorioData as any,
+    }).where(eq(relatorios.id, existingReport[0].id));
+  } else {
+    await db.insert(relatorios).values({
+      titulo: "Relat\u00f3rio de Dados Cadastrais - Clientes PF",
+      categoria: "Cadastral",
+      subcategoria: "Dados Cadastrais Clientes PF",
+      descricao: `Relat\u00f3rio gerado automaticamente com ${clientesPF.length} clientes PF e ${totalProcessosCount[0]?.count || 0} processos.`,
+      tipoRelatorio: "cadastral_pf",
+      formato: "JSON",
+      storageKey,
+      storageUrl: url,
+      dadosJson: relatorioData as any,
+      geradoPor: "Sistema (Auto)",
+    });
+  }
+
+  return { success: true, totalClientes: clientesPF.length, url };
 }
 
 export const appRouter = router({
@@ -731,6 +834,14 @@ ${textoExtraido}`;
         // 12. Build client folder with all JSON files in S3
         const pastaCliente = await buildClientFolder(clienteId, nome, clienteCpf);
 
+        // 13. HOOK: Atualizar Relatório Cadastral automaticamente após importação
+        try {
+          await autoUpdateRelatorioCadastral(db);
+          console.log(`[Relatório] Relatório cadastral atualizado automaticamente após importação de ${nome}`);
+        } catch (relErr) {
+          console.error("[Relatório] Erro ao atualizar relatório cadastral após importação:", relErr);
+        }
+
         return {
           success: true,
           clienteId,
@@ -741,6 +852,7 @@ ${textoExtraido}`;
           pastaCliente: pastaCliente?.folder || folder,
           arquivosPasta: pastaCliente?.files || null,
           dadosExtraidos,
+          relatorioAtualizado: true,
         };
       }),
   }),
@@ -1084,6 +1196,291 @@ ${textoExtraido}`;
       const db = await getDb();
       if (!db) return [];
       return db.select().from(conhecimentos).orderBy(desc(conhecimentos.createdAt));
+    }),
+  }),
+
+  // ==================== RELATÓRIOS ====================
+  relatorios: router({
+    // Listar todos os relatórios
+    list: protectedProcedure
+      .input(z.object({ categoria: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        if (input?.categoria) {
+          return db.select().from(relatorios)
+            .where(eq(relatorios.categoria, input.categoria))
+            .orderBy(desc(relatorios.updatedAt));
+        }
+        return db.select().from(relatorios).orderBy(desc(relatorios.updatedAt));
+      }),
+
+    // Buscar relatório por ID
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const rows = await db.select().from(relatorios).where(eq(relatorios.id, input.id)).limit(1);
+        return rows[0] ?? null;
+      }),
+
+    // Gerar Relatório de Dados Cadastrais em tempo real (consulta banco e gera PDF)
+    gerarCadastral: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // 1. Buscar todos os clientes PF com dados completos
+      const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+      const clientesPF = allClientes.filter(c => c.tipoPessoa === "PF" && !c.cpfCnpj.startsWith("PENDENTE"));
+
+      // 2. Para cada cliente, buscar processos e dados vinculados
+      const dadosRelatorio = await Promise.all(clientesPF.map(async (cli) => {
+        const procs = await db.select().from(processos).where(eq(processos.clienteId, cli.id)).orderBy(desc(processos.updatedAt));
+        const financeiro = await db.select().from(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, cli.id)).limit(1);
+        const emprestimos = await db.select().from(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, cli.id));
+
+        return {
+          id: cli.id,
+          nomeCompleto: cli.nomeCompleto,
+          cpfCnpj: cli.cpfCnpj,
+          rg: cli.rg,
+          profissao: cli.profissao,
+          cargo: cli.cargo,
+          orgaoEmpregador: cli.orgaoEmpregador,
+          vinculoFuncional: cli.vinculoFuncional,
+          endereco: cli.endereco,
+          cidade: cli.cidade,
+          estado: cli.estado,
+          cep: cli.cep,
+          telefone: cli.telefone,
+          email: cli.email,
+          dataNascimento: cli.dataNascimento,
+          estadoCivil: cli.estadoCivil,
+          nacionalidade: cli.nacionalidade,
+          totalProcessos: procs.length,
+          processosAtivos: procs.filter(p => p.statusProcesso === "Ativo").length,
+          processos: procs.map(p => ({
+            numeroCnj: p.numeroCnj,
+            tribunal: p.tribunal,
+            vara: p.vara,
+            comarca: p.comarca,
+            tipoAcao: p.tipoAcao,
+            faseAtual: p.faseAtual,
+            statusProcesso: p.statusProcesso,
+            valorCausa: p.valorCausa,
+            dataDistribuicao: p.dataDistribuicao,
+            poloPassivo: p.poloPassivo,
+          })),
+          dadosFinanceiros: financeiro[0] ? {
+            remuneracaoBruta: financeiro[0].remuneracaoBruta,
+            remuneracaoLiquida: financeiro[0].remuneracaoLiquida,
+            margemConsignavelPerc: financeiro[0].margemConsignavelPerc,
+            margemConsignavelValor: financeiro[0].margemConsignavelValor,
+            fonteRenda: financeiro[0].fonteRenda,
+          } : null,
+          totalEmprestimos: emprestimos.length,
+          emprestimosAtivos: emprestimos.filter(e => e.status === "Ativo").length,
+        };
+      }));
+
+      // 3. Estatísticas gerais
+      const totalClientes = allClientes.length;
+      const totalProcessos = await db.select({ count: sql<number>`COUNT(*)` }).from(processos);
+      const valorTotal = await db.select({ total: sql<string>`COALESCE(SUM(valorCausa), 0)` }).from(processos);
+
+      const relatorioData = {
+        titulo: "Relat\u00f3rio de Dados Cadastrais - Clientes Pessoa F\u00edsica",
+        dataGeracao: new Date().toISOString(),
+        escritorio: "Melo & Preda Advogados",
+        resumo: {
+          totalClientesPF: clientesPF.length,
+          totalClientesGeral: totalClientes,
+          totalProcessos: totalProcessos[0]?.count || 0,
+          valorTotalCausas: valorTotal[0]?.total || "0",
+        },
+        clientes: dadosRelatorio,
+      };
+
+      // 4. Salvar JSON do relatório no S3
+      const storageKey = `relatorios/cadastral/RELATORIO_CADASTRAL_${new Date().toISOString().split('T')[0].replace(/-/g, '')}.json`;
+      const { url } = await storagePut(storageKey, JSON.stringify(relatorioData, null, 2), "application/json");
+
+      // 5. Salvar/atualizar registro no banco
+      const existingReport = await db.select().from(relatorios)
+        .where(eq(relatorios.tipoRelatorio, "cadastral_pf")).limit(1);
+
+      let relatorioId: number;
+      if (existingReport.length > 0) {
+        // Atualizar relatório existente
+        await db.update(relatorios).set({
+          titulo: "Relat\u00f3rio de Dados Cadastrais - Clientes PF",
+          descricao: `Relat\u00f3rio atualizado com ${clientesPF.length} clientes PF e ${totalProcessos[0]?.count || 0} processos. Gerado em ${new Date().toLocaleString('pt-BR')}.`,
+          storageKey,
+          storageUrl: url,
+          dadosJson: relatorioData as any,
+        }).where(eq(relatorios.id, existingReport[0].id));
+        relatorioId = existingReport[0].id;
+      } else {
+        // Criar novo relatório
+        const [inserted] = await db.insert(relatorios).values({
+          titulo: "Relat\u00f3rio de Dados Cadastrais - Clientes PF",
+          categoria: "Cadastral",
+          subcategoria: "Dados Cadastrais Clientes PF",
+          descricao: `Relat\u00f3rio com ${clientesPF.length} clientes PF e ${totalProcessos[0]?.count || 0} processos. Gerado em ${new Date().toLocaleString('pt-BR')}.`,
+          tipoRelatorio: "cadastral_pf",
+          formato: "JSON",
+          storageKey,
+          storageUrl: url,
+          dadosJson: relatorioData as any,
+          geradoPor: "Sistema",
+        }).$returningId();
+        relatorioId = inserted.id;
+      }
+
+      return {
+        success: true,
+        relatorioId,
+        url,
+        totalClientes: clientesPF.length,
+        totalProcessos: totalProcessos[0]?.count || 0,
+        dados: relatorioData,
+      };
+    }),
+
+    // Dados em tempo real para exibição na tela (sem gerar arquivo)
+    dadosCadastraisRealtime: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return null;
+
+      const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+      const clientesPF = allClientes.filter(c => c.tipoPessoa === "PF" && !c.cpfCnpj.startsWith("PENDENTE"));
+
+      const dadosRelatorio = await Promise.all(clientesPF.map(async (cli) => {
+        const procs = await db.select().from(processos).where(eq(processos.clienteId, cli.id)).orderBy(desc(processos.updatedAt));
+        const financeiro = await db.select().from(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, cli.id)).limit(1);
+        const emprestimos = await db.select().from(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, cli.id));
+
+        return {
+          id: cli.id,
+          nomeCompleto: cli.nomeCompleto,
+          cpfCnpj: cli.cpfCnpj,
+          rg: cli.rg,
+          profissao: cli.profissao,
+          cargo: cli.cargo,
+          orgaoEmpregador: cli.orgaoEmpregador,
+          vinculoFuncional: cli.vinculoFuncional,
+          endereco: cli.endereco,
+          cidade: cli.cidade,
+          estado: cli.estado,
+          telefone: cli.telefone,
+          email: cli.email,
+          totalProcessos: procs.length,
+          processosAtivos: procs.filter(p => p.statusProcesso === "Ativo").length,
+          processos: procs.map(p => ({
+            numeroCnj: p.numeroCnj,
+            tribunal: p.tribunal,
+            vara: p.vara,
+            comarca: p.comarca,
+            tipoAcao: p.tipoAcao,
+            faseAtual: p.faseAtual,
+            statusProcesso: p.statusProcesso,
+            valorCausa: p.valorCausa,
+            dataDistribuicao: p.dataDistribuicao,
+            poloPassivo: p.poloPassivo,
+          })),
+          dadosFinanceiros: financeiro[0] ? {
+            remuneracaoBruta: financeiro[0].remuneracaoBruta,
+            remuneracaoLiquida: financeiro[0].remuneracaoLiquida,
+            fonteRenda: financeiro[0].fonteRenda,
+          } : null,
+          totalEmprestimos: emprestimos.length,
+        };
+      }));
+
+      // Estatísticas
+      const totalProcessos = await db.select({ count: sql<number>`COUNT(*)` }).from(processos);
+      const valorTotal = await db.select({ total: sql<string>`COALESCE(SUM(valorCausa), 0)` }).from(processos);
+      const totalEmprestimos = await db.select({ count: sql<number>`COUNT(*)` }).from(emprestimosConsignados);
+
+      // Último relatório gerado
+      const ultimoRelatorio = await db.select().from(relatorios)
+        .where(eq(relatorios.tipoRelatorio, "cadastral_pf"))
+        .orderBy(desc(relatorios.updatedAt)).limit(1);
+
+      return {
+        dataConsulta: new Date().toISOString(),
+        totalClientesPF: clientesPF.length,
+        totalClientesGeral: allClientes.length,
+        totalProcessos: totalProcessos[0]?.count || 0,
+        valorTotalCausas: valorTotal[0]?.total || "0",
+        totalEmprestimos: totalEmprestimos[0]?.count || 0,
+        ultimoRelatorioGerado: ultimoRelatorio[0]?.updatedAt || null,
+        ultimoRelatorioUrl: ultimoRelatorio[0]?.storageUrl || null,
+        clientes: dadosRelatorio,
+      };
+    }),
+
+    // Excluir relatório
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        await db.delete(relatorios).where(eq(relatorios.id, input.id));
+        return { success: true };
+      }),
+
+    // Atualizar título/descrição de um relatório
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        titulo: z.string().optional(),
+        descricao: z.string().optional(),
+        subcategoria: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const updateFields: Record<string, any> = {};
+        if (input.titulo) updateFields.titulo = input.titulo;
+        if (input.descricao !== undefined) updateFields.descricao = input.descricao;
+        if (input.subcategoria !== undefined) updateFields.subcategoria = input.subcategoria;
+        if (Object.keys(updateFields).length > 0) {
+          await db.update(relatorios).set(updateFields).where(eq(relatorios.id, input.id));
+        }
+        const [updated] = await db.select().from(relatorios).where(eq(relatorios.id, input.id)).limit(1);
+        return updated ?? null;
+      }),
+
+    // Categorias disponíveis de relatórios
+    categorias: protectedProcedure.query(async () => {
+      return [
+        {
+          id: "cadastral",
+          titulo: "Relatórios Cadastrais",
+          descricao: "Dados cadastrais de clientes, CPF, processos vinculados, vínculos funcionais",
+          subcategorias: [
+            { id: "cadastral_pf", titulo: "Dados Cadastrais - Clientes PF", descricao: "Relatório completo de clientes pessoa física com processos, vínculos e dados financeiros" },
+          ],
+        },
+        {
+          id: "financeiro",
+          titulo: "Relatórios Financeiros",
+          descricao: "Dados financeiros, empréstimos consignados, margem consignável",
+          subcategorias: [
+            { id: "financeiro_margem", titulo: "Margem Consignável", descricao: "Análise de margem consignável por cliente (em breve)" },
+          ],
+        },
+        {
+          id: "processual",
+          titulo: "Relatórios Processuais",
+          descricao: "Acompanhamento de processos, fases, valores, estratégias",
+          subcategorias: [
+            { id: "processual_geral", titulo: "Panorama Processual", descricao: "Visão geral de todos os processos (em breve)" },
+          ],
+        },
+      ];
     }),
   }),
 });

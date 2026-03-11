@@ -61,3 +61,15 @@
 - [ ] Preencher movimentações processuais de cada processo (pendente - 0 registros)
 - [x] Preencher partes processuais de cada processo (20 registros)
 - [x] Preencher banco de conhecimentos com teses e jurisprudência de cada processo (42 registros)
+- [x] Criar tabela relatorios no banco de dados
+- [x] Criar rota relatoriosRouter no backend (CRUD + geração PDF)
+- [x] Upload do relatório PDF existente para S3 e gravar no banco
+- [x] Criar página Relatórios no frontend com subpastas
+- [x] Subpasta "Relatório de Dados Cadastrais" com o relatório gerado
+- [x] Botão Atualizar na página de Relatórios
+- [x] Botão Editar relatório
+- [x] Botão Excluir relatório com confirmação
+- [x] Botão Gerar Relatório com exportação em PDF
+- [x] Adicionar link Relatórios na sidebar do DashboardLayout
+- [x] Integrar geração automática de relatório ao fluxo de importação de PDFs (Upload → Extração → Banco → Atualizar Relatório)
+- [x] Relatório de Dados Cadastrais sempre reflete dados em tempo real do banco
