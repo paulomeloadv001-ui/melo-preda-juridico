@@ -481,6 +481,98 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // ==================== ATUALIZAÇÃO DE STATUS DE HONORÁRIOS ====================
+    atualizarStatusHonorario: protectedProcedure
+      .input(z.object({
+        movimentacaoId: z.number(),
+        novoStatus: z.enum(['pago_levantado', 'depositado_a_levantar', 'pendente', 'parcial', 'cancelado']),
+        valorLevantado: z.number().optional(),
+        valorPendente: z.number().optional(),
+        dataLevantamento: z.string().optional(),
+        observacao: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        const updateData: Record<string, any> = {
+          status: input.novoStatus,
+        };
+        if (input.valorLevantado !== undefined) updateData.valorLevantado = String(input.valorLevantado);
+        if (input.valorPendente !== undefined) updateData.valorPendente = String(input.valorPendente);
+        if (input.dataLevantamento) updateData.dataLevantamento = input.dataLevantamento;
+        if (input.observacao) updateData.descricao = input.observacao;
+        await db.update(movimentacoesFinanceiras).set(updateData).where(eq(movimentacoesFinanceiras.id, input.movimentacaoId));
+        return { success: true };
+      }),
+
+    atualizarStatusLote: protectedProcedure
+      .input(z.object({
+        movimentacaoIds: z.array(z.number()),
+        novoStatus: z.enum(['pago_levantado', 'depositado_a_levantar', 'pendente', 'parcial', 'cancelado']),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        let atualizados = 0;
+        for (const id of input.movimentacaoIds) {
+          await db.update(movimentacoesFinanceiras).set({
+            status: input.novoStatus,
+          }).where(eq(movimentacoesFinanceiras.id, id));
+          atualizados++;
+        }
+        return { success: true, atualizados };
+      }),
+
+    adicionarMovimentacaoFinanceira: protectedProcedure
+      .input(z.object({
+        clienteId: z.number(),
+        processoId: z.number().optional(),
+        tipo: z.enum(['deposito_judicial', 'alvara_levantamento', 'honorarios_sucumbenciais', 'honorarios_contratuais', 'pagamento', 'restituicao', 'multa', 'custas']),
+        status: z.enum(['pago_levantado', 'depositado_a_levantar', 'pendente', 'parcial', 'cancelado']).default('pendente'),
+        valor: z.number(),
+        valorLevantado: z.number().optional(),
+        valorPendente: z.number().optional(),
+        descricao: z.string(),
+        beneficiario: z.string().optional(),
+        dataMovimentacao: z.string().optional(),
+        dataLevantamento: z.string().optional(),
+        banco: z.string().optional(),
+        numeroAlvara: z.string().optional(),
+        percentualHonorarios: z.number().optional(),
+        fundamentoLegal: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        const [result] = await db.insert(movimentacoesFinanceiras).values({
+          clienteId: input.clienteId,
+          processoId: input.processoId || 0,
+          tipo: input.tipo,
+          status: input.status,
+          valor: String(input.valor),
+          valorLevantado: input.valorLevantado ? String(input.valorLevantado) : null,
+          valorPendente: input.valorPendente ? String(input.valorPendente) : null,
+          descricao: input.descricao,
+          beneficiario: input.beneficiario || null,
+          dataMovimentacao: input.dataMovimentacao || null,
+          dataLevantamento: input.dataLevantamento || null,
+          banco: input.banco || null,
+          numeroAlvara: input.numeroAlvara || null,
+          percentualHonorarios: input.percentualHonorarios ? String(input.percentualHonorarios) : null,
+          fundamentoLegal: input.fundamentoLegal || null,
+        }).$returningId();
+        return { success: true, id: result.id };
+      }),
+
+    excluirMovimentacaoFinanceira: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        await db.delete(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.id, input.id));
+        return { success: true };
+      }),
+
     stats: protectedProcedure.query(async () => {
       const db = await getDb();
       if (!db) return { totalClientes: 0, totalProcessos: 0, processosAtivos: 0, valorTotalCausas: 0, honorarios: { total: 0, pagosLevantados: 0, depositadosALevantar: 0, pendentes: 0 }, depositos: { total: 0, levantados: 0, aLevantar: 0 }, alvaras: { total: 0, levantados: 0, pendentes: 0 } };
@@ -2798,6 +2890,109 @@ ${textoExtraido}`;
       }),
 
     // ==================== IMPORTAÇÃO EM LOTE AVANÇADA ====================
+    // Upload unitário de arquivo para o lote (um PDF por vez, evita PayloadTooLarge)
+    uploadArquivoLote: protectedProcedure
+      .input(z.object({
+        fileName: z.string(),
+        fileBase64: z.string(),
+        fileSize: z.number(),
+        tipoDocumento: z.enum(['processo', 'contracheque', 'auto']).default('auto'),
+        loteId: z.string(),
+        masterJobId: z.number(),
+        posicaoNoLote: z.number(),
+        totalNoLote: z.number(),
+        opcoes: z.object({
+          gerarConhecimentos: z.boolean().default(true),
+          gerarRelatorios: z.boolean().default(true),
+          deduplicarAutomatico: z.boolean().default(true),
+          gerarPastaCliente: z.boolean().default(true),
+          prioridade: z.number().default(0),
+        }).default({ gerarConhecimentos: true, gerarRelatorios: true, deduplicarAutomatico: true, gerarPastaCliente: true, prioridade: 0 }),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        // Detecção automática do tipo
+        let tipoFinal = input.tipoDocumento;
+        if (tipoFinal === 'auto') {
+          const nomeNorm = input.fileName.toLowerCase();
+          if (nomeNorm.includes('contracheque') || nomeNorm.includes('demonstrativo') || nomeNorm.includes('holerite') || nomeNorm.includes('pagamento') || nomeNorm.includes('folha')) {
+            tipoFinal = 'contracheque';
+          } else {
+            tipoFinal = 'processo';
+          }
+        }
+        const [result] = await db.insert(jobs).values({
+          tipo: tipoFinal === 'contracheque' ? 'importacao_contracheque' : 'importacao_pdf',
+          status: 'pendente',
+          prioridade: input.opcoes.prioridade,
+          titulo: `[Lote] ${input.fileName}`,
+          descricao: `Lote ${input.loteId} — Arquivo ${input.posicaoNoLote}/${input.totalNoLote}: ${input.fileName} (${(input.fileSize / 1024).toFixed(1)} KB) — Tipo: ${tipoFinal}`,
+          inputData: JSON.stringify({
+            fileName: input.fileName,
+            fileBase64: input.fileBase64,
+            fileSize: input.fileSize,
+            tipoDocumento: tipoFinal,
+            loteId: input.loteId,
+            masterJobId: input.masterJobId,
+            opcoes: input.opcoes,
+            posicaoNoLote: input.posicaoNoLote,
+            totalNoLote: input.totalNoLote,
+          }),
+          progresso: 0,
+        });
+        return { jobId: result.insertId, tipoFinal };
+      }),
+
+    // Criar lote master e iniciar processamento (chamado APÓS todos os uploads unitários)
+    iniciarLote: protectedProcedure
+      .input(z.object({
+        loteId: z.string(),
+        jobIds: z.array(z.number()),
+        totalArquivos: z.number(),
+        arquivosNomes: z.array(z.string()),
+        opcoes: z.object({
+          gerarConhecimentos: z.boolean().default(true),
+          gerarRelatorios: z.boolean().default(true),
+          deduplicarAutomatico: z.boolean().default(true),
+          gerarPastaCliente: z.boolean().default(true),
+          prioridade: z.number().default(0),
+        }).default({ gerarConhecimentos: true, gerarRelatorios: true, deduplicarAutomatico: true, gerarPastaCliente: true, prioridade: 0 }),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        // Criar job mestre do lote
+        const [masterJob] = await db.insert(jobs).values({
+          tipo: 'lote_master',
+          status: 'processando',
+          prioridade: input.opcoes.prioridade,
+          titulo: `Importação em Lote: ${input.totalArquivos} arquivo(s)`,
+          descricao: `Lote ${input.loteId} — ${input.totalArquivos} documentos para processamento automático`,
+          inputData: JSON.stringify({
+            loteId: input.loteId,
+            totalArquivos: input.totalArquivos,
+            opcoes: input.opcoes,
+            arquivosNomes: input.arquivosNomes,
+          }),
+          progresso: 0,
+          mensagemProgresso: `Preparando ${input.totalArquivos} arquivo(s)...`,
+        });
+        const masterJobId = masterJob.insertId;
+        // Processar jobs em background
+        processarLoteCompleto(masterJobId, input.jobIds, input.loteId, input.opcoes).catch(err => {
+          console.error('[Lote] Erro no processamento em lote:', err);
+        });
+        return {
+          loteId: input.loteId,
+          masterJobId,
+          jobIds: input.jobIds,
+          total: input.jobIds.length,
+          message: `${input.jobIds.length} arquivo(s) na fila de processamento em lote (ID: ${input.loteId})`,
+        };
+      }),
+
+    // Manter rota legada para compatibilidade (com limite menor)
     importacaoLoteAvancada: protectedProcedure
       .input(z.object({
         arquivos: z.array(z.object({
@@ -2819,73 +3014,33 @@ ${textoExtraido}`;
         if (!db) throw new Error('Database not available');
         const jobIds: number[] = [];
         const loteId = `LOTE_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
-
-        // Criar job mestre do lote
         const [masterJob] = await db.insert(jobs).values({
-          tipo: 'lote_master',
-          status: 'processando',
-          prioridade: input.opcoes.prioridade,
+          tipo: 'lote_master', status: 'processando', prioridade: input.opcoes.prioridade,
           titulo: `Importação em Lote: ${input.arquivos.length} arquivo(s)`,
-          descricao: `Lote ${loteId} — ${input.arquivos.length} documentos para processamento automático`,
-          inputData: JSON.stringify({
-            loteId,
-            totalArquivos: input.arquivos.length,
-            opcoes: input.opcoes,
-            arquivosNomes: input.arquivos.map(a => a.fileName),
-          }),
-          progresso: 0,
-          mensagemProgresso: `Preparando ${input.arquivos.length} arquivo(s)...`,
+          descricao: `Lote ${loteId} — ${input.arquivos.length} documentos`,
+          inputData: JSON.stringify({ loteId, totalArquivos: input.arquivos.length, opcoes: input.opcoes, arquivosNomes: input.arquivos.map(a => a.fileName) }),
+          progresso: 0, mensagemProgresso: `Preparando ${input.arquivos.length} arquivo(s)...`,
         });
         const masterJobId = masterJob.insertId;
-
-        // Criar jobs individuais para cada arquivo
         for (let i = 0; i < input.arquivos.length; i++) {
           const arquivo = input.arquivos[i];
-          // Detecção automática do tipo de documento
           let tipoFinal = arquivo.tipoDocumento;
           if (tipoFinal === 'auto') {
             const nomeNorm = arquivo.fileName.toLowerCase();
-            if (nomeNorm.includes('contracheque') || nomeNorm.includes('demonstrativo') || nomeNorm.includes('holerite') || nomeNorm.includes('pagamento') || nomeNorm.includes('folha')) {
-              tipoFinal = 'contracheque';
-            } else {
-              tipoFinal = 'processo';
-            }
+            tipoFinal = (nomeNorm.includes('contracheque') || nomeNorm.includes('demonstrativo') || nomeNorm.includes('holerite') || nomeNorm.includes('pagamento') || nomeNorm.includes('folha')) ? 'contracheque' : 'processo';
           }
-
           const [result] = await db.insert(jobs).values({
             tipo: tipoFinal === 'contracheque' ? 'importacao_contracheque' : 'importacao_pdf',
-            status: 'pendente',
-            prioridade: input.opcoes.prioridade,
+            status: 'pendente', prioridade: input.opcoes.prioridade,
             titulo: `[Lote] ${arquivo.fileName}`,
-            descricao: `Lote ${loteId} — Arquivo ${i + 1}/${input.arquivos.length}: ${arquivo.fileName} (${(arquivo.fileSize / 1024).toFixed(1)} KB) — Tipo: ${tipoFinal}`,
-            inputData: JSON.stringify({
-              fileName: arquivo.fileName,
-              fileBase64: arquivo.fileBase64,
-              fileSize: arquivo.fileSize,
-              tipoDocumento: tipoFinal,
-              loteId,
-              masterJobId,
-              opcoes: input.opcoes,
-              posicaoNoLote: i + 1,
-              totalNoLote: input.arquivos.length,
-            }),
+            descricao: `Lote ${loteId} — Arquivo ${i + 1}/${input.arquivos.length}: ${arquivo.fileName}`,
+            inputData: JSON.stringify({ fileName: arquivo.fileName, fileBase64: arquivo.fileBase64, fileSize: arquivo.fileSize, tipoDocumento: tipoFinal, loteId, masterJobId, opcoes: input.opcoes, posicaoNoLote: i + 1, totalNoLote: input.arquivos.length }),
             progresso: 0,
           });
           jobIds.push(result.insertId);
         }
-
-        // Processar jobs em background com callback de finalização do lote
-        processarLoteCompleto(masterJobId, jobIds, loteId, input.opcoes).catch(err => {
-          console.error('[Lote] Erro no processamento em lote:', err);
-        });
-
-        return {
-          loteId,
-          masterJobId,
-          jobIds,
-          total: jobIds.length,
-          message: `${jobIds.length} arquivo(s) na fila de processamento em lote (ID: ${loteId})`,
-        };
+        processarLoteCompleto(masterJobId, jobIds, loteId, input.opcoes).catch(err => console.error('[Lote] Erro:', err));
+        return { loteId, masterJobId, jobIds, total: jobIds.length, message: `${jobIds.length} arquivo(s) na fila` };
       }),
 
     // Obter status do lote

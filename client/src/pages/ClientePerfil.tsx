@@ -8,7 +8,13 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, FileText, DollarSign, Scale, Download, ExternalLink, FolderOpen, BookOpen, Lightbulb, RefreshCw, Database, Trash2, Upload, Link2, GitBranch, Banknote, Receipt, ArrowUpCircle, ArrowDownCircle, Clock, CheckCircle2, AlertCircle, TrendingUp, Landmark } from "lucide-react";
+import { ArrowLeft, FileText, DollarSign, Scale, Download, ExternalLink, FolderOpen, BookOpen, Lightbulb, RefreshCw, Database, Trash2, Upload, Link2, GitBranch, Banknote, Receipt, ArrowUpCircle, ArrowDownCircle, Clock, CheckCircle2, AlertCircle, TrendingUp, Landmark, Edit, Plus, X, Save, MoreHorizontal } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { useLocation, useParams } from "wouter";
@@ -49,6 +55,39 @@ export default function ClientePerfil() {
       refetchPasta();
     },
     onError: (e) => toast.error(`Erro: ${e.message}`),
+  });
+
+  // Mutations para honorários
+  const atualizarStatus = trpc.clientes.atualizarStatusHonorario.useMutation({
+    onSuccess: () => { toast.success("Status atualizado"); refetch(); },
+    onError: (e) => toast.error(e.message),
+  });
+  const atualizarStatusLote = trpc.clientes.atualizarStatusLote.useMutation({
+    onSuccess: (d) => { toast.success(`${d.atualizados} movimentações atualizadas`); refetch(); },
+    onError: (e) => toast.error(e.message),
+  });
+  const adicionarMovimentacao = trpc.clientes.adicionarMovimentacaoFinanceira.useMutation({
+    onSuccess: () => { toast.success("Movimentação adicionada"); refetch(); setShowAddDialog(false); },
+    onError: (e) => toast.error(e.message),
+  });
+  const excluirMovimentacao = trpc.clientes.excluirMovimentacaoFinanceira.useMutation({
+    onSuccess: () => { toast.success("Movimentação excluída"); refetch(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editStatus, setEditStatus] = useState('');
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [newMov, setNewMov] = useState({
+    tipo: 'honorarios_sucumbenciais' as any,
+    status: 'pendente' as any,
+    valor: 0,
+    descricao: '',
+    beneficiario: '',
+    dataMovimentacao: '',
+    fundamentoLegal: '',
+    percentualHonorarios: 0,
   });
 
   const handleExportJson = () => {
@@ -549,20 +588,127 @@ export default function ClientePerfil() {
             </div>
           )}
 
-          {/* Tabela detalhada de movimentações financeiras */}
-          {movimentacoesFinanceiras && movimentacoesFinanceiras.length > 0 ? (
-            <div>
-              <h4 className="text-sm font-semibold mb-3">Detalhamento por Movimentação ({movimentacoesFinanceiras.length})</h4>
+          {/* Tabela detalhada de movimentações financeiras com ações */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-semibold">Detalhamento por Movimentação ({movimentacoesFinanceiras?.length || 0})</h4>
+              <div className="flex gap-2">
+                {selectedIds.length > 0 && (
+                  <Select onValueChange={(val) => {
+                    atualizarStatusLote.mutate({ movimentacaoIds: selectedIds, novoStatus: val as any });
+                    setSelectedIds([]);
+                  }}>
+                    <SelectTrigger className="w-[200px] h-8 text-xs">
+                      <SelectValue placeholder={`Alterar ${selectedIds.length} selecionados`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pago_levantado">Marcar como Pago/Levantado</SelectItem>
+                      <SelectItem value="depositado_a_levantar">Marcar como Dep./A Levantar</SelectItem>
+                      <SelectItem value="pendente">Marcar como Pendente</SelectItem>
+                      <SelectItem value="parcial">Marcar como Parcial</SelectItem>
+                      <SelectItem value="cancelado">Marcar como Cancelado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+                <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" variant="outline" className="h-8">
+                      <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-lg">
+                    <DialogHeader>
+                      <DialogTitle>Adicionar Movimentação Financeira</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Tipo</Label>
+                          <Select value={newMov.tipo} onValueChange={(v) => setNewMov(p => ({ ...p, tipo: v }))}>
+                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="honorarios_sucumbenciais">Hon. Sucumbenciais</SelectItem>
+                              <SelectItem value="honorarios_contratuais">Hon. Contratuais</SelectItem>
+                              <SelectItem value="deposito_judicial">Depósito Judicial</SelectItem>
+                              <SelectItem value="alvara_levantamento">Alvará Levantamento</SelectItem>
+                              <SelectItem value="pagamento">Pagamento</SelectItem>
+                              <SelectItem value="restituicao">Restituição</SelectItem>
+                              <SelectItem value="multa">Multa</SelectItem>
+                              <SelectItem value="custas">Custas</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs">Status</Label>
+                          <Select value={newMov.status} onValueChange={(v) => setNewMov(p => ({ ...p, status: v }))}>
+                            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pago_levantado">Pago/Levantado</SelectItem>
+                              <SelectItem value="depositado_a_levantar">Dep./A Levantar</SelectItem>
+                              <SelectItem value="pendente">Pendente</SelectItem>
+                              <SelectItem value="parcial">Parcial</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Valor (R$)</Label>
+                          <Input type="number" step="0.01" className="mt-1" value={newMov.valor || ''}
+                            onChange={(e) => setNewMov(p => ({ ...p, valor: parseFloat(e.target.value) || 0 }))} />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Data</Label>
+                          <Input type="date" className="mt-1" value={newMov.dataMovimentacao}
+                            onChange={(e) => setNewMov(p => ({ ...p, dataMovimentacao: e.target.value }))} />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Descrição</Label>
+                        <Textarea className="mt-1" rows={2} value={newMov.descricao}
+                          onChange={(e) => setNewMov(p => ({ ...p, descricao: e.target.value }))} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs">Beneficiário</Label>
+                          <Input className="mt-1" value={newMov.beneficiario}
+                            onChange={(e) => setNewMov(p => ({ ...p, beneficiario: e.target.value }))} />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Fundamento Legal</Label>
+                          <Input className="mt-1" value={newMov.fundamentoLegal}
+                            onChange={(e) => setNewMov(p => ({ ...p, fundamentoLegal: e.target.value }))} />
+                        </div>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
+                      <Button onClick={() => adicionarMovimentacao.mutate({ ...newMov, clienteId })} disabled={adicionarMovimentacao.isPending || !newMov.valor || !newMov.descricao}>
+                        {adicionarMovimentacao.isPending ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+                        Salvar
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+
+            {movimentacoesFinanceiras && movimentacoesFinanceiras.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left">
+                      <th className="pb-2 pr-2 w-8">
+                        <input type="checkbox" className="rounded" checked={selectedIds.length === movimentacoesFinanceiras.length && movimentacoesFinanceiras.length > 0}
+                          onChange={(e) => setSelectedIds(e.target.checked ? movimentacoesFinanceiras.map((m: any) => m.id) : [])} />
+                      </th>
                       <th className="pb-2 pr-3 text-xs text-muted-foreground font-medium">Tipo</th>
                       <th className="pb-2 pr-3 text-xs text-muted-foreground font-medium">Status</th>
                       <th className="pb-2 pr-3 text-xs text-muted-foreground font-medium text-right">Valor</th>
                       <th className="pb-2 pr-3 text-xs text-muted-foreground font-medium text-right">Levantado</th>
                       <th className="pb-2 pr-3 text-xs text-muted-foreground font-medium">Data</th>
-                      <th className="pb-2 text-xs text-muted-foreground font-medium">Descrição</th>
+                      <th className="pb-2 pr-3 text-xs text-muted-foreground font-medium">Descrição</th>
+                      <th className="pb-2 text-xs text-muted-foreground font-medium text-center">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -585,34 +731,95 @@ export default function ClientePerfil() {
                         cancelado: { label: 'Cancelado', color: 'text-gray-500 bg-gray-50 dark:bg-gray-900' },
                       };
                       const st = statusLabels[mf.status] || statusLabels.pendente;
+                      const isEditing = editingId === mf.id;
                       return (
-                        <tr key={mf.id} className="border-b last:border-0 hover:bg-accent/50">
-                          <td className="py-2.5 pr-3">
-                            <span className="font-medium">{tipoLabels[mf.tipo] || mf.tipo}</span>
+                        <tr key={mf.id} className={`border-b last:border-0 hover:bg-accent/50 ${selectedIds.includes(mf.id) ? 'bg-primary/5' : ''}`}>
+                          <td className="py-2.5 pr-2">
+                            <input type="checkbox" className="rounded" checked={selectedIds.includes(mf.id)}
+                              onChange={(e) => setSelectedIds(prev => e.target.checked ? [...prev, mf.id] : prev.filter(id => id !== mf.id))} />
                           </td>
                           <td className="py-2.5 pr-3">
-                            <Badge variant="outline" className={`text-xs ${st.color}`}>{st.label}</Badge>
+                            <span className="font-medium text-xs">{tipoLabels[mf.tipo] || mf.tipo}</span>
                           </td>
-                          <td className="py-2.5 pr-3 text-right font-mono font-medium">{formatCurrency(mf.valor)}</td>
-                          <td className="py-2.5 pr-3 text-right font-mono">
+                          <td className="py-2.5 pr-3">
+                            {isEditing ? (
+                              <Select value={editStatus} onValueChange={setEditStatus}>
+                                <SelectTrigger className="h-7 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pago_levantado">Pago/Levantado</SelectItem>
+                                  <SelectItem value="depositado_a_levantar">Dep./A Levantar</SelectItem>
+                                  <SelectItem value="pendente">Pendente</SelectItem>
+                                  <SelectItem value="parcial">Parcial</SelectItem>
+                                  <SelectItem value="cancelado">Cancelado</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Badge variant="outline" className={`text-xs cursor-pointer ${st.color}`}
+                                onClick={() => { setEditingId(mf.id); setEditStatus(mf.status); }}>
+                                {st.label}
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="py-2.5 pr-3 text-right font-mono font-medium text-xs">{formatCurrency(mf.valor)}</td>
+                          <td className="py-2.5 pr-3 text-right font-mono text-xs">
                             {mf.valorLevantado ? formatCurrency(mf.valorLevantado) : '—'}
                           </td>
                           <td className="py-2.5 pr-3 text-xs text-muted-foreground">{mf.dataMovimentacao || '—'}</td>
-                          <td className="py-2.5 text-xs text-muted-foreground max-w-[200px] truncate">{mf.descricao || '—'}</td>
+                          <td className="py-2.5 pr-3 text-xs text-muted-foreground max-w-[160px] truncate">{mf.descricao || '—'}</td>
+                          <td className="py-2.5 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              {isEditing ? (
+                                <>
+                                  <Button size="icon" variant="ghost" className="h-6 w-6" disabled={atualizarStatus.isPending}
+                                    onClick={() => { atualizarStatus.mutate({ movimentacaoId: mf.id, novoStatus: editStatus as any }); setEditingId(null); }}>
+                                    <Save className="h-3.5 w-3.5 text-green-600" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingId(null)}>
+                                    <X className="h-3.5 w-3.5" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  <Button size="icon" variant="ghost" className="h-6 w-6"
+                                    onClick={() => { setEditingId(mf.id); setEditStatus(mf.status); }}>
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:text-destructive">
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Excluir movimentação?</AlertDialogTitle>
+                                        <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction className="bg-destructive text-destructive-foreground"
+                                          onClick={() => excluirMovimentacao.mutate({ id: mf.id })}>Excluir</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </>
+                              )}
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-6 text-muted-foreground">
-              <Banknote className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">Nenhuma movimentação financeira registrada</p>
-              <p className="text-xs mt-1">Os dados financeiros serão extraídos automaticamente ao importar processos</p>
-            </div>
-          )}
+            ) : (
+              <div className="text-center py-6 text-muted-foreground">
+                <Banknote className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Nenhuma movimentação financeira registrada</p>
+                <p className="text-xs mt-1">Clique em "Adicionar" ou importe processos para extrair dados financeiros automaticamente</p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

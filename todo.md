@@ -159,3 +159,12 @@
 - [x] Reprocessar dados financeiros dos 25 processos existentes via IA (17 com dados, 8 sem CNJ válido)
 - [x] Dashboard atualizado: Honorários Totais R$ 8.040.550,78, Depósitos Judiciais R$ 34.039,08
 - [x] Aba Financeiro individual por cliente funcionando (ex: Leonardo R$ 81.637,64 em honorários)
+- [x] Backend: rota para atualizar status de movimentação financeira individual (Pendente → Pago/Levantado ou Depositado/A Levantar)
+- [x] Backend: rota para atualizar status de honorários em lote por processo ou cliente
+- [x] Frontend: botões/select de atualização de status na aba Financeiro do perfil do cliente (dropdown com 5 opções)
+- [x] Frontend: confirmação inline ao alterar status de honorários (botões check/X)
+- [x] Dashboard: valores consolidados refletindo status atualizado (Pagos vs Depositados vs Pendentes)
+- [x] Histórico de alterações de status de honorários com timestamp e usuário
+- [x] BUG: Importação em lote de processos dando erro - CORRIGIDO: PayloadTooLargeError resolvido refatorando envio para upload individual por arquivo
+- [x] Implementar rotas de atualização de status de honorários no backend (atualizarStatusMovimentacao + atualizarStatusLote)
+- [x] Implementar interface de atualização de status no frontend (aba Financeiro do cliente) - dropdown + botão Adicionar + editar/excluir

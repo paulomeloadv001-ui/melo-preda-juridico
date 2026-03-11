@@ -590,7 +590,7 @@ type LoteFileItem = {
   file: File;
   tipoDetectado: 'processo' | 'contracheque' | 'auto';
   tipoManual?: 'processo' | 'contracheque';
-  status: 'pending' | 'queued' | 'processing' | 'done' | 'error';
+  status: 'pending' | 'uploading' | 'queued' | 'processing' | 'done' | 'error';
 };
 
 function detectarTipoDocumento(fileName: string): 'processo' | 'contracheque' {
@@ -617,7 +617,8 @@ function ImportacaoLote() {
     gerarPastaCliente: true,
   });
 
-  const importarLoteMutation = trpc.jobs.importacaoLoteAvancada.useMutation();
+  const uploadArquivoMutation = trpc.jobs.uploadArquivoLote.useMutation();
+  const iniciarLoteMutation = trpc.jobs.iniciarLote.useMutation();
   const { data: statusLote, refetch: refetchStatus } = trpc.jobs.statusLote.useQuery(
     { masterJobId: masterJobId! },
     { enabled: !!masterJobId, refetchInterval: masterJobId ? 2000 : false }
@@ -676,36 +677,56 @@ function ImportacaoLote() {
 
     setIsProcessing(true);
     setFiles(prev => prev.map(f => f.status === 'pending' ? { ...f, status: 'queued' } : f));
+    const newLoteId = `LOTE_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+    setLoteId(newLoteId);
 
     try {
-      // Converter arquivos para base64
-      const arquivos = await Promise.all(
-        pendingFiles.map(async (item) => {
-          const buffer = await item.file.arrayBuffer();
-          const base64 = btoa(
-            new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-          );
-          return {
-            fileName: item.file.name,
-            fileBase64: base64,
-            fileSize: item.file.size,
-            tipoDocumento: (item.tipoManual || item.tipoDetectado) as 'processo' | 'contracheque' | 'auto',
-          };
-        })
-      );
+      // Enviar cada arquivo INDIVIDUALMENTE (evita PayloadTooLarge)
+      const jobIds: number[] = [];
+      const arquivosNomes: string[] = [];
+      for (let i = 0; i < pendingFiles.length; i++) {
+        const item = pendingFiles[i];
+        setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'uploading' } : f));
+        toast.info(`Enviando ${i + 1}/${pendingFiles.length}: ${item.file.name}`);
 
-      const result = await importarLoteMutation.mutateAsync({
-        arquivos,
+        const buffer = await item.file.arrayBuffer();
+        const base64 = btoa(
+          new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+
+        const result = await uploadArquivoMutation.mutateAsync({
+          fileName: item.file.name,
+          fileBase64: base64,
+          fileSize: item.file.size,
+          tipoDocumento: (item.tipoManual || item.tipoDetectado) as 'processo' | 'contracheque' | 'auto',
+          loteId: newLoteId,
+          masterJobId: 0, // Será atualizado depois
+          posicaoNoLote: i + 1,
+          totalNoLote: pendingFiles.length,
+          opcoes: { ...opcoes, prioridade: 0 },
+        });
+
+        jobIds.push(result.jobId);
+        arquivosNomes.push(item.file.name);
+        setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'queued' } : f));
+      }
+
+      // Todos os arquivos enviados, agora criar o lote master e iniciar processamento
+      toast.info('Todos os arquivos enviados. Iniciando processamento em lote...');
+      const loteResult = await iniciarLoteMutation.mutateAsync({
+        loteId: newLoteId,
+        jobIds,
+        totalArquivos: pendingFiles.length,
+        arquivosNomes,
         opcoes: { ...opcoes, prioridade: 0 },
       });
 
-      setMasterJobId(result.masterJobId);
-      setLoteId(result.loteId);
-      toast.success(`${result.total} arquivo(s) enviados para processamento em lote`);
+      setMasterJobId(loteResult.masterJobId);
+      toast.success(`${loteResult.total} arquivo(s) enviados para processamento em lote`);
     } catch (error: any) {
       toast.error(`Erro ao iniciar importação: ${error.message}`);
       setIsProcessing(false);
-      setFiles(prev => prev.map(f => f.status === 'queued' ? { ...f, status: 'pending' } : f));
+      setFiles(prev => prev.map(f => (f.status === 'queued' || f.status === 'uploading') ? { ...f, status: 'pending' } : f));
     }
   };
 
