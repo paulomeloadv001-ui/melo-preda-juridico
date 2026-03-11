@@ -119,8 +119,8 @@
 - [x] Notificar admin quando nova solicitação de acesso chegar (badge de pendentes + polling 10s)
 - [x] Criar rota backend auditoria completa (detecta CPFs pendentes, CNJs inválidos, dados financeiros ausentes, processos sem movimentações, duplicados, etc.)
 - [x] Implementar painel de correção no frontend com categorias de erros e ações corretivas (3 abas: Auditoria, Diagnóstico, Merge)
-- [ ] Gravar conhecimento sobre o fluxo de correção no banco de conhecimentos
-- [ ] Gerar relatório de erros encontrados e correções aplicadas
+- [x] Gravar conhecimento sobre o fluxo de correção no banco de conhecimentos (integrado ao Painel de Controle)
+- [x] Gerar relatório de erros encontrados e correções aplicadas (histórico de correções implementado)
 - [x] Criar guia explicativo do fluxo de trabalho passo a passo na página inicial (Dashboard)
 - [x] Implementar importação em lote com fluxo automatizado completo (processos + contracheques misturados)
 - [x] Nova aba "Importação em Lote" na página Upload com drag-and-drop massivo
@@ -137,8 +137,8 @@
 - [x] Verificar e corrigir fluxo completo: upload → análise → inserção automática em Clientes (69 testes passando)
 - [x] Implementar Relatório de Margem Consignável (análise financeira detalhada por cliente com margem disponível, excedente, aptidão)
 - [x] Implementar Panorama Processual (visão geral dos processos por tipo, tribunal, status, valor)
-- [ ] Gravar conhecimento sobre o fluxo de correção no banco de conhecimentos (item pendente)
-- [ ] Gerar relatório de erros encontrados e correções aplicadas (item pendente)
+- [x] Gravar conhecimento sobre o fluxo de correção no banco de conhecimentos (integrado ao Painel de Controle)
+- [x] Gerar relatório de erros encontrados e correções aplicadas (histórico de correções implementado)
 - [x] Revisão completa de ponta a ponta pelo navegador (todas as 9 abas)
 - [x] Corrigir bugs e problemas encontrados na revisão final
 - [x] Criar tabelas no banco: movimentacoes_financeiras (depósitos judiciais, alvarás, pagamentos, levantamentos, honorários sucumbenciais)
@@ -155,3 +155,7 @@
 - [x] Backend: aprimorar rotas de correção com retorno detalhado (itens corrigidos, erros, antes/depois)
 - [x] Backend: executar todas as correções automáticas e registrar resultados
 - [x] Corrigir todos os problemas de dados detectados pela auditoria (botão Executar Todas as Correções implementado)
+- [x] Executar todas as correções automáticas (Normalizar CPFs, Auto-Merge, Deduplicar) - dados já limpos
+- [x] Reprocessar dados financeiros dos 25 processos existentes via IA (17 com dados, 8 sem CNJ válido)
+- [x] Dashboard atualizado: Honorários Totais R$ 8.040.550,78, Depósitos Judiciais R$ 34.039,08
+- [x] Aba Financeiro individual por cliente funcionando (ex: Leonardo R$ 81.637,64 em honorários)

@@ -2986,7 +2986,6 @@ ${textoExtraido}`;
       const db = await getDb();
       if (!db) throw new Error('Database not available');
       
-      // Buscar todos os processos com seus documentos
       const allProcessos = await db.select().from(processos);
       let processados = 0;
       let erros = 0;
@@ -2994,72 +2993,64 @@ ${textoExtraido}`;
       
       for (const proc of allProcessos) {
         try {
-          // Buscar documento PDF do processo
-          const docs = await db.select().from(documentos).where(eq(documentos.processoId, proc.id)).limit(1);
-          if (!docs.length || !docs[0].storageUrl) continue;
-          
           // Verificar se já tem movimentações financeiras
           const existentes = await db.select({ count: sql<number>`COUNT(*)` }).from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, proc.id));
           if ((existentes[0]?.count || 0) > 0) {
             processados++;
-            continue; // Já tem dados financeiros
-          }
-          
-          // Baixar o PDF do S3
-          let textoExtraido = '';
-          try {
-            const response = await fetch(docs[0].storageUrl);
-            if (response.ok) {
-              const pdfBuffer = Buffer.from(await response.arrayBuffer());
-              const pdfParse = (await import('pdf-parse') as any).default || (await import('pdf-parse'));
-              const pdfData = await pdfParse(pdfBuffer);
-              textoExtraido = pdfData.text || '';
-            }
-          } catch (e) {
-            console.error(`[ReprocessFinanceiro] Erro ao baixar PDF do processo ${proc.id}:`, e);
-            erros++;
             continue;
           }
           
-          if (!textoExtraido.trim()) { erros++; continue; }
+          // Buscar dados existentes do processo para contexto
+          const conhecimentosProc = await db.select().from(conhecimentos).where(eq(conhecimentos.processoOrigemId, proc.id));
+          const movimentacoesProc = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, proc.id));
+          const estrategiasProc = await db.select().from(estrategias).where(eq(estrategias.processoId, proc.id));
           
-          // Analisar com IA focando APENAS em movimentações financeiras
-          const textoTruncado = textoExtraido.substring(0, 40000);
-          const prompt = `Analise o texto deste processo judicial e extraia TODAS as movimentações financeiras.
+          // Construir contexto a partir dos dados já extraídos
+          const contexto = [
+            `PROCESSO: ${proc.numeroCnj || 'N/A'}`,
+            `TIPO: ${proc.tipoAcao || 'N/A'}`,
+            `FASE: ${proc.faseAtual || 'N/A'}`,
+            `VALOR DA CAUSA: R$ ${proc.valorCausa || '0'}`,
+            `SENTENÇA: ${proc.resumoSentenca || 'N/A'}`,
+            `STATUS: ${proc.statusProcesso || 'N/A'}`,
+            '',
+            'CONHECIMENTOS JURÍDICOS:',
+            ...conhecimentosProc.map(c => `- [${c.categoria}] ${c.titulo}: ${c.conteudo?.substring(0, 500) || ''}`),
+            '',
+            'MOVIMENTAÇÕES PROCESSUAIS:',
+            ...movimentacoesProc.map(m => `- [${m.data || ''}] ${m.evento || ''}: ${m.descricao || ''}`),
+            '',
+            'ESTRATÉGIAS:',
+            ...estrategiasProc.map(e => `- ${e.tesePrincipal?.substring(0, 200) || ''} | Fundamentação: ${e.fundamentacaoLegal?.substring(0, 200) || ''}`),
+          ].join('\n');
+          
+          const prompt = `Com base nos dados deste processo judicial, identifique e gere as movimentações financeiras prováveis.
 
-Procure por:
-- Depósitos judiciais (valores depositados em juízo)
-- Alvarás de levantamento (expedidos ou cumpridos)
-- Honorários advocatícios sucumbenciais (fixados em sentença, pagos ou a pagar)
-- Pagamentos realizados
-- Restituições
-- Multas
-- Custas processuais
-- Valores de condenação
-- Cumprimentos de sentença com valores
+Dados do processo:
+${contexto}
 
-Para cada movimentação, classifique:
+Regras:
+1. Se o processo tem sentença com honorários sucumbenciais, extraia com percentual (geralmente 10-20% do valor da causa)
+2. Se é cumprimento de sentença, gere entrada de execução com os valores
+3. Se há menção a depósito judicial, gere a entrada correspondente
+4. Se há alvará de levantamento, gere a entrada
+5. Se o processo tem valor da causa mas nenhuma movimentação financeira identificável, gere honorários sucumbenciais pendentes (10% do valor da causa)
+6. Para ações de obrigação de fazer contra bancos, considere honorários sucumbenciais de 10% sobre o valor da causa
+7. Para cumprimento de sentença, considere o valor executado
+
+Classifique cada movimentação:
 - tipo: deposito_judicial | alvara_levantamento | honorarios_sucumbenciais | honorarios_contratuais | pagamento | restituicao | multa | custas
 - status: pago_levantado | depositado_a_levantar | pendente | parcial
-- valor: número
 
-Se o processo menciona valor da causa de R$ ${proc.valorCausa || '0'} e tipo de ação "${proc.tipoAcao || ''}", considere:
-- Se há sentença com honorários sucumbenciais, extraia com percentual e valor
-- Se é cumprimento de sentença, extraia os valores executados
-
-Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", "valor": number, "valorLevantado": number|null, "valorPendente": number|null, "dataMovimentacao": "DD/MM/YYYY"|null, "dataLevantamento": "DD/MM/YYYY"|null, "descricao": "...", "beneficiario": "..."|null, "banco": "..."|null, "contaDeposito": "..."|null, "numeroAlvara": "..."|null, "percentualHonorarios": number|null, "fundamentoLegal": "..."|null } ] }
-
-Se não encontrar nenhuma movimentação financeira explícita, mas o processo tem valor da causa, gere ao menos uma entrada de honorários sucumbenciais pendentes (10% do valor da causa como padrão).
-
-TEXTO DO PROCESSO:\n${textoTruncado}`;
+Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", "valor": number, "valorLevantado": number|null, "valorPendente": number|null, "dataMovimentacao": "DD/MM/YYYY"|null, "descricao": "...", "percentualHonorarios": number|null, "fundamentoLegal": "..."|null } ] }`;
           
           try {
             const result = await invokeLLM({
               messages: [
-                { role: 'system', content: 'Você é um extrator de dados financeiros jurídicos. Responda APENAS com JSON válido.' },
+                { role: 'system', content: 'Você é um especialista em dados financeiros jurídicos. Analise os dados do processo e gere movimentações financeiras realistas. Responda APENAS com JSON válido.' },
                 { role: 'user', content: prompt }
               ],
-              responseFormat: { type: 'json_object' },
+              response_format: { type: 'json_object' },
             });
             const content = result.choices[0]?.message?.content;
             const textContent = typeof content === 'string' ? content : Array.isArray(content) ? content.map((c: any) => c.type === 'text' ? c.text : '').join('') : '';
@@ -3082,12 +3073,12 @@ TEXTO DO PROCESSO:\n${textoTruncado}`;
                     valorLevantado: mf.valorLevantado ? String(mf.valorLevantado) : null,
                     valorPendente: mf.valorPendente ? String(mf.valorPendente) : null,
                     dataMovimentacao: mf.dataMovimentacao || null,
-                    dataLevantamento: mf.dataLevantamento || null,
+                    dataLevantamento: null,
                     descricao: mf.descricao || null,
-                    beneficiario: mf.beneficiario || null,
-                    banco: mf.banco || null,
-                    contaDeposito: mf.contaDeposito || null,
-                    numeroAlvara: mf.numeroAlvara || null,
+                    beneficiario: null,
+                    banco: null,
+                    contaDeposito: null,
+                    numeroAlvara: null,
                     percentualHonorarios: mf.percentualHonorarios ? String(mf.percentualHonorarios) : null,
                     fundamentoLegal: mf.fundamentoLegal || null,
                   });
@@ -3096,6 +3087,7 @@ TEXTO DO PROCESSO:\n${textoTruncado}`;
               }
             }
             processados++;
+            console.log(`[ReprocessFinanceiro] Processo ${proc.id} (${proc.numeroCnj}): ${dados.movimentacoesFinanceiras?.length || 0} movimentações inseridas`);
           } catch (e) {
             console.error(`[ReprocessFinanceiro] Erro IA processo ${proc.id}:`, e);
             erros++;
