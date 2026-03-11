@@ -396,3 +396,78 @@ export const historicoCorrecoes = mysqlTable("historico_correcoes", {
 
 export type HistoricoCorrecao = typeof historicoCorrecoes.$inferSelect;
 export type InsertHistoricoCorrecao = typeof historicoCorrecoes.$inferInsert;
+
+// ==================== NOTIFICAÇÕES ====================
+export const notificacoes = mysqlTable("notificacoes", {
+  id: int("id").autoincrement().primaryKey(),
+  tipo: mysqlEnum("tipoNotif", [
+    "honorario_status",       // Mudança de status de honorário
+    "honorario_novo",         // Novo honorário detectado
+    "prazo_vencendo",         // Prazo processual próximo do vencimento
+    "prazo_vencido",          // Prazo processual vencido
+    "importacao_concluida",   // Importação de processo concluída
+    "importacao_erro",        // Erro na importação
+    "correcao_executada",     // Correção automática executada
+    "novo_cliente",           // Novo cliente cadastrado
+    "novo_processo",          // Novo processo importado
+    "acesso_solicitado",      // Nova solicitação de acesso
+    "sistema",                // Notificação do sistema
+  ]).notNull(),
+  prioridade: mysqlEnum("prioridadeNotif", ["baixa", "normal", "alta", "urgente"]).default("normal").notNull(),
+  titulo: varchar("tituloNotif", { length: 500 }).notNull(),
+  mensagem: text("mensagemNotif").notNull(),
+  // Referências opcionais para navegação direta
+  clienteId: int("clienteIdNotif"),
+  processoId: int("processoIdNotif"),
+  movimentacaoFinanceiraId: int("movFinanceiraIdNotif"),
+  prazoId: int("prazoIdNotif"),
+  // Link direto para a página relevante
+  linkUrl: varchar("linkUrl", { length: 500 }),
+  // Controle de leitura
+  lida: int("lidaNotif").default(0).notNull(),
+  lidaEm: timestamp("lidaEm"),
+  // Metadados
+  icone: varchar("icone", { length: 50 }),
+  cor: varchar("corNotif", { length: 20 }),
+  dadosExtras: json("dadosExtras"),
+  createdAt: timestamp("createdAtNotif").defaultNow().notNull(),
+});
+
+export type Notificacao = typeof notificacoes.$inferSelect;
+export type InsertNotificacao = typeof notificacoes.$inferInsert;
+
+// ==================== PRAZOS PROCESSUAIS ====================
+export const prazosProcessuais = mysqlTable("prazos_processuais", {
+  id: int("id").autoincrement().primaryKey(),
+  processoId: int("processoIdPrazo").notNull(),
+  clienteId: int("clienteIdPrazo").notNull(),
+  tipo: mysqlEnum("tipoPrazo", [
+    "recurso",                // Prazo para recurso
+    "contestacao",            // Prazo para contestação
+    "manifestacao",           // Prazo para manifestação
+    "cumprimento",            // Prazo para cumprimento de sentença
+    "audiencia",              // Data de audiência
+    "pericia",                // Data de perícia
+    "diligencia",             // Prazo para diligência
+    "pagamento",              // Prazo para pagamento
+    "levantamento",           // Prazo para levantamento de alvará
+    "outro",                  // Outro tipo de prazo
+  ]).notNull(),
+  titulo: varchar("tituloPrazo", { length: 500 }).notNull(),
+  descricao: text("descricaoPrazo"),
+  dataVencimento: timestamp("dataVencimento").notNull(),
+  diasAntecedencia: int("diasAntecedencia").default(3), // Notificar X dias antes
+  status: mysqlEnum("statusPrazo", [
+    "pendente",               // Prazo ativo, aguardando
+    "cumprido",               // Prazo cumprido
+    "vencido",                // Prazo vencido sem cumprimento
+    "cancelado",              // Prazo cancelado
+  ]).default("pendente").notNull(),
+  notificacaoEnviada: int("notificacaoEnviada").default(0),
+  observacoes: text("observacoesPrazo"),
+  createdAt: timestamp("createdAtPrazo").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAtPrazo").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PrazoProcessual = typeof prazosProcessuais.$inferSelect;
+export type InsertPrazoProcessual = typeof prazosProcessuais.$inferInsert;

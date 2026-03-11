@@ -168,3 +168,22 @@
 - [x] BUG: Importação em lote de processos dando erro - CORRIGIDO: PayloadTooLargeError resolvido refatorando envio para upload individual por arquivo
 - [x] Implementar rotas de atualização de status de honorários no backend (atualizarStatusMovimentacao + atualizarStatusLote)
 - [x] Implementar interface de atualização de status no frontend (aba Financeiro do cliente) - dropdown + botão Adicionar + editar/excluir
+- [x] Criar tabela notificacoes no banco de dados (tipo, mensagem, link, lida, prioridade, timestamp)
+- [x] Criar tabela prazos_processuais no banco de dados (processoId, tipo, data, descrição, status)
+- [x] Backend: rotas CRUD de notificações (listar, marcar como lida, marcar todas como lidas, excluir)
+- [x] Backend: função criarNotificacao reutilizável para disparar notificações de qualquer ponto do sistema
+- [x] Backend: triggers automáticos ao alterar status de honorários (Pendente → Pago/Levantado, etc.)
+- [x] Backend: triggers automáticos ao importar processos (novo cliente, novo processo, análise concluída)
+- [x] Backend: verificação periódica de prazos processuais próximos do vencimento (a cada 6h com setInterval)
+- [x] Backend: notificação ao executar correções automáticas
+- [x] Frontend: ícone de sino com badge de contagem no header/sidebar
+- [x] Frontend: painel dropdown/drawer de notificações com lista, filtros e ações (posicionamento fixed)
+- [x] Frontend: marcação individual e em lote como lida
+- [x] Frontend: link direto da notificação para o recurso relacionado (cliente, processo, honorário)
+- [x] Integrar notificações nas rotas existentes de honorários, importação e correções
+- [x] Backend: rotas CRUD de prazos processuais (criar, listar, atualizar status, excluir)
+- [x] Backend: verificação automática de prazos a cada 6 horas + primeira verificação 30s após iniciar
+- [x] Backend: notificação automática para prazos vencendo (prioridade alta/urgente) e vencidos (urgente)
+- [x] Backend: notificação automática ao concluir/errar importação em lote
+- [x] Backend: notificação automática ao adicionar movimentação financeira
+- [x] Testes unitários para sistema de notificações (30 testes - total 99 passando)

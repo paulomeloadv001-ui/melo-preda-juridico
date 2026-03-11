@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, Users, Upload, Download, BookOpen, LogOut, PanelLeft, Scale, Shield, FileBarChart, ListChecks, ShieldCheck } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { LayoutDashboard, Users, Upload, Download, BookOpen, LogOut, PanelLeft, Scale, Shield, FileBarChart, ListChecks, ShieldCheck, Bell, Clock, AlertTriangle, DollarSign, FileText, CheckCircle, X, Trash2 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -43,6 +44,202 @@ const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 260;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 400;
+
+function getNotifIcon(tipo: string) {
+  switch (tipo) {
+    case 'honorario_status': case 'honorario_novo': return DollarSign;
+    case 'prazo_vencendo': return Clock;
+    case 'prazo_vencido': return AlertTriangle;
+    case 'importacao_concluida': return CheckCircle;
+    case 'importacao_erro': return AlertTriangle;
+    case 'correcao_executada': return Shield;
+    case 'novo_cliente': return Users;
+    case 'novo_processo': return FileText;
+    default: return Bell;
+  }
+}
+
+function getNotifColor(prioridade: string) {
+  switch (prioridade) {
+    case 'urgente': return 'text-red-400 bg-red-500/10';
+    case 'alta': return 'text-amber-400 bg-amber-500/10';
+    case 'normal': return 'text-blue-400 bg-blue-500/10';
+    case 'baixa': return 'text-gray-400 bg-gray-500/10';
+    default: return 'text-blue-400 bg-blue-500/10';
+  }
+}
+
+function formatTimeAgo(date: Date | string) {
+  const now = new Date();
+  const d = new Date(date);
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'agora';
+  if (diffMin < 60) return `${diffMin}min`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH}h`;
+  const diffD = Math.floor(diffH / 24);
+  if (diffD < 7) return `${diffD}d`;
+  return d.toLocaleDateString('pt-BR');
+}
+
+// ==================== PAINEL DE NOTIFICAÇÕES ====================
+function NotificacoesPanel() {
+  const [aberto, setAberto] = useState(false);
+  const [, setLocation] = useLocation();
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const { data: notifData, refetch } = trpc.notificacoes.listar.useQuery(
+    { limite: 50 },
+    { refetchInterval: 30000 }
+  );
+  const marcarLida = trpc.notificacoes.marcarComoLida.useMutation({ onSuccess: () => refetch() });
+  const marcarTodasLidas = trpc.notificacoes.marcarTodasComoLidas.useMutation({ onSuccess: () => refetch() });
+  const excluirNotif = trpc.notificacoes.excluir.useMutation({ onSuccess: () => refetch() });
+  const limparLidas = trpc.notificacoes.limparLidas.useMutation({ onSuccess: () => refetch() });
+
+  const totalNaoLidas = notifData?.totalNaoLidas || 0;
+  const notificacoes = notifData?.notificacoes || [];
+
+  // Fechar ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setAberto(false);
+      }
+    }
+    if (aberto) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [aberto]);
+
+  return (
+    <div className="relative" ref={panelRef}>
+      {/* Botão Sino */}
+      <button
+        onClick={() => setAberto(!aberto)}
+        className="relative h-9 w-9 flex items-center justify-center rounded-lg hover:bg-sidebar-accent/50 transition-colors"
+        aria-label="Notificações"
+      >
+        <Bell className="h-5 w-5 text-sidebar-foreground/70" />
+        {totalNaoLidas > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 h-5 min-w-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1 animate-pulse">
+            {totalNaoLidas > 99 ? '99+' : totalNaoLidas}
+          </span>
+        )}
+      </button>
+
+      {/* Painel Dropdown */}
+      {aberto && (
+        <div className="fixed bottom-20 left-4 w-96 max-h-[70vh] bg-[oklch(0.2_0.01_60)] border border-[oklch(0.3_0.02_60)] rounded-xl shadow-2xl z-[200] overflow-hidden flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[oklch(0.3_0.02_60)]">
+            <div className="flex items-center gap-2">
+              <Bell className="h-4 w-4 text-[oklch(0.75_0.12_85)]" />
+              <span className="font-semibold text-sm text-white">Notificações</span>
+              {totalNaoLidas > 0 && (
+                <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full font-medium">
+                  {totalNaoLidas} nova(s)
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              {totalNaoLidas > 0 && (
+                <button
+                  onClick={() => marcarTodasLidas.mutate()}
+                  className="text-xs text-[oklch(0.75_0.12_85)] hover:underline px-2 py-1"
+                  title="Marcar todas como lidas"
+                >
+                  Ler todas
+                </button>
+              )}
+              {notificacoes.some((n: any) => n.lida === 1) && (
+                <button
+                  onClick={() => limparLidas.mutate()}
+                  className="text-xs text-gray-400 hover:text-red-400 px-2 py-1"
+                  title="Limpar lidas"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+              <button
+                onClick={() => setAberto(false)}
+                className="text-gray-400 hover:text-white p-1"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Lista */}
+          <div className="overflow-y-auto flex-1">
+            {notificacoes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4">
+                <Bell className="h-10 w-10 text-gray-600 mb-3" />
+                <p className="text-sm text-gray-400">Nenhuma notificação</p>
+                <p className="text-xs text-gray-500 mt-1">As notificações aparecerão aqui</p>
+              </div>
+            ) : (
+              notificacoes.map((n: any) => {
+                const Icon = getNotifIcon(n.tipo);
+                const colorClass = getNotifColor(n.prioridade);
+                return (
+                  <div
+                    key={n.id}
+                    className={`flex items-start gap-3 px-4 py-3 border-b border-[oklch(0.25_0.01_60)] hover:bg-[oklch(0.25_0.02_60)] transition-colors cursor-pointer ${
+                      n.lida === 0 ? 'bg-[oklch(0.22_0.02_60)]' : ''
+                    }`}
+                    onClick={() => {
+                      if (n.lida === 0) marcarLida.mutate({ id: n.id });
+                      if (n.linkUrl) {
+                        setLocation(n.linkUrl);
+                        setAberto(false);
+                      }
+                    }}
+                  >
+                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${colorClass}`}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={`text-sm leading-tight ${n.lida === 0 ? 'font-semibold text-white' : 'text-gray-300'}`}>
+                          {n.titulo}
+                        </p>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className="text-[10px] text-gray-500">
+                            {formatTimeAgo(n.createdAt)}
+                          </span>
+                          {n.lida === 0 && (
+                            <div className="h-2 w-2 rounded-full bg-[oklch(0.75_0.12_85)]" />
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{n.mensagem}</p>
+                      {n.prioridade === 'urgente' && (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-red-400 mt-1">
+                          <AlertTriangle className="h-3 w-3" /> Urgente
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        excluirNotif.mutate({ id: n.id });
+                      }}
+                      className="text-gray-500 hover:text-red-400 p-1 shrink-0 opacity-0 hover:opacity-100 transition-opacity"
+                      title="Excluir"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function DashboardLayout({
   children,
@@ -212,6 +409,11 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           <SidebarFooter className="p-3">
+            {/* Notificações */}
+            <div className="flex items-center justify-center mb-2 group-data-[collapsible=icon]:mb-0">
+              <NotificacoesPanel />
+            </div>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-3 rounded-lg px-1 py-1 hover:bg-sidebar-accent/50 transition-colors w-full text-left group-data-[collapsible=icon]:justify-center focus:outline-none">
@@ -265,6 +467,7 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
+            <NotificacoesPanel />
           </div>
         )}
         <main className="flex-1 p-6">{children}</main>

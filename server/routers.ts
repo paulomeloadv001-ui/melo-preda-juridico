@@ -8,7 +8,8 @@ import {
   clientes, processos, dadosFinanceiros, emprestimosConsignados,
   estrategias, partesProcessuais, movimentacoes, documentos,
   conhecimentos, cumprimentosSentenca, analiseGeral, relatorios, jobs,
-  accessRequests, userProfiles, users, movimentacoesFinanceiras, historicoCorrecoes
+  accessRequests, userProfiles, users, movimentacoesFinanceiras, historicoCorrecoes,
+  notificacoes, prazosProcessuais
 } from "../drizzle/schema";
 import { eq, like, desc, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -290,6 +291,45 @@ async function autoUpdateRelatorioCadastral(db: any) {
   return { success: true, totalClientes: clientesPF.length, url };
 }
 
+// ==================== HELPER: CRIAR NOTIFICAÇÃO ====================
+interface CriarNotificacaoParams {
+  tipo: 'honorario_status' | 'honorario_novo' | 'prazo_vencendo' | 'prazo_vencido' | 'importacao_concluida' | 'importacao_erro' | 'correcao_executada' | 'novo_cliente' | 'novo_processo' | 'acesso_solicitado' | 'sistema';
+  prioridade?: 'baixa' | 'normal' | 'alta' | 'urgente';
+  titulo: string;
+  mensagem: string;
+  clienteId?: number;
+  processoId?: number;
+  movimentacaoFinanceiraId?: number;
+  prazoId?: number;
+  linkUrl?: string;
+  icone?: string;
+  cor?: string;
+  dadosExtras?: any;
+}
+
+async function criarNotificacao(params: CriarNotificacaoParams) {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    await db.insert(notificacoes).values({
+      tipo: params.tipo,
+      prioridade: params.prioridade || 'normal',
+      titulo: params.titulo,
+      mensagem: params.mensagem,
+      clienteId: params.clienteId || null,
+      processoId: params.processoId || null,
+      movimentacaoFinanceiraId: params.movimentacaoFinanceiraId || null,
+      prazoId: params.prazoId || null,
+      linkUrl: params.linkUrl || null,
+      icone: params.icone || null,
+      cor: params.cor || null,
+      dadosExtras: params.dadosExtras || null,
+    });
+  } catch (e) {
+    console.error('[Notificacao] Erro ao criar notificação:', e);
+  }
+}
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -502,6 +542,29 @@ export const appRouter = router({
         if (input.dataLevantamento) updateData.dataLevantamento = input.dataLevantamento;
         if (input.observacao) updateData.descricao = input.observacao;
         await db.update(movimentacoesFinanceiras).set(updateData).where(eq(movimentacoesFinanceiras.id, input.movimentacaoId));
+        // Buscar dados da movimentação para notificação
+        const [mov] = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.id, input.movimentacaoId));
+        if (mov) {
+          const statusLabels: Record<string, string> = {
+            pago_levantado: 'Pago/Levantado',
+            depositado_a_levantar: 'Depositado/A Levantar',
+            pendente: 'Pendente',
+            parcial: 'Parcial',
+            cancelado: 'Cancelado',
+          };
+          await criarNotificacao({
+            tipo: 'honorario_status',
+            prioridade: input.novoStatus === 'pago_levantado' ? 'alta' : 'normal',
+            titulo: `Status atualizado: ${statusLabels[input.novoStatus]}`,
+            mensagem: `Movimentação #${mov.id} (${mov.tipo}) - R$ ${parseFloat(String(mov.valor || '0')).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} alterada para ${statusLabels[input.novoStatus]}`,
+            clienteId: mov.clienteId,
+            processoId: mov.processoId || undefined,
+            movimentacaoFinanceiraId: mov.id,
+            linkUrl: `/clientes/${mov.clienteId}`,
+            icone: 'DollarSign',
+            cor: input.novoStatus === 'pago_levantado' ? 'green' : input.novoStatus === 'cancelado' ? 'red' : 'amber',
+          });
+        }
         return { success: true };
       }),
 
@@ -520,6 +583,22 @@ export const appRouter = router({
           }).where(eq(movimentacoesFinanceiras.id, id));
           atualizados++;
         }
+        const statusLabels: Record<string, string> = {
+          pago_levantado: 'Pago/Levantado',
+          depositado_a_levantar: 'Depositado/A Levantar',
+          pendente: 'Pendente',
+          parcial: 'Parcial',
+          cancelado: 'Cancelado',
+        };
+        await criarNotificacao({
+          tipo: 'honorario_status',
+          prioridade: 'normal',
+          titulo: `Atualização em lote: ${atualizados} movimentações`,
+          mensagem: `${atualizados} movimentações alteradas para ${statusLabels[input.novoStatus]}`,
+          linkUrl: '/',
+          icone: 'DollarSign',
+          cor: 'blue',
+        });
         return { success: true, atualizados };
       }),
 
@@ -561,6 +640,29 @@ export const appRouter = router({
           percentualHonorarios: input.percentualHonorarios ? String(input.percentualHonorarios) : null,
           fundamentoLegal: input.fundamentoLegal || null,
         }).$returningId();
+        // Notificar nova movimentação
+        const tipoLabels: Record<string, string> = {
+          deposito_judicial: 'Depósito Judicial',
+          alvara_levantamento: 'Alvará de Levantamento',
+          honorarios_sucumbenciais: 'Honorários Sucumbenciais',
+          honorarios_contratuais: 'Honorários Contratuais',
+          pagamento: 'Pagamento',
+          restituicao: 'Restituição',
+          multa: 'Multa',
+          custas: 'Custas',
+        };
+        await criarNotificacao({
+          tipo: 'honorario_novo',
+          prioridade: 'normal',
+          titulo: `Nova movimentação: ${tipoLabels[input.tipo] || input.tipo}`,
+          mensagem: `R$ ${input.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} - ${input.descricao}`,
+          clienteId: input.clienteId,
+          processoId: input.processoId || undefined,
+          movimentacaoFinanceiraId: result.id,
+          linkUrl: `/clientes/${input.clienteId}`,
+          icone: 'DollarSign',
+          cor: 'green',
+        });
         return { success: true, id: result.id };
       }),
 
@@ -2054,6 +2156,17 @@ ${textoExtraido}`;
         dadosDepois: resultados,
       });
 
+      // Notificar sobre correções executadas
+      await criarNotificacao({
+        tipo: 'correcao_executada',
+        prioridade: statusGeral === 'sucesso' ? 'baixa' : 'normal',
+        titulo: `Correções executadas: ${resultados.length} etapas`,
+        mensagem: `${totalAfetados} itens afetados. Status: ${statusGeral}. ${resultados.map(r => `${r.etapa}: ${r.detalhes}`).join('; ')}`,
+        linkUrl: '/correcao',
+        icone: 'Shield',
+        cor: statusGeral === 'sucesso' ? 'green' : 'amber',
+      });
+
       return { resultados, totalAfetados, statusGeral };
     }),
 
@@ -3457,6 +3570,240 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
         return { success: true };
       }),
   }),
+
+  // ==================== NOTIFICAÇÕES ====================
+  notificacoes: router({
+    listar: protectedProcedure
+      .input(z.object({
+        apenasNaoLidas: z.boolean().optional(),
+        tipo: z.string().optional(),
+        limite: z.number().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { notificacoes: [], totalNaoLidas: 0 };
+        const rows = await db.select().from(notificacoes).orderBy(desc(notificacoes.createdAt));
+        let resultado = rows as any[];
+        if (input?.apenasNaoLidas) {
+          resultado = resultado.filter((n: any) => n.lida === 0);
+        }
+        if (input?.tipo) {
+          resultado = resultado.filter((n: any) => n.tipo === input.tipo);
+        }
+        if (input?.limite) {
+          resultado = resultado.slice(0, input.limite);
+        }
+        const naoLidas = rows.filter((n: any) => n.lida === 0).length;
+        return { notificacoes: resultado, totalNaoLidas: naoLidas };
+      }),
+
+    marcarComoLida: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { success: false };
+        await db.update(notificacoes)
+          .set({ lida: 1, lidaEm: new Date() })
+          .where(eq(notificacoes.id, input.id));
+        return { success: true };
+      }),
+
+    marcarTodasComoLidas: protectedProcedure
+      .mutation(async () => {
+        const db = await getDb();
+        if (!db) return { success: false };
+        await db.update(notificacoes)
+          .set({ lida: 1, lidaEm: new Date() })
+          .where(eq(notificacoes.lida, 0));
+        return { success: true };
+      }),
+
+    excluir: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { success: false };
+        await db.delete(notificacoes).where(eq(notificacoes.id, input.id));
+        return { success: true };
+      }),
+
+    limparLidas: protectedProcedure
+      .mutation(async () => {
+        const db = await getDb();
+        if (!db) return { success: false };
+        await db.delete(notificacoes).where(eq(notificacoes.lida, 1));
+        return { success: true };
+      }),
+  }),
+
+  // ==================== PRAZOS PROCESSUAIS ====================
+  prazos: router({
+    listar: protectedProcedure
+      .input(z.object({
+        status: z.string().optional(),
+        processoId: z.number().optional(),
+        clienteId: z.number().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        let rows: any[] = await db.select().from(prazosProcessuais).orderBy(prazosProcessuais.dataVencimento);
+        if (input?.status) {
+          rows = rows.filter((p: any) => p.status === input.status);
+        }
+        if (input?.processoId) {
+          rows = rows.filter((p: any) => p.processoId === input.processoId);
+        }
+        if (input?.clienteId) {
+          rows = rows.filter((p: any) => p.clienteId === input.clienteId);
+        }
+        // Enriquecer com dados do processo e cliente
+        const procs = await db.select().from(processos);
+        const clis = await db.select().from(clientes);
+        const enriched = rows.map((p: any) => {
+          const proc = (procs as any[]).find((pr: any) => pr.id === p.processoId);
+          const cli = (clis as any[]).find((c: any) => c.id === p.clienteId);
+          return {
+            ...p,
+            numeroCnj: proc?.numeroCnj || '',
+            tipoAcao: proc?.tipoAcao || '',
+            nomeCliente: cli?.nomeCompleto || '',
+          };
+        });
+        return enriched;
+      }),
+
+    criar: protectedProcedure
+      .input(z.object({
+        processoId: z.number(),
+        clienteId: z.number(),
+        tipo: z.enum(['recurso', 'contestacao', 'manifestacao', 'cumprimento', 'audiencia', 'pericia', 'diligencia', 'pagamento', 'levantamento', 'outro']),
+        titulo: z.string(),
+        descricao: z.string().optional(),
+        dataVencimento: z.string(), // ISO date string
+        diasAntecedencia: z.number().optional(),
+        observacoes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { success: false };
+        await db.insert(prazosProcessuais).values({
+          processoId: input.processoId,
+          clienteId: input.clienteId,
+          tipo: input.tipo,
+          titulo: input.titulo,
+          descricao: input.descricao || null,
+          dataVencimento: new Date(input.dataVencimento),
+          diasAntecedencia: input.diasAntecedencia ?? 3,
+          observacoes: input.observacoes || null,
+        });
+        // Criar notificação de novo prazo
+        await criarNotificacao({
+          tipo: 'prazo_vencendo',
+          prioridade: 'alta',
+          titulo: `Novo prazo: ${input.titulo}`,
+          mensagem: `Prazo cadastrado para ${new Date(input.dataVencimento).toLocaleDateString('pt-BR')}`,
+          processoId: input.processoId,
+          clienteId: input.clienteId,
+          linkUrl: `/clientes/${input.clienteId}`,
+          icone: 'Clock',
+          cor: 'amber',
+        });
+        return { success: true };
+      }),
+
+    atualizar: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        status: z.enum(['pendente', 'cumprido', 'vencido', 'cancelado']).optional(),
+        titulo: z.string().optional(),
+        descricao: z.string().optional(),
+        dataVencimento: z.string().optional(),
+        observacoes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { success: false };
+        const updates: any = {};
+        if (input.status) updates.status = input.status;
+        if (input.titulo) updates.titulo = input.titulo;
+        if (input.descricao !== undefined) updates.descricao = input.descricao;
+        if (input.dataVencimento) updates.dataVencimento = new Date(input.dataVencimento);
+        if (input.observacoes !== undefined) updates.observacoes = input.observacoes;
+        await db.update(prazosProcessuais).set(updates).where(eq(prazosProcessuais.id, input.id));
+        return { success: true };
+      }),
+
+    excluir: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { success: false };
+        await db.delete(prazosProcessuais).where(eq(prazosProcessuais.id, input.id));
+        return { success: true };
+      }),
+
+    verificarVencimentos: protectedProcedure
+      .mutation(async () => {
+        const db = await getDb();
+        if (!db) return { notificacoesEnviadas: 0, prazosVencidos: 0, totalVerificados: 0 };
+        const pendentes = await db.select().from(prazosProcessuais)
+          .where(eq(prazosProcessuais.status, 'pendente'));
+        const agora = new Date();
+        let notificacoesEnviadas = 0;
+        let prazosVencidos = 0;
+        for (const prazo of pendentes) {
+          const vencimento = new Date(prazo.dataVencimento);
+          const diffMs = vencimento.getTime() - agora.getTime();
+          const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+          // Prazo já vencido
+          if (diffDias < 0) {
+            await db.update(prazosProcessuais)
+              .set({ status: 'vencido' })
+              .where(eq(prazosProcessuais.id, prazo.id));
+            if (!prazo.notificacaoEnviada) {
+              await criarNotificacao({
+                tipo: 'prazo_vencido',
+                prioridade: 'urgente',
+                titulo: `PRAZO VENCIDO: ${prazo.titulo}`,
+                mensagem: `O prazo venceu em ${vencimento.toLocaleDateString('pt-BR')}. Ação imediata necessária.`,
+                processoId: prazo.processoId,
+                clienteId: prazo.clienteId,
+                prazoId: prazo.id,
+                linkUrl: `/clientes/${prazo.clienteId}`,
+                icone: 'AlertTriangle',
+                cor: 'red',
+              });
+              await db.update(prazosProcessuais)
+                .set({ notificacaoEnviada: 1 })
+                .where(eq(prazosProcessuais.id, prazo.id));
+              notificacoesEnviadas++;
+            }
+            prazosVencidos++;
+          }
+          // Prazo vencendo em breve
+          else if (diffDias <= (prazo.diasAntecedencia || 3) && !prazo.notificacaoEnviada) {
+            await criarNotificacao({
+              tipo: 'prazo_vencendo',
+              prioridade: diffDias <= 1 ? 'urgente' : 'alta',
+              titulo: `Prazo em ${diffDias} dia(s): ${prazo.titulo}`,
+              mensagem: `O prazo vence em ${vencimento.toLocaleDateString('pt-BR')} (${diffDias} dia(s) restantes).`,
+              processoId: prazo.processoId,
+              clienteId: prazo.clienteId,
+              prazoId: prazo.id,
+              linkUrl: `/clientes/${prazo.clienteId}`,
+              icone: 'Clock',
+              cor: diffDias <= 1 ? 'red' : 'amber',
+            });
+            await db.update(prazosProcessuais)
+              .set({ notificacaoEnviada: 1 })
+              .where(eq(prazosProcessuais.id, prazo.id));
+            notificacoesEnviadas++;
+          }
+        }
+        return { notificacoesEnviadas, prazosVencidos, totalVerificados: pendentes.length };
+      }),
+  }),
 });
 
 // ==================== PROCESSADOR DE FILA DE JOBS ====================
@@ -3496,7 +3843,33 @@ async function processarFilaJobs(jobIds: number[]) {
         progresso: 0,
         mensagemProgresso: 'Falha no processamento',
       }).where(eq(jobs.id, jobId));
+      // Notificar erro de importação
+      await criarNotificacao({
+        tipo: 'importacao_erro',
+        prioridade: 'alta',
+        titulo: `Erro na importação do job #${jobId}`,
+        mensagem: `Falha ao processar: ${error?.message || 'Erro desconhecido'}`,
+        linkUrl: '/jobs',
+        icone: 'AlertTriangle',
+        cor: 'red',
+      });
     }
+  }
+
+  // Notificar conclusão do lote
+  const jobsFinalizados = await db.select().from(jobs).where(sql`${jobs.id} IN (${sql.join(jobIds.map(id => sql`${id}`), sql`, `)})`);
+  const concluidos = jobsFinalizados.filter((j: any) => j.status === 'concluido').length;
+  const erros = jobsFinalizados.filter((j: any) => j.status === 'erro').length;
+  if (jobIds.length > 0) {
+    await criarNotificacao({
+      tipo: 'importacao_concluida',
+      prioridade: erros > 0 ? 'alta' : 'normal',
+      titulo: `Importação finalizada: ${concluidos}/${jobIds.length} sucesso`,
+      mensagem: `${concluidos} arquivo(s) processado(s) com sucesso${erros > 0 ? `, ${erros} com erro` : ''}`,
+      linkUrl: '/jobs',
+      icone: erros > 0 ? 'AlertTriangle' : 'CheckCircle',
+      cor: erros > 0 ? 'amber' : 'green',
+    });
   }
 }
 
@@ -4666,6 +5039,70 @@ async function gerarConhecimentosLote(processoIds: number[]) {
       console.error(`[Lote] Erro ao gerar conhecimentos para processo ${processoId}:`, e);
     }
   }
+}
+
+// ==================== VERIFICAÇÃO PERIÓDICA DE PRAZOS ====================
+async function verificarPrazosAutomaticamente() {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const pendentes = await db.select().from(prazosProcessuais)
+      .where(eq(prazosProcessuais.status, 'pendente'));
+    const agora = new Date();
+    for (const prazo of pendentes) {
+      const vencimento = new Date(prazo.dataVencimento);
+      const diffMs = vencimento.getTime() - agora.getTime();
+      const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDias < 0) {
+        await db.update(prazosProcessuais)
+          .set({ status: 'vencido' })
+          .where(eq(prazosProcessuais.id, prazo.id));
+        if (!prazo.notificacaoEnviada) {
+          await criarNotificacao({
+            tipo: 'prazo_vencido',
+            prioridade: 'urgente',
+            titulo: `PRAZO VENCIDO: ${prazo.titulo}`,
+            mensagem: `O prazo venceu em ${vencimento.toLocaleDateString('pt-BR')}. Ação imediata necessária.`,
+            processoId: prazo.processoId,
+            clienteId: prazo.clienteId,
+            prazoId: prazo.id,
+            linkUrl: `/clientes/${prazo.clienteId}`,
+            icone: 'AlertTriangle',
+            cor: 'red',
+          });
+          await db.update(prazosProcessuais)
+            .set({ notificacaoEnviada: 1 })
+            .where(eq(prazosProcessuais.id, prazo.id));
+        }
+      } else if (diffDias <= (prazo.diasAntecedencia || 3) && !prazo.notificacaoEnviada) {
+        await criarNotificacao({
+          tipo: 'prazo_vencendo',
+          prioridade: diffDias <= 1 ? 'urgente' : 'alta',
+          titulo: `Prazo em ${diffDias} dia(s): ${prazo.titulo}`,
+          mensagem: `O prazo vence em ${vencimento.toLocaleDateString('pt-BR')} (${diffDias} dia(s) restantes).`,
+          processoId: prazo.processoId,
+          clienteId: prazo.clienteId,
+          prazoId: prazo.id,
+          linkUrl: `/clientes/${prazo.clienteId}`,
+          icone: 'Clock',
+          cor: diffDias <= 1 ? 'red' : 'amber',
+        });
+        await db.update(prazosProcessuais)
+          .set({ notificacaoEnviada: 1 })
+          .where(eq(prazosProcessuais.id, prazo.id));
+      }
+    }
+    console.log(`[Prazos] Verificação automática: ${pendentes.length} prazos verificados`);
+  } catch (e) {
+    console.error('[Prazos] Erro na verificação automática:', e);
+  }
+}
+
+// Verificar prazos a cada 6 horas
+if (typeof setInterval !== 'undefined') {
+  setInterval(verificarPrazosAutomaticamente, 6 * 60 * 60 * 1000);
+  // Primeira verificação 30s após iniciar
+  setTimeout(verificarPrazosAutomaticamente, 30000);
 }
 
 export type AppRouter = typeof appRouter;
