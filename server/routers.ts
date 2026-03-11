@@ -2657,190 +2657,434 @@ async function processarJobImportacaoPdf(jobId: number, inputData: any) {
       return;
     }
 
-    await updateProgress(30, 'Analisando dados com IA...');
-    const textoTruncado = textoExtraido.substring(0, 15000);
-    const llmResponse = await invokeLLM({
-      messages: [
-        { role: 'system', content: `Você é um assistente jurídico especializado em extrair dados de processos judiciais brasileiros. Extraia os dados em JSON com os campos: nomeCliente, cpf, rg, profissao, cargo, orgaoEmpregador, vinculoFuncional, endereco, cidade, estado, cep, telefone, email, dataNascimento, estadoCivil, nacionalidade, numeroCnj, tribunal, comarca, vara, tipoAcao, natureza, classeProcessual, assunto, faseAtual, statusProcesso, valorCausa, dataDistribuicao, dataSentenca, juiz, poloAtivo, poloPassivo, advogadoAutor, resumoSentenca, valorCondenacao, danosMorais, danosMateriais, restituicao, honorariosPerc, honorariosValor, tutelaTipo, tutelaStatus, tutelaDescricao, remuneracaoBruta, remuneracaoLiquida, totalConsignacoes, margemConsignavel, fonteRenda, tesePrincipal, fundamentacaoLegal, jurisprudenciaCitada, pontosFortes, riscosIdentificados, partesAtivas (array), partesPassivas (array), movimentacoes (array de {data, evento, descricao}), tipoVinculo (se for processo dependente), processoOrigemCnj (CNJ do processo principal se for dependente). Retorne APENAS o JSON.` },
-        { role: 'user', content: textoTruncado },
-      ],
-    });
+    await updateProgress(20, 'Analisando dados com IA (prompt completo)...');
+    const textoTruncado = textoExtraido.substring(0, 50000);
 
-    let dados: any = {};
-    try { dados = JSON.parse(llmResponse.choices[0]?.message?.content as string || '{}'); } catch { dados = {}; }
+    // Usar o MESMO prompt detalhado do upload individual
+    const extractionPrompt = `Você é um assistente jurídico especializado em análise de processos judiciais brasileiros.
+Analise o texto extraído de um processo judicial e extraia TODOS os dados estruturados possíveis.
 
-    await updateProgress(50, 'Salvando cliente...');
-    const clienteNome = dados.nomeCliente || inputData.fileName.replace(/\.pdf$/i, '');
-    const clienteCpf = dados.cpf?.replace(/[^0-9]/g, '') || `PEND_${Date.now().toString(36)}`;
+REGRAS IMPORTANTES:
+- Extraia CPF/CNPJ do AUTOR (polo ativo/cliente), não do advogado
+- Se houver múltiplos CPFs, identifique qual pertence ao autor/cliente
+- Valores monetários devem ser números sem formatação (ex: 487150.30)
+- Datas no formato DD/MM/YYYY
+- Se não encontrar um campo, retorne null
+- Identifique a natureza da ação (cível, trabalhista, consumerista, etc.)
+- Classifique se o processo está ativo ou inativo
+- Extraia TODOS os empréstimos consignados mencionados
+- IMPORTANTE: Identifique se o processo é DEPENDENTE de outro (ex: cumprimento de sentença, recurso, embargos protocolados por dependência)
+- Se houver menção a "por dependência ao processo nº" ou "autos principais", extraia o número CNJ do processo principal
+- Em processos de cumprimento de sentença, o CLIENTE é o autor dos autos principais, não o advogado exequente
 
-    // Verificar se cliente já existe por CPF
-    const [existente] = await db.select().from(clientes).where(eq(clientes.cpfCnpj, clienteCpf));
+Retorne um JSON com esta estrutura exata:
+{
+  "cliente": {
+    "cpfCnpj": "string ou null",
+    "nomeCompleto": "string",
+    "tipoPessoa": "PF ou PJ",
+    "rg": "string ou null",
+    "profissao": "string ou null",
+    "cargo": "string ou null",
+    "orgaoEmpregador": "string ou null",
+    "vinculoFuncional": "string ou null",
+    "endereco": "string ou null",
+    "cidade": "string ou null",
+    "estado": "string ou null",
+    "cep": "string ou null",
+    "nacionalidade": "string ou null"
+  },
+  "processo": {
+    "numeroCnj": "string",
+    "tribunal": "string ou null",
+    "comarca": "string ou null",
+    "vara": "string ou null",
+    "tipoAcao": "string",
+    "natureza": "string ou null",
+    "classeProcessual": "string ou null",
+    "assunto": "string ou null",
+    "faseAtual": "Conhecimento|Cumprimento Provisorio|Cumprimento Definitivo|Execucao|Recurso|Arquivado|Suspenso",
+    "statusProcesso": "Ativo|Sentenca Procedente|Sentenca Improcedente|Parcialmente Procedente|Acordo|Arquivado|Recurso Pendente",
+    "valorCausa": "number ou null",
+    "dataDistribuicao": "string ou null",
+    "dataSentenca": "string ou null",
+    "juiz": "string ou null",
+    "prioridade": "string ou null",
+    "segredoJustica": false,
+    "poloAtivo": "string",
+    "poloPassivo": "string (nomes separados por ;)",
+    "advogadoAutor": "string ou null",
+    "processoOrigemCnj": "string ou null (número CNJ do processo principal, se este for dependente/cumprimento/recurso)",
+    "tipoVinculo": "string ou null (Cumprimento Provisório|Cumprimento Definitivo|Recurso|Embargos|Agravo|null se for autos principais)"
+  },
+  "financeiro": {
+    "remuneracaoBruta": "number ou null",
+    "remuneracaoLiquida": "number ou null",
+    "margemConsignavelPerc": "number ou null",
+    "margemConsignavelValor": "number ou null",
+    "totalConsignacoes": "number ou null",
+    "fonteRenda": "string ou null"
+  },
+  "emprestimos": [
+    {
+      "banco": "string",
+      "contrato": "string ou null",
+      "valorParcela": "number ou null",
+      "valorTotal": "number ou null",
+      "totalParcelas": "number ou null"
+    }
+  ],
+  "estrategia": {
+    "tesePrincipal": "string",
+    "fundamentacaoLegal": "string (artigos citados)",
+    "jurisprudenciaCitada": "string (súmulas e acórdãos)",
+    "pontosFortes": "string",
+    "riscosIdentificados": "string"
+  },
+  "sentenca": {
+    "resultado": "string ou null",
+    "valorCondenacao": "number ou null",
+    "danosMorais": "number ou null",
+    "danosMateriais": "number ou null",
+    "restituicao": "number ou null",
+    "honorariosPerc": "number ou null",
+    "tutelaTipo": "string ou null",
+    "tutelaStatus": "string ou null",
+    "tutelaDescricao": "string ou null"
+  },
+  "partesPassivas": [
+    {
+      "nome": "string",
+      "cpfCnpj": "string ou null",
+      "categoria": "Banco|Empresa|Pessoa Fisica|Orgao Publico"
+    }
+  ],
+  "movimentacoes": [
+    {
+      "data": "DD/MM/YYYY ou null",
+      "evento": "tipo do evento processual",
+      "descricao": "descrição detalhada do evento",
+      "numero_evento": "número do evento PROJUDI se mencionado, ou null"
+    }
+  ]
+}
+
+TEXTO DO PROCESSO:
+${textoTruncado}`;
+
+    let dadosExtraidos: any = {};
+    try {
+      const result = await invokeLLM({
+        messages: [
+          { role: 'system', content: 'Você é um extrator de dados jurídicos. Responda APENAS com JSON válido, sem markdown.' },
+          { role: 'user', content: extractionPrompt }
+        ],
+        responseFormat: { type: 'json_object' },
+      });
+      const content = result.choices[0]?.message?.content;
+      const textContent = typeof content === 'string' ? content : Array.isArray(content) ? content.map((c: any) => c.type === 'text' ? c.text : '').join('') : '';
+      dadosExtraidos = JSON.parse(textContent);
+    } catch (e) {
+      console.error('[Job] AI extraction error:', e);
+      dadosExtraidos = { error: 'Falha na extração via IA' };
+    }
+
+    await updateProgress(40, 'Salvando cliente...');
+    // 3. Deduplication and save to DB
     let clienteId: number;
-    if (existente) {
-      clienteId = existente.id;
-    } else if (clienteCpf.startsWith('PEND_')) {
+    const cpf = dadosExtraidos.cliente?.cpfCnpj;
+    const nome = dadosExtraidos.cliente?.nomeCompleto || inputData.fileName.replace(/\.pdf$/i, '');
+
+    if (cpf) {
+      const existing = await db.select().from(clientes).where(eq(clientes.cpfCnpj, cpf)).limit(1);
+      if (existing.length > 0) {
+        clienteId = existing[0].id;
+        // Atualizar dados do cliente existente
+        await db.update(clientes).set({
+          profissao: dadosExtraidos.cliente?.profissao || existing[0].profissao,
+          cargo: dadosExtraidos.cliente?.cargo || existing[0].cargo,
+          orgaoEmpregador: dadosExtraidos.cliente?.orgaoEmpregador || existing[0].orgaoEmpregador,
+          vinculoFuncional: dadosExtraidos.cliente?.vinculoFuncional || existing[0].vinculoFuncional,
+          endereco: dadosExtraidos.cliente?.endereco || existing[0].endereco,
+          cidade: dadosExtraidos.cliente?.cidade || existing[0].cidade,
+          estado: dadosExtraidos.cliente?.estado || existing[0].estado,
+          cep: dadosExtraidos.cliente?.cep || existing[0].cep,
+          rg: dadosExtraidos.cliente?.rg || existing[0].rg,
+          nacionalidade: dadosExtraidos.cliente?.nacionalidade || existing[0].nacionalidade,
+        }).where(eq(clientes.id, clienteId));
+      } else {
+        const [inserted] = await db.insert(clientes).values({
+          cpfCnpj: cpf,
+          nomeCompleto: nome,
+          tipoPessoa: dadosExtraidos.cliente?.tipoPessoa === 'PJ' ? 'PJ' : 'PF',
+          rg: dadosExtraidos.cliente?.rg,
+          profissao: dadosExtraidos.cliente?.profissao,
+          cargo: dadosExtraidos.cliente?.cargo,
+          orgaoEmpregador: dadosExtraidos.cliente?.orgaoEmpregador,
+          vinculoFuncional: dadosExtraidos.cliente?.vinculoFuncional,
+          endereco: dadosExtraidos.cliente?.endereco,
+          cidade: dadosExtraidos.cliente?.cidade,
+          estado: dadosExtraidos.cliente?.estado,
+          cep: dadosExtraidos.cliente?.cep,
+          nacionalidade: dadosExtraidos.cliente?.nacionalidade,
+        }).$returningId();
+        clienteId = inserted.id;
+      }
+    } else {
       // CPF não extraído - buscar por nome similar para evitar duplicação
-      const nomeLimpo = clienteNome.replace(/PROCESSO|COMPLETO|AUTOS|PRINCIPAIS|CUMPRIMENTO|PROVISORIO|PROVISÓRIO|SENTENÇA|SENTENCA|COMPETO|DE|DO|DA/gi, '').trim();
+      const nomeLimpo = nome.replace(/PROCESSO|COMPLETO|AUTOS|PRINCIPAIS|CUMPRIMENTO|PROVISORIO|PROVISÓRIO|SENTENÇA|SENTENCA|COMPETO|DE|DO|DA/gi, '').trim();
       const palavrasNome = nomeLimpo.split(/\s+/).filter((p: string) => p.length > 2);
-      let clienteExistentePorNome: any = null;
+      let clienteExistente = null;
       if (palavrasNome.length > 0) {
         const todosClientes = await db.select().from(clientes);
         for (const c of todosClientes) {
           const nomeClienteLimpo = c.nomeCompleto.replace(/PROCESSO|COMPLETO|AUTOS|PRINCIPAIS|CUMPRIMENTO|PROVISORIO|PROVISÓRIO|SENTENÇA|SENTENCA|COMPETO|DE|DO|DA/gi, '').trim().toUpperCase();
           const matches = palavrasNome.filter((p: string) => nomeClienteLimpo.includes(p.toUpperCase()));
           if (matches.length >= 1 && matches.length >= palavrasNome.length * 0.5) {
-            clienteExistentePorNome = c;
+            clienteExistente = c;
             break;
           }
         }
       }
-      if (clienteExistentePorNome) {
-        clienteId = clienteExistentePorNome.id;
-        console.log(`[Job] Cliente encontrado por nome similar: ${clienteExistentePorNome.nomeCompleto} (ID: ${clienteId})`);
+      if (clienteExistente) {
+        clienteId = clienteExistente.id;
+        console.log(`[Job] Cliente encontrado por nome similar: ${clienteExistente.nomeCompleto} (ID: ${clienteId})`);
       } else {
-        const [ins] = await db.insert(clientes).values({
-          cpfCnpj: clienteCpf,
-          nomeCompleto: clienteNome,
-          rg: dados.rg || null,
-          profissao: dados.profissao || null,
-          cargo: dados.cargo || null,
-          orgaoEmpregador: dados.orgaoEmpregador || null,
-          vinculoFuncional: dados.vinculoFuncional || null,
-          endereco: dados.endereco || null,
-          cidade: dados.cidade || null,
-          estado: dados.estado || null,
-          cep: dados.cep || null,
-          telefone: dados.telefone || null,
-          email: dados.email || null,
-          dataNascimento: dados.dataNascimento || null,
-          estadoCivil: dados.estadoCivil || null,
-          nacionalidade: dados.nacionalidade || null,
-        });
-        clienteId = ins.insertId;
+        const [inserted] = await db.insert(clientes).values({
+          cpfCnpj: `PEND_${Date.now().toString(36)}`,
+          nomeCompleto: nome,
+          tipoPessoa: dadosExtraidos.cliente?.tipoPessoa === 'PJ' ? 'PJ' : 'PF',
+          rg: dadosExtraidos.cliente?.rg,
+          profissao: dadosExtraidos.cliente?.profissao,
+          cargo: dadosExtraidos.cliente?.cargo,
+          orgaoEmpregador: dadosExtraidos.cliente?.orgaoEmpregador,
+          vinculoFuncional: dadosExtraidos.cliente?.vinculoFuncional,
+          endereco: dadosExtraidos.cliente?.endereco,
+          cidade: dadosExtraidos.cliente?.cidade,
+          estado: dadosExtraidos.cliente?.estado,
+          cep: dadosExtraidos.cliente?.cep,
+          nacionalidade: dadosExtraidos.cliente?.nacionalidade,
+        }).$returningId();
+        clienteId = inserted.id;
       }
+    }
+
+    await updateProgress(50, 'Enviando PDF para armazenamento...');
+    // 4. Upload PDF to client folder in S3
+    const clienteCpf = cpf || `PEND_${Date.now().toString(36)}`;
+    const folder = clientFolderKey(nome, clienteCpf);
+    const pdfKey = `${folder}/processos_pdf/${inputData.fileName}`;
+    const { key, url: pdfUrl } = await storagePut(pdfKey, pdfBuffer, 'application/pdf');
+
+    await updateProgress(55, 'Salvando processo...');
+    // 5. Insert processo (dedup by numeroCnj)
+    const numCnj = dadosExtraidos.processo?.numeroCnj || `SEM_${Date.now().toString(36)}`;
+    const existingProc = await db.select().from(processos).where(eq(processos.numeroCnj, numCnj)).limit(1);
+    let processoId: number;
+
+    if (existingProc.length > 0) {
+      processoId = existingProc[0].id;
+      await db.update(processos).set({
+        faseAtual: dadosExtraidos.processo?.faseAtual || existingProc[0].faseAtual,
+        statusProcesso: dadosExtraidos.processo?.statusProcesso || existingProc[0].statusProcesso,
+        pdfStorageKey: key,
+        pdfUrl,
+        textoExtraido: textoExtraido.substring(0, 60000),
+      }).where(eq(processos.id, processoId));
     } else {
-      const [ins] = await db.insert(clientes).values({
-        cpfCnpj: clienteCpf,
-        nomeCompleto: clienteNome,
-        rg: dados.rg || null,
-        profissao: dados.profissao || null,
-        cargo: dados.cargo || null,
-        orgaoEmpregador: dados.orgaoEmpregador || null,
-        vinculoFuncional: dados.vinculoFuncional || null,
-        endereco: dados.endereco || null,
-        cidade: dados.cidade || null,
-        estado: dados.estado || null,
-        cep: dados.cep || null,
-        telefone: dados.telefone || null,
-        email: dados.email || null,
-        dataNascimento: dados.dataNascimento || null,
-        estadoCivil: dados.estadoCivil || null,
-        nacionalidade: dados.nacionalidade || null,
-      });
-      clienteId = ins.insertId;
+      const proc = dadosExtraidos.processo || {};
+      const sent = dadosExtraidos.sentenca || {};
+      const [insertedProc] = await db.insert(processos).values({
+        clienteId,
+        numeroCnj: numCnj,
+        tribunal: proc.tribunal,
+        comarca: proc.comarca,
+        vara: proc.vara,
+        tipoAcao: proc.tipoAcao,
+        natureza: proc.natureza,
+        classeProcessual: proc.classeProcessual,
+        assunto: proc.assunto,
+        faseAtual: proc.faseAtual || 'Conhecimento',
+        statusProcesso: proc.statusProcesso || 'Ativo',
+        valorCausa: proc.valorCausa ? String(proc.valorCausa) : null,
+        dataDistribuicao: proc.dataDistribuicao,
+        dataSentenca: proc.dataSentenca,
+        juiz: proc.juiz,
+        prioridade: proc.prioridade,
+        segredoJustica: proc.segredoJustica ? 1 : 0,
+        poloAtivo: proc.poloAtivo,
+        poloPassivo: proc.poloPassivo,
+        advogadoAutor: proc.advogadoAutor,
+        valorCondenacao: sent.valorCondenacao ? String(sent.valorCondenacao) : null,
+        danosMorais: sent.danosMorais ? String(sent.danosMorais) : null,
+        danosMateriais: sent.danosMateriais ? String(sent.danosMateriais) : null,
+        restituicao: sent.restituicao ? String(sent.restituicao) : null,
+        honorariosPerc: sent.honorariosPerc ? String(sent.honorariosPerc) : null,
+        tutelaTipo: sent.tutelaTipo,
+        tutelaStatus: sent.tutelaStatus,
+        tutelaDescricao: sent.tutelaDescricao,
+        pdfStorageKey: key,
+        pdfUrl,
+        textoExtraido: textoExtraido.substring(0, 60000),
+      }).$returningId();
+      processoId = insertedProc.id;
     }
 
-    await updateProgress(60, 'Salvando processo...');
-    const numCnj = dados.numeroCnj || `CNJ_${Date.now().toString(36)}`;
-    // Verificar vinculação
-    let processoOrigemId: number | null = null;
-    if (dados.processoOrigemCnj) {
-      const [origem] = await db.select().from(processos).where(eq(processos.numeroCnj, dados.processoOrigemCnj));
-      if (origem) processoOrigemId = origem.id;
+    // 5.5. Vincular processo dependente ao principal (se aplicável)
+    const origemCnj = dadosExtraidos.processo?.processoOrigemCnj;
+    const tipoVinculo = dadosExtraidos.processo?.tipoVinculo;
+    if (origemCnj && tipoVinculo) {
+      const [procOrigem] = await db.select().from(processos).where(eq(processos.numeroCnj, origemCnj)).limit(1);
+      if (procOrigem) {
+        await db.update(processos).set({
+          processoOrigemId: procOrigem.id,
+          tipoVinculo: tipoVinculo,
+        }).where(eq(processos.id, processoId));
+        console.log(`[Job] Processo ${numCnj} vinculado ao principal ${origemCnj} (${tipoVinculo})`);
+      } else {
+        await db.update(processos).set({
+          tipoVinculo: `${tipoVinculo} (pendente: ${origemCnj})`,
+        }).where(eq(processos.id, processoId));
+      }
     }
 
-    // Upload PDF para S3
-    const folderKey = clientFolderKey(clienteNome, clienteCpf);
-    const pdfKey = `${folderKey}/${inputData.fileName}`;
-    const { url: pdfUrl } = await storagePut(pdfKey, pdfBuffer, 'application/pdf');
+    await updateProgress(65, 'Salvando dados financeiros...');
+    // 6. Insert financial data
+    if (dadosExtraidos.financeiro) {
+      const fin = dadosExtraidos.financeiro;
+      if (fin.remuneracaoBruta || fin.remuneracaoLiquida || fin.totalConsignacoes || fin.margemConsignavelValor) {
+        await db.insert(dadosFinanceiros).values({
+          clienteId,
+          remuneracaoBruta: fin.remuneracaoBruta ? String(fin.remuneracaoBruta) : null,
+          remuneracaoLiquida: fin.remuneracaoLiquida ? String(fin.remuneracaoLiquida) : null,
+          margemConsignavelPerc: fin.margemConsignavelPerc ? String(fin.margemConsignavelPerc) : null,
+          margemConsignavelValor: fin.margemConsignavelValor ? String(fin.margemConsignavelValor) : null,
+          totalConsignacoes: fin.totalConsignacoes ? String(fin.totalConsignacoes) : null,
+          fonteRenda: fin.fonteRenda,
+        });
+      }
+    }
 
-    const [procIns] = await db.insert(processos).values({
-      clienteId,
-      numeroCnj: numCnj,
-      tribunal: dados.tribunal || null,
-      comarca: dados.comarca || null,
-      vara: dados.vara || null,
-      tipoAcao: dados.tipoAcao || null,
-      natureza: dados.natureza || null,
-      classeProcessual: dados.classeProcessual || null,
-      assunto: dados.assunto || null,
-      faseAtual: dados.faseAtual || 'Conhecimento',
-      statusProcesso: dados.statusProcesso || 'Ativo',
-      valorCausa: dados.valorCausa || null,
-      dataDistribuicao: dados.dataDistribuicao || null,
-      dataSentenca: dados.dataSentenca || null,
-      juiz: dados.juiz || null,
-      poloAtivo: dados.poloAtivo || null,
-      poloPassivo: dados.poloPassivo || null,
-      advogadoAutor: dados.advogadoAutor || null,
-      resumoSentenca: dados.resumoSentenca || null,
-      valorCondenacao: dados.valorCondenacao || null,
-      danosMorais: dados.danosMorais || null,
-      danosMateriais: dados.danosMateriais || null,
-      restituicao: dados.restituicao || null,
-      honorariosPerc: dados.honorariosPerc || null,
-      honorariosValor: dados.honorariosValor || null,
-      tutelaTipo: dados.tutelaTipo || null,
-      tutelaStatus: dados.tutelaStatus || null,
-      tutelaDescricao: dados.tutelaDescricao || null,
-      processoOrigemId,
-      tipoVinculo: dados.tipoVinculo || null,
-      pdfStorageKey: pdfKey,
-      pdfUrl,
-      textoExtraido: textoExtraido.substring(0, 60000),
-    });
-    const processoId = procIns.insertId;
+    // 7. Insert emprestimos
+    if (dadosExtraidos.emprestimos?.length) {
+      for (const emp of dadosExtraidos.emprestimos) {
+        await db.insert(emprestimosConsignados).values({
+          clienteId,
+          banco: emp.banco,
+          contrato: emp.contrato,
+          valorParcela: emp.valorParcela ? String(emp.valorParcela) : null,
+          valorTotal: emp.valorTotal ? String(emp.valorTotal) : null,
+          totalParcelas: emp.totalParcelas,
+        });
+      }
+    }
 
-    await updateProgress(70, 'Salvando partes e movimentações...');
-    // Movimentações
-    if (Array.isArray(dados.movimentacoes)) {
-      for (const mov of dados.movimentacoes) {
+    await updateProgress(70, 'Salvando estratégia processual...');
+    // 8. Insert estrategia
+    if (dadosExtraidos.estrategia) {
+      const est = dadosExtraidos.estrategia;
+      if (est.tesePrincipal) {
+        await db.insert(estrategias).values({
+          processoId,
+          tesePrincipal: est.tesePrincipal,
+          fundamentacaoLegal: est.fundamentacaoLegal,
+          jurisprudenciaCitada: est.jurisprudenciaCitada,
+          pontosFortes: est.pontosFortes,
+          riscosIdentificados: est.riscosIdentificados,
+        });
+      }
+    }
+
+    await updateProgress(75, 'Salvando partes processuais...');
+    // 9. Insert partes passivas
+    if (dadosExtraidos.partesPassivas?.length) {
+      for (const parte of dadosExtraidos.partesPassivas) {
+        await db.insert(partesProcessuais).values({
+          processoId,
+          nome: parte.nome,
+          cpfCnpj: parte.cpfCnpj,
+          tipo: 'Reu',
+          categoria: parte.categoria,
+        });
+      }
+    }
+
+    await updateProgress(80, 'Salvando movimentações processuais...');
+    // 9.5. Insert movimentacoes extraídas pela IA
+    if (dadosExtraidos.movimentacoes?.length) {
+      for (const mov of dadosExtraidos.movimentacoes) {
+        const numEvento = mov.numero_evento ? `[Ev.${mov.numero_evento}] ` : '';
         await db.insert(movimentacoes).values({
           processoId,
           data: mov.data || null,
-          evento: mov.evento || null,
-          descricao: mov.descricao || null,
+          evento: (mov.evento || 'Movimentação').substring(0, 500),
+          descricao: (numEvento + (mov.descricao || '')).substring(0, 5000),
         });
       }
     }
 
-    await updateProgress(80, 'Salvando dados financeiros e estratégias...');
-    // Dados financeiros
-    if (dados.remuneracaoBruta || dados.remuneracaoLiquida) {
-      const remBruta = parseFloat(dados.remuneracaoBruta) || 0;
-      const remLiq = parseFloat(dados.remuneracaoLiquida) || 0;
-      const totalCons = parseFloat(dados.totalConsignacoes) || 0;
-      const margem35 = remBruta * 0.35;
-      await db.insert(dadosFinanceiros).values({
-        clienteId,
-        remuneracaoBruta: String(remBruta),
-        remuneracaoLiquida: String(remLiq),
-        totalConsignacoes: String(totalCons),
-        margemConsignavelPerc: '35.00',
-        margemConsignavelValor: String(margem35.toFixed(2)),
-        margemDisponivel: String((margem35 - totalCons).toFixed(2)),
-        margemExcedida: totalCons > margem35 ? 1 : 0,
-        valorExcedente: totalCons > margem35 ? String((totalCons - margem35).toFixed(2)) : '0.00',
-        aptoEmprestimo: totalCons <= margem35 ? 1 : 0,
-        fonteRenda: dados.fonteRenda || null,
+    await updateProgress(85, 'Registrando documento...');
+    // 10. Insert document record
+    await db.insert(documentos).values({
+      processoId,
+      clienteId,
+      tipo: 'Processo Completo',
+      nomeArquivo: inputData.fileName,
+      storageKey: key,
+      storageUrl: pdfUrl,
+      tamanho: inputData.fileSize,
+      mimeType: 'application/pdf',
+    });
+
+    await updateProgress(88, 'Gerando conhecimentos jurídicos...');
+    // 11. Extract knowledge
+    if (dadosExtraidos.estrategia?.tesePrincipal) {
+      await db.insert(conhecimentos).values({
+        categoria: 'Tese',
+        titulo: `Tese: ${dadosExtraidos.processo?.tipoAcao || 'Processo'} - ${nome}`,
+        conteudo: dadosExtraidos.estrategia.tesePrincipal,
+        tribunal: dadosExtraidos.processo?.tribunal,
+        tipoAcao: dadosExtraidos.processo?.tipoAcao,
+        processoOrigemId: processoId,
+      });
+    }
+    if (dadosExtraidos.estrategia?.jurisprudenciaCitada) {
+      await db.insert(conhecimentos).values({
+        categoria: 'Jurisprudencia',
+        titulo: `Jurisprudência: ${dadosExtraidos.processo?.tipoAcao || 'Processo'} - ${nome}`,
+        conteudo: dadosExtraidos.estrategia.jurisprudenciaCitada,
+        tribunal: dadosExtraidos.processo?.tribunal,
+        tipoAcao: dadosExtraidos.processo?.tipoAcao,
+        processoOrigemId: processoId,
+      });
+    }
+    if (dadosExtraidos.estrategia?.fundamentacaoLegal) {
+      await db.insert(conhecimentos).values({
+        categoria: 'Legislacao',
+        titulo: `Fundamentação: ${dadosExtraidos.processo?.tipoAcao || 'Processo'} - ${nome}`,
+        conteudo: dadosExtraidos.estrategia.fundamentacaoLegal,
+        tribunal: dadosExtraidos.processo?.tribunal,
+        tipoAcao: dadosExtraidos.processo?.tipoAcao,
+        processoOrigemId: processoId,
       });
     }
 
-    // Estratégia
-    if (dados.tesePrincipal) {
-      await db.insert(estrategias).values({
-        processoId,
-        tesePrincipal: dados.tesePrincipal || null,
-        fundamentacaoLegal: dados.fundamentacaoLegal || null,
-        jurisprudenciaCitada: dados.jurisprudenciaCitada || null,
-        pontosFortes: dados.pontosFortes || null,
-        riscosIdentificados: dados.riscosIdentificados || null,
-      });
+    await updateProgress(92, 'Gerando pasta do cliente...');
+    // 12. Build client folder with all JSON files in S3
+    try {
+      await buildClientFolder(clienteId, nome, clienteCpf);
+    } catch (e) {
+      console.error('[Job] Erro ao gerar pasta do cliente:', e);
     }
 
-    await updateProgress(90, 'Atualizando relatórios...');
-    // Atualizar relatório cadastral
-    try { await autoUpdateRelatorioCadastral(db); } catch (e) { console.error('[Jobs] Erro atualizar relatório:', e); }
+    await updateProgress(96, 'Atualizando relatórios...');
+    // 13. Atualizar Relatório Cadastral automaticamente
+    try {
+      await autoUpdateRelatorioCadastral(db);
+      console.log(`[Job] Relatório cadastral atualizado após importação de ${nome}`);
+    } catch (relErr) {
+      console.error('[Job] Erro ao atualizar relatório:', relErr);
+    }
 
     await updateProgress(100, 'Concluído!');
     await db.update(jobs).set({
@@ -2848,7 +3092,16 @@ async function processarJobImportacaoPdf(jobId: number, inputData: any) {
       concluidoEm: new Date(),
       clienteId,
       processoId,
-      outputData: JSON.stringify({ clienteId, processoId, clienteNome, numeroCnj: numCnj }),
+      outputData: JSON.stringify({
+        clienteId,
+        processoId,
+        clienteNome: nome,
+        cpf: cpf || 'PENDENTE',
+        numeroCnj: numCnj,
+        pastaCliente: folder,
+        dadosExtraidos,
+        relatorioAtualizado: true,
+      }),
     }).where(eq(jobs.id, jobId));
 
   } catch (error: any) {
@@ -2873,84 +3126,304 @@ async function processarJobImportacaoContracheque(jobId: number, inputData: any)
       textoExtraido = pdfData.text || '';
     } catch { textoExtraido = ''; }
 
-    await updateProgress(30, 'Analisando dados financeiros com IA...');
-    const llmResponse = await invokeLLM({
-      messages: [
-        { role: 'system', content: `Extraia dados financeiros do contracheque em JSON: nomeServidor, cpf, cargo, orgao, remuneracaoBruta, remuneracaoLiquida, descontoIrrf, descontoPrevidencia, outrosDescontos, emprestimos (array de {banco, rubrica, contrato, valorParcela, totalParcelas, parcelasRestantes, taxaJuros}), mesReferencia. Retorne APENAS JSON.` },
-        { role: 'user', content: textoExtraido.substring(0, 10000) },
-      ],
-    });
-
-    let dados: any = {};
-    try { dados = JSON.parse(llmResponse.choices[0]?.message?.content as string || '{}'); } catch { dados = {}; }
-
-    await updateProgress(50, 'Salvando dados financeiros...');
-    const clienteNome = dados.nomeServidor || inputData.fileName.replace(/\.pdf$/i, '');
-    const clienteCpf = dados.cpf?.replace(/[^0-9]/g, '') || `PEND_${Date.now().toString(36)}`;
-
-    const [existente] = await db.select().from(clientes).where(eq(clientes.cpfCnpj, clienteCpf));
-    let clienteId: number;
-    if (existente) {
-      clienteId = existente.id;
-    } else {
-      const [ins] = await db.insert(clientes).values({
-        cpfCnpj: clienteCpf,
-        nomeCompleto: clienteNome,
-        cargo: dados.cargo || null,
-        orgaoEmpregador: dados.orgao || null,
-      });
-      clienteId = ins.insertId;
+    if (!textoExtraido.trim()) {
+      await db.update(jobs).set({
+        status: 'erro',
+        erroDetalhes: 'Não foi possível extrair texto do contracheque.',
+        concluidoEm: new Date(),
+        progresso: 0,
+      }).where(eq(jobs.id, jobId));
+      return;
     }
 
-    await updateProgress(70, 'Calculando margem consignável...');
-    const remBruta = parseFloat(dados.remuneracaoBruta) || 0;
-    const remLiq = parseFloat(dados.remuneracaoLiquida) || 0;
-    const totalEmp = Array.isArray(dados.emprestimos) ? dados.emprestimos.reduce((s: number, e: any) => s + (parseFloat(e.valorParcela) || 0), 0) : 0;
-    const margem35 = remBruta * 0.35;
+    await updateProgress(25, 'Analisando dados financeiros com IA (prompt completo)...');
+    // Usar o MESMO prompt detalhado do upload individual de contracheque
+    const extractionPrompt = `Você é um assistente especializado em análise de contracheques e demonstrativos de pagamento de servidores públicos brasileiros.
+Analise o texto extraído de um contracheque/demonstrativo de pagamento e extraia TODOS os dados financeiros detalhados.
 
-    await db.insert(dadosFinanceiros).values({
+REGRAS IMPORTANTES:
+- Identifique o NOME COMPLETO e CPF do servidor/beneficiário
+- Extraia TODOS os valores de remuneração (bruta, líquida, descontos)
+- Identifique CADA empréstimo consignado individualmente (banco, rubrica, contrato, parcela, total de parcelas)
+- Calcule a margem consignável (35% do líquido para servidores de GO - Lei Estadual 16.898/2010)
+- Some TODOS os descontos de empréstimos consignados para obter o total de consignações
+- Calcule a margem disponível = margem consignável - total de consignações
+- Se margem disponível < 0, a margem está excedida
+- Valores monetários devem ser números sem formatação (ex: 4871.50)
+- Identifique o órgão empregador, cargo, vínculo funcional
+- Identifique o mês/ano de referência do contracheque
+
+Retorne um JSON com esta estrutura exata:
+{
+  "servidor": {
+    "nomeCompleto": "string",
+    "cpf": "string ou null",
+    "rg": "string ou null",
+    "cargo": "string ou null",
+    "orgaoEmpregador": "string ou null",
+    "vinculoFuncional": "string ou null (Efetivo, Comissionado, Aposentado, Pensionista)",
+    "lotacao": "string ou null",
+    "matricula": "string ou null"
+  },
+  "referencia": {
+    "mesAno": "string (MM/YYYY)",
+    "dataCredito": "string ou null (DD/MM/YYYY)"
+  },
+  "remuneracao": {
+    "remuneracaoBruta": "number",
+    "descontoIrrf": "number ou null",
+    "descontoPrevidencia": "number ou null",
+    "outrosDescontos": "number ou null",
+    "totalDescontos": "number",
+    "remuneracaoLiquida": "number"
+  },
+  "margemConsignavel": {
+    "percentual": 35,
+    "valorMargem": "number (35% do líquido)",
+    "totalConsignacoes": "number (soma de todas as parcelas de empréstimos)",
+    "margemDisponivel": "number (valorMargem - totalConsignacoes)",
+    "margemExcedida": "boolean",
+    "valorExcedente": "number ou 0"
+  },
+  "emprestimosConsignados": [
+    {
+      "banco": "string (nome da instituição financeira)",
+      "rubrica": "string ou null (código da rubrica no contracheque)",
+      "contrato": "string ou null",
+      "valorParcela": "number",
+      "totalParcelas": "number ou null",
+      "parcelasRestantes": "number ou null",
+      "valorTotal": "number ou null",
+      "taxaJuros": "number ou null"
+    }
+  ]
+}
+
+TEXTO DO CONTRACHEQUE:
+${textoExtraido.substring(0, 50000)}`;
+
+    let dadosExtraidos: any = {};
+    try {
+      const result = await invokeLLM({
+        messages: [
+          { role: 'system', content: 'Você é um extrator de dados financeiros de contracheques. Responda APENAS com JSON válido, sem markdown.' },
+          { role: 'user', content: extractionPrompt }
+        ],
+        responseFormat: { type: 'json_object' },
+      });
+      const content = result.choices[0]?.message?.content;
+      const textContent = typeof content === 'string' ? content : Array.isArray(content) ? content.map((c: any) => c.type === 'text' ? c.text : '').join('') : '';
+      dadosExtraidos = JSON.parse(textContent);
+    } catch (e) {
+      console.error('[Job] AI extraction error (contracheque):', e);
+      throw new Error('Falha na extração de dados do contracheque via IA');
+    }
+
+    await updateProgress(45, 'Salvando cliente...');
+    // 3. Find or create client
+    let clienteId: number;
+    const cpf = dadosExtraidos.servidor?.cpf;
+    const nome = dadosExtraidos.servidor?.nomeCompleto || inputData.fileName.replace(/\.pdf$/i, '');
+
+    if (cpf) {
+      const existing = await db.select().from(clientes).where(eq(clientes.cpfCnpj, cpf)).limit(1);
+      if (existing.length > 0) {
+        clienteId = existing[0].id;
+        // Update client data from contracheque
+        const serv = dadosExtraidos.servidor || {};
+        const updateData: Record<string, any> = {};
+        if (serv.cargo) updateData.cargo = serv.cargo;
+        if (serv.orgaoEmpregador) updateData.orgaoEmpregador = serv.orgaoEmpregador;
+        if (serv.vinculoFuncional) updateData.vinculoFuncional = serv.vinculoFuncional;
+        if (serv.rg) updateData.rg = serv.rg;
+        if (Object.keys(updateData).length > 0) {
+          await db.update(clientes).set(updateData).where(eq(clientes.id, clienteId));
+        }
+      } else {
+        // Create new client from contracheque
+        const serv = dadosExtraidos.servidor || {};
+        const [inserted] = await db.insert(clientes).values({
+          cpfCnpj: cpf,
+          nomeCompleto: nome,
+          tipoPessoa: 'PF',
+          rg: serv.rg,
+          cargo: serv.cargo,
+          orgaoEmpregador: serv.orgaoEmpregador,
+          vinculoFuncional: serv.vinculoFuncional,
+          profissao: serv.cargo || 'Servidor Público',
+        }).$returningId();
+        clienteId = inserted.id;
+      }
+    } else {
+      // CPF não extraído - buscar por nome similar
+      const nomeLimpo = nome.replace(/CONTRACHEQUE|DEMONSTRATIVO|HOLERITE|PAGAMENTO|FOLHA/gi, '').trim();
+      const palavrasNome = nomeLimpo.split(/\s+/).filter((p: string) => p.length > 2);
+      let clienteExistente = null;
+      if (palavrasNome.length > 0) {
+        const todosClientes = await db.select().from(clientes);
+        for (const c of todosClientes) {
+          const nomeClienteLimpo = c.nomeCompleto.toUpperCase();
+          const matches = palavrasNome.filter((p: string) => nomeClienteLimpo.includes(p.toUpperCase()));
+          if (matches.length >= 1 && matches.length >= palavrasNome.length * 0.5) {
+            clienteExistente = c;
+            break;
+          }
+        }
+      }
+      if (clienteExistente) {
+        clienteId = clienteExistente.id;
+      } else {
+        const [inserted] = await db.insert(clientes).values({
+          cpfCnpj: `PEND_${Date.now().toString(36)}`,
+          nomeCompleto: nome,
+          tipoPessoa: 'PF',
+          profissao: dadosExtraidos.servidor?.cargo || 'Servidor Público',
+        }).$returningId();
+        clienteId = inserted.id;
+      }
+    }
+
+    await updateProgress(55, 'Enviando contracheque para armazenamento...');
+    // 4. Upload contracheque PDF to S3
+    const clienteCpf = cpf || `PEND_${Date.now().toString(36)}`;
+    const folder = clientFolderKey(nome, clienteCpf);
+    const ref = dadosExtraidos.referencia?.mesAno?.replace('/', '_') || 'sem_ref';
+    const pdfKey = `${folder}/contracheques/${ref}_${inputData.fileName}`;
+    const { key, url: pdfUrl } = await storagePut(pdfKey, pdfBuffer, 'application/pdf');
+
+    await updateProgress(60, 'Registrando documento...');
+    // 5. Insert document record
+    await db.insert(documentos).values({
       clienteId,
-      remuneracaoBruta: String(remBruta),
-      remuneracaoLiquida: String(remLiq),
-      descontoIrrf: String(parseFloat(dados.descontoIrrf) || 0),
-      descontoPrevidencia: String(parseFloat(dados.descontoPrevidencia) || 0),
-      outrosDescontos: String(parseFloat(dados.outrosDescontos) || 0),
-      totalConsignacoes: String(totalEmp),
-      margemConsignavelPerc: '35.00',
-      margemConsignavelValor: String(margem35.toFixed(2)),
-      margemDisponivel: String((margem35 - totalEmp).toFixed(2)),
-      margemExcedida: totalEmp > margem35 ? 1 : 0,
-      valorExcedente: totalEmp > margem35 ? String((totalEmp - margem35).toFixed(2)) : '0.00',
-      aptoEmprestimo: totalEmp <= margem35 ? 1 : 0,
-      fonteRenda: dados.orgao || null,
-      dataReferencia: dados.mesReferencia || null,
+      tipo: 'Contracheque',
+      nomeArquivo: inputData.fileName,
+      storageKey: key,
+      storageUrl: pdfUrl,
+      tamanho: inputData.fileSize,
+      mimeType: 'application/pdf',
     });
 
-    await updateProgress(80, 'Salvando empréstimos...');
-    if (Array.isArray(dados.emprestimos)) {
-      for (const emp of dados.emprestimos) {
+    await updateProgress(70, 'Calculando margem consignável...');
+    // 6. Insert/Update financial data with full calculations
+    const rem = dadosExtraidos.remuneracao || {};
+    const marg = dadosExtraidos.margemConsignavel || {};
+    const remuneracaoBruta = rem.remuneracaoBruta || 0;
+    const remuneracaoLiquida = rem.remuneracaoLiquida || 0;
+    const descontoIrrf = rem.descontoIrrf || 0;
+    const descontoPrevidencia = rem.descontoPrevidencia || 0;
+    const outrosDescontos = rem.outrosDescontos || 0;
+    const margemPerc = marg.percentual || 35;
+    const margemValor = marg.valorMargem || (remuneracaoLiquida * 0.35);
+    const totalConsignacoes = marg.totalConsignacoes || 0;
+    const margemDisponivel = marg.margemDisponivel ?? (margemValor - totalConsignacoes);
+    const margemExcedida = margemDisponivel < 0 ? 1 : 0;
+    const valorExcedente = margemExcedida ? Math.abs(margemDisponivel) : 0;
+    const aptoEmprestimo = margemDisponivel > 0 ? 1 : 0;
+    const scoreRisco = margemExcedida ? 'Alto' : (margemDisponivel < margemValor * 0.1 ? 'Medio' : 'Baixo');
+
+    // Check if financial data already exists for this client
+    const existingFin = await db.select().from(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, clienteId)).limit(1);
+    if (existingFin.length > 0) {
+      await db.update(dadosFinanceiros).set({
+        remuneracaoBruta: String(remuneracaoBruta),
+        remuneracaoLiquida: String(remuneracaoLiquida),
+        descontoIrrf: String(descontoIrrf),
+        descontoPrevidencia: String(descontoPrevidencia),
+        outrosDescontos: String(outrosDescontos),
+        margemConsignavelPerc: String(margemPerc),
+        margemConsignavelValor: String(margemValor),
+        totalConsignacoes: String(totalConsignacoes),
+        margemDisponivel: String(margemDisponivel),
+        margemExcedida,
+        valorExcedente: String(valorExcedente),
+        aptoEmprestimo,
+        scoreRisco: scoreRisco as 'Baixo' | 'Medio' | 'Alto',
+        fonteRenda: dadosExtraidos.servidor?.orgaoEmpregador || 'Servidor Público',
+        dataReferencia: dadosExtraidos.referencia?.mesAno || null,
+      }).where(eq(dadosFinanceiros.clienteId, clienteId));
+    } else {
+      await db.insert(dadosFinanceiros).values({
+        clienteId,
+        remuneracaoBruta: String(remuneracaoBruta),
+        remuneracaoLiquida: String(remuneracaoLiquida),
+        descontoIrrf: String(descontoIrrf),
+        descontoPrevidencia: String(descontoPrevidencia),
+        outrosDescontos: String(outrosDescontos),
+        margemConsignavelPerc: String(margemPerc),
+        margemConsignavelValor: String(margemValor),
+        totalConsignacoes: String(totalConsignacoes),
+        margemDisponivel: String(margemDisponivel),
+        margemExcedida,
+        valorExcedente: String(valorExcedente),
+        aptoEmprestimo,
+        scoreRisco: scoreRisco as 'Baixo' | 'Medio' | 'Alto',
+        fonteRenda: dadosExtraidos.servidor?.orgaoEmpregador || 'Servidor Público',
+        dataReferencia: dadosExtraidos.referencia?.mesAno || null,
+      });
+    }
+
+    await updateProgress(80, 'Salvando empréstimos consignados...');
+    // 7. Insert/Update emprestimos consignados (replace all for this client)
+    if (dadosExtraidos.emprestimosConsignados?.length) {
+      // Delete old emprestimos for this client to avoid duplication
+      await db.delete(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, clienteId));
+      for (const emp of dadosExtraidos.emprestimosConsignados) {
         await db.insert(emprestimosConsignados).values({
           clienteId,
-          banco: emp.banco || null,
-          rubrica: emp.rubrica || null,
-          contrato: emp.contrato || null,
-          valorParcela: String(parseFloat(emp.valorParcela) || 0),
-          totalParcelas: emp.totalParcelas || null,
-          parcelasRestantes: emp.parcelasRestantes || null,
+          banco: emp.banco,
+          rubrica: emp.rubrica,
+          contrato: emp.contrato,
+          valorParcela: emp.valorParcela ? String(emp.valorParcela) : null,
+          valorTotal: emp.valorTotal ? String(emp.valorTotal) : null,
+          totalParcelas: emp.totalParcelas,
+          parcelasRestantes: emp.parcelasRestantes,
           taxaJuros: emp.taxaJuros ? String(emp.taxaJuros) : null,
+          status: 'Ativo',
         });
       }
     }
 
-    await updateProgress(90, 'Atualizando relatórios...');
-    try { await autoUpdateRelatorioCadastral(db); } catch (e) { console.error('[Jobs] Erro relatório:', e); }
+    await updateProgress(88, 'Gerando pasta do cliente...');
+    // 8. Build/update client folder
+    try {
+      await buildClientFolder(clienteId, nome, clienteCpf);
+    } catch (e) {
+      console.error('[Job] Erro ao gerar pasta do cliente:', e);
+    }
+
+    await updateProgress(94, 'Atualizando relatórios...');
+    // 9. Update relatório cadastral
+    try {
+      await autoUpdateRelatorioCadastral(db);
+      console.log(`[Job] Relatório cadastral atualizado após upload de contracheque de ${nome}`);
+    } catch (relErr) {
+      console.error('[Job] Erro ao atualizar relatório:', relErr);
+    }
 
     await updateProgress(100, 'Concluído!');
     await db.update(jobs).set({
       status: 'concluido',
       concluidoEm: new Date(),
       clienteId,
-      outputData: JSON.stringify({ clienteId, clienteNome, resumoFinanceiro: { remuneracaoBruta: remBruta, margem35, totalEmprestimos: totalEmp } }),
+      outputData: JSON.stringify({
+        clienteId,
+        clienteNome: nome,
+        cpf: cpf || 'PENDENTE',
+        referencia: dadosExtraidos.referencia?.mesAno || 'N/A',
+        resumoFinanceiro: {
+          remuneracaoBruta,
+          remuneracaoLiquida,
+          margemConsignavel: margemValor,
+          totalConsignacoes,
+          margemDisponivel,
+          margemExcedida: margemExcedida === 1,
+          aptoEmprestimo: aptoEmprestimo === 1,
+          scoreRisco,
+          totalEmprestimos: dadosExtraidos.emprestimosConsignados?.length || 0,
+        },
+        dadosExtraidos,
+        relatorioAtualizado: true,
+      }),
     }).where(eq(jobs.id, jobId));
 
   } catch (error: any) {

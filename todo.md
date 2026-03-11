@@ -132,3 +132,6 @@
 - [x] Deduplicação automática durante importação em lote (CPF + CNJ)
 - [x] Resumo final da importação em lote (total importado, erros, duplicados, conhecimentos gerados)
 - [x] Testes unitários para importação em lote (50 testes passando)
+- [x] BUG: Importação em massa não estava inserindo todos os dados (documentos, partes, empréstimos, estratégias, movimentações) - CORRIGIDO: reescrito processarJobImportacaoPdf e processarJobImportacaoContracheque com prompt completo idêntico ao upload individual
+- [x] BUG: Após upload e análise, dados agora são inseridos automaticamente na aba Clientes com informações completas (cliente, processo, financeiro, empréstimos, partes, movimentações, estratégias, conhecimentos, documentos, pasta S3)
+- [x] Verificar e corrigir fluxo completo: upload → análise → inserção automática em Clientes (69 testes passando)
