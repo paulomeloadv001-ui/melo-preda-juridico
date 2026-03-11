@@ -235,6 +235,47 @@ export const cumprimentosSentenca = mysqlTable("cumprimentos_sentenca", {
 export type CumprimentoSentenca = typeof cumprimentosSentenca.$inferSelect;
 export type InsertCumprimentoSentenca = typeof cumprimentosSentenca.$inferInsert;
 
+// ==================== MOVIMENTAÇÕES FINANCEIRAS (Depósitos, Alvarás, Honorários) ====================
+export const movimentacoesFinanceiras = mysqlTable("movimentacoes_financeiras", {
+  id: int("id").autoincrement().primaryKey(),
+  processoId: int("processoId").notNull(),
+  clienteId: int("clienteId").notNull(),
+  tipo: mysqlEnum("tipo", [
+    "deposito_judicial",      // Depósito judicial realizado
+    "alvara_levantamento",    // Alvará de levantamento expedido/cumprido
+    "honorarios_sucumbenciais", // Honorários advocatícios sucumbenciais
+    "honorarios_contratuais",  // Honorários contratuais
+    "pagamento",              // Pagamento genérico
+    "restituicao",            // Restituição de valores
+    "multa",                  // Multa processual
+    "custas",                 // Custas processuais
+  ]).notNull(),
+  status: mysqlEnum("statusMov", [
+    "pago_levantado",         // Já pago ou levantado
+    "depositado_a_levantar",  // Depositado, aguardando levantamento
+    "pendente",               // Pendente de pagamento/depósito
+    "parcial",                // Pagamento/levantamento parcial
+    "cancelado",              // Cancelado
+  ]).default("pendente").notNull(),
+  valor: decimal("valor", { precision: 15, scale: 2 }).notNull(),
+  valorLevantado: decimal("valorLevantado", { precision: 15, scale: 2 }),
+  valorPendente: decimal("valorPendente", { precision: 15, scale: 2 }),
+  dataMovimentacao: varchar("dataMovimentacao", { length: 10 }),
+  dataLevantamento: varchar("dataLevantamento", { length: 10 }),
+  descricao: text("descricao"),
+  beneficiario: varchar("beneficiario", { length: 255 }),
+  banco: varchar("banco", { length: 255 }),
+  contaDeposito: varchar("contaDeposito", { length: 100 }),
+  numeroAlvara: varchar("numeroAlvara", { length: 100 }),
+  percentualHonorarios: decimal("percentualHonorarios", { precision: 5, scale: 2 }),
+  fundamentoLegal: text("fundamentoLegal"),
+  observacoes: text("observacoes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type MovimentacaoFinanceira = typeof movimentacoesFinanceiras.$inferSelect;
+export type InsertMovimentacaoFinanceira = typeof movimentacoesFinanceiras.$inferInsert;
+
 // ==================== ANÁLISE GERAL DO ESCRITÓRIO ====================
 export const analiseGeral = mysqlTable("analise_geral", {
   id: int("id").autoincrement().primaryKey(),

@@ -8,7 +8,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, FileText, DollarSign, Scale, Download, ExternalLink, FolderOpen, BookOpen, Lightbulb, RefreshCw, Database, Trash2, Upload, Link2, GitBranch } from "lucide-react";
+import { ArrowLeft, FileText, DollarSign, Scale, Download, ExternalLink, FolderOpen, BookOpen, Lightbulb, RefreshCw, Database, Trash2, Upload, Link2, GitBranch, Banknote, Receipt, ArrowUpCircle, ArrowDownCircle, Clock, CheckCircle2, AlertCircle, TrendingUp, Landmark } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 
@@ -79,7 +81,7 @@ export default function ClientePerfil() {
     );
   }
 
-  const { cliente, dadosFinanceiros, emprestimos, processos, documentos, conhecimentos } = profile;
+  const { cliente, dadosFinanceiros, emprestimos, processos, documentos, conhecimentos, movimentacoesFinanceiras, resumoFinanceiro } = profile as any;
 
   return (
     <div className="space-y-6">
@@ -207,7 +209,7 @@ export default function ClientePerfil() {
           <CardHeader><CardTitle className="text-base">Empréstimos Consignados ({emprestimos.length})</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {emprestimos.map((emp) => (
+              {emprestimos.map((emp: any) => (
                 <div key={emp.id} className="border rounded-lg p-3 text-sm space-y-1">
                   <div className="flex justify-between">
                     <span className="font-medium">{emp.banco || "Banco não identificado"}</span>
@@ -266,7 +268,7 @@ export default function ClientePerfil() {
             <p className="text-sm text-muted-foreground text-center py-4">Nenhum processo vinculado</p>
           ) : (
             <div className="space-y-4">
-              {processos.map((proc) => (
+              {processos.map((proc: any) => (
                 <div key={proc.id} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
@@ -364,7 +366,7 @@ export default function ClientePerfil() {
                   {proc.estrategias?.length > 0 && (
                     <div className="mt-3 border-t pt-3">
                       <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Estratégia Processual</h5>
-                      {proc.estrategias.map((est) => (
+                      {proc.estrategias.map((est: any) => (
                         <div key={est.id} className="space-y-2 text-sm">
                           {est.tesePrincipal && <div><span className="text-xs text-muted-foreground">Tese Principal:</span><p className="text-sm">{est.tesePrincipal}</p></div>}
                           {est.fundamentacaoLegal && <div><span className="text-xs text-muted-foreground">Fundamentação Legal:</span><p className="text-sm">{est.fundamentacaoLegal}</p></div>}
@@ -417,13 +419,210 @@ export default function ClientePerfil() {
         </CardContent>
       </Card>
 
+      {/* ==================== ABA FINANCEIRO ==================== */}
+      <Card className="border-2 border-[oklch(0.55_0.15_145)]/30 shadow-md">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Banknote className="h-5 w-5 text-[oklch(0.55_0.15_145)]" />
+            Painel Financeiro
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">Depósitos judiciais, alvarás, honorários e pagamentos extraídos dos processos</p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Resumo Financeiro em Cards */}
+          {resumoFinanceiro && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Honorários Totais */}
+              <div className="border rounded-lg p-4 bg-[oklch(0.55_0.15_145)]/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Banknote className="h-4 w-4 text-[oklch(0.55_0.15_145)]" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">Honorários Total</span>
+                </div>
+                <p className="text-xl font-bold">{formatCurrency(resumoFinanceiro.totalHonorariosSucumbenciais)}</p>
+              </div>
+              {/* Honorários Pagos/Levantados */}
+              <div className="border rounded-lg p-4 bg-green-500/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">Pagos / Levantados</span>
+                </div>
+                <p className="text-xl font-bold text-green-700 dark:text-green-400">{formatCurrency(resumoFinanceiro.honorariosPagosLevantados)}</p>
+              </div>
+              {/* Honorários Depositados/A Levantar */}
+              <div className="border rounded-lg p-4 bg-amber-500/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-amber-600" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">Depositados / A Levantar</span>
+                </div>
+                <p className="text-xl font-bold text-amber-700 dark:text-amber-400">{formatCurrency(resumoFinanceiro.honorariosDepositadosALevantar)}</p>
+              </div>
+              {/* Honorários Pendentes */}
+              <div className="border rounded-lg p-4 bg-red-500/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">Pendentes</span>
+                </div>
+                <p className="text-xl font-bold text-red-700 dark:text-red-400">{formatCurrency(resumoFinanceiro.honorariosPendentes)}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Depósitos e Alvarás */}
+          {resumoFinanceiro && (resumoFinanceiro.totalDepositos > 0 || resumoFinanceiro.totalAlvaras > 0) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {resumoFinanceiro.totalDepositos > 0 && (
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Landmark className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-semibold">Depósitos Judiciais</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Total Depositado</span>
+                      <span className="font-medium">{formatCurrency(resumoFinanceiro.totalDepositos)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-green-600">Levantados</span>
+                      <span className="font-medium text-green-600">{formatCurrency(resumoFinanceiro.depositosLevantados)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-amber-600">A Levantar</span>
+                      <span className="font-medium text-amber-600">{formatCurrency(resumoFinanceiro.depositosALevantar)}</span>
+                    </div>
+                    <Progress value={resumoFinanceiro.totalDepositos > 0 ? (resumoFinanceiro.depositosLevantados / resumoFinanceiro.totalDepositos) * 100 : 0} className="h-2" />
+                  </div>
+                </div>
+              )}
+              {resumoFinanceiro.totalAlvaras > 0 && (
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Receipt className="h-4 w-4 text-purple-600" />
+                    <span className="text-sm font-semibold">Alvarás de Levantamento</span>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Total em Alvarás</span>
+                      <span className="font-medium">{formatCurrency(resumoFinanceiro.totalAlvaras)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-green-600">Levantados</span>
+                      <span className="font-medium text-green-600">{formatCurrency(resumoFinanceiro.alvarasLevantados)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-amber-600">Pendentes</span>
+                      <span className="font-medium text-amber-600">{formatCurrency(resumoFinanceiro.alvarasPendentes)}</span>
+                    </div>
+                    <Progress value={resumoFinanceiro.totalAlvaras > 0 ? (resumoFinanceiro.alvarasLevantados / resumoFinanceiro.totalAlvaras) * 100 : 0} className="h-2" />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Outros valores */}
+          {resumoFinanceiro && (resumoFinanceiro.totalPagamentos > 0 || resumoFinanceiro.totalRestituicoes > 0 || resumoFinanceiro.totalMultas > 0 || resumoFinanceiro.totalCustas > 0) && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {resumoFinanceiro.totalPagamentos > 0 && (
+                <div className="border rounded-lg p-3 text-center">
+                  <p className="text-xs text-muted-foreground">Pagamentos</p>
+                  <p className="text-sm font-bold">{formatCurrency(resumoFinanceiro.totalPagamentos)}</p>
+                </div>
+              )}
+              {resumoFinanceiro.totalRestituicoes > 0 && (
+                <div className="border rounded-lg p-3 text-center">
+                  <p className="text-xs text-muted-foreground">Restituições</p>
+                  <p className="text-sm font-bold">{formatCurrency(resumoFinanceiro.totalRestituicoes)}</p>
+                </div>
+              )}
+              {resumoFinanceiro.totalMultas > 0 && (
+                <div className="border rounded-lg p-3 text-center">
+                  <p className="text-xs text-muted-foreground">Multas</p>
+                  <p className="text-sm font-bold text-red-600">{formatCurrency(resumoFinanceiro.totalMultas)}</p>
+                </div>
+              )}
+              {resumoFinanceiro.totalCustas > 0 && (
+                <div className="border rounded-lg p-3 text-center">
+                  <p className="text-xs text-muted-foreground">Custas</p>
+                  <p className="text-sm font-bold">{formatCurrency(resumoFinanceiro.totalCustas)}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tabela detalhada de movimentações financeiras */}
+          {movimentacoesFinanceiras && movimentacoesFinanceiras.length > 0 ? (
+            <div>
+              <h4 className="text-sm font-semibold mb-3">Detalhamento por Movimentação ({movimentacoesFinanceiras.length})</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-2 pr-3 text-xs text-muted-foreground font-medium">Tipo</th>
+                      <th className="pb-2 pr-3 text-xs text-muted-foreground font-medium">Status</th>
+                      <th className="pb-2 pr-3 text-xs text-muted-foreground font-medium text-right">Valor</th>
+                      <th className="pb-2 pr-3 text-xs text-muted-foreground font-medium text-right">Levantado</th>
+                      <th className="pb-2 pr-3 text-xs text-muted-foreground font-medium">Data</th>
+                      <th className="pb-2 text-xs text-muted-foreground font-medium">Descrição</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {movimentacoesFinanceiras.map((mf: any) => {
+                      const tipoLabels: Record<string, string> = {
+                        deposito_judicial: 'Depósito Judicial',
+                        alvara_levantamento: 'Alvará Levantamento',
+                        honorarios_sucumbenciais: 'Hon. Sucumbenciais',
+                        honorarios_contratuais: 'Hon. Contratuais',
+                        pagamento: 'Pagamento',
+                        restituicao: 'Restituição',
+                        multa: 'Multa',
+                        custas: 'Custas',
+                      };
+                      const statusLabels: Record<string, { label: string; color: string }> = {
+                        pago_levantado: { label: 'Pago/Levantado', color: 'text-green-600 bg-green-50 dark:bg-green-950' },
+                        depositado_a_levantar: { label: 'Dep./A Levantar', color: 'text-amber-600 bg-amber-50 dark:bg-amber-950' },
+                        pendente: { label: 'Pendente', color: 'text-red-600 bg-red-50 dark:bg-red-950' },
+                        parcial: { label: 'Parcial', color: 'text-blue-600 bg-blue-50 dark:bg-blue-950' },
+                        cancelado: { label: 'Cancelado', color: 'text-gray-500 bg-gray-50 dark:bg-gray-900' },
+                      };
+                      const st = statusLabels[mf.status] || statusLabels.pendente;
+                      return (
+                        <tr key={mf.id} className="border-b last:border-0 hover:bg-accent/50">
+                          <td className="py-2.5 pr-3">
+                            <span className="font-medium">{tipoLabels[mf.tipo] || mf.tipo}</span>
+                          </td>
+                          <td className="py-2.5 pr-3">
+                            <Badge variant="outline" className={`text-xs ${st.color}`}>{st.label}</Badge>
+                          </td>
+                          <td className="py-2.5 pr-3 text-right font-mono font-medium">{formatCurrency(mf.valor)}</td>
+                          <td className="py-2.5 pr-3 text-right font-mono">
+                            {mf.valorLevantado ? formatCurrency(mf.valorLevantado) : '—'}
+                          </td>
+                          <td className="py-2.5 pr-3 text-xs text-muted-foreground">{mf.dataMovimentacao || '—'}</td>
+                          <td className="py-2.5 text-xs text-muted-foreground max-w-[200px] truncate">{mf.descricao || '—'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <Banknote className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">Nenhuma movimentação financeira registrada</p>
+              <p className="text-xs mt-1">Os dados financeiros serão extraídos automaticamente ao importar processos</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Documentos */}
       {documentos && documentos.length > 0 && (
         <Card className="border shadow-sm">
           <CardHeader><CardTitle className="text-base">Documentos ({documentos.length})</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {documentos.map((doc) => (
+              {documentos.map((doc: any) => (
                 <div key={doc.id} className="flex items-center justify-between border rounded-lg p-3">
                   <div className="flex items-center gap-3">
                     <FileText className="h-4 w-4 text-muted-foreground" />

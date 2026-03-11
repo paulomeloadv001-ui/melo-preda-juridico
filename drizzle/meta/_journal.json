@@ -64,6 +64,13 @@
       "when": 1773234723978,
       "tag": "0008_fixed_iron_lad",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1773242968253,
+      "tag": "0009_uneven_white_queen",
+      "breakpoints": true
     }
   ]
 }

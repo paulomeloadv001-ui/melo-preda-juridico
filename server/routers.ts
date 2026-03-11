@@ -8,7 +8,7 @@ import {
   clientes, processos, dadosFinanceiros, emprestimosConsignados,
   estrategias, partesProcessuais, movimentacoes, documentos,
   conhecimentos, cumprimentosSentenca, analiseGeral, relatorios, jobs,
-  accessRequests, userProfiles, users
+  accessRequests, userProfiles, users, movimentacoesFinanceiras
 } from "../drizzle/schema";
 import { eq, like, desc, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -351,8 +351,12 @@ export const appRouter = router({
           const partes = await db.select().from(partesProcessuais).where(eq(partesProcessuais.processoId, p.id));
           const movs = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, p.id)).orderBy(desc(movimentacoes.createdAt));
           const cumps = await db.select().from(cumprimentosSentenca).where(eq(cumprimentosSentenca.processoId, p.id));
-          return { ...p, estrategias: estrats, partes, movimentacoes: movs, cumprimentos: cumps };
+          const movFin = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, p.id)).orderBy(desc(movimentacoesFinanceiras.createdAt));
+          return { ...p, estrategias: estrats, partes, movimentacoes: movs, cumprimentos: cumps, movimentacoesFinanceiras: movFin };
         }));
+
+        // Buscar todas as movimentações financeiras do cliente (consolidado)
+        const todasMovFin = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.clienteId, input.id)).orderBy(desc(movimentacoesFinanceiras.createdAt));
 
         // Get knowledge for this client
         const procIds = procs.map(p => p.id);
@@ -362,6 +366,50 @@ export const appRouter = router({
           conhecimentosCliente.push(...kn);
         }
 
+        // Calcular resumo financeiro
+        const resumoFinanceiro = {
+          totalHonorariosSucumbenciais: 0,
+          honorariosPagosLevantados: 0,
+          honorariosDepositadosALevantar: 0,
+          honorariosPendentes: 0,
+          totalDepositos: 0,
+          depositosLevantados: 0,
+          depositosALevantar: 0,
+          totalAlvaras: 0,
+          alvarasLevantados: 0,
+          alvarasPendentes: 0,
+          totalPagamentos: 0,
+          totalRestituicoes: 0,
+          totalMultas: 0,
+          totalCustas: 0,
+        };
+        for (const mf of todasMovFin) {
+          const val = parseFloat(String(mf.valor || '0'));
+          const valLev = parseFloat(String(mf.valorLevantado || '0'));
+          if (mf.tipo === 'honorarios_sucumbenciais' || mf.tipo === 'honorarios_contratuais') {
+            resumoFinanceiro.totalHonorariosSucumbenciais += val;
+            if (mf.status === 'pago_levantado') resumoFinanceiro.honorariosPagosLevantados += val;
+            else if (mf.status === 'depositado_a_levantar') resumoFinanceiro.honorariosDepositadosALevantar += val;
+            else resumoFinanceiro.honorariosPendentes += val;
+          } else if (mf.tipo === 'deposito_judicial') {
+            resumoFinanceiro.totalDepositos += val;
+            if (mf.status === 'pago_levantado') resumoFinanceiro.depositosLevantados += valLev || val;
+            else resumoFinanceiro.depositosALevantar += val - (valLev || 0);
+          } else if (mf.tipo === 'alvara_levantamento') {
+            resumoFinanceiro.totalAlvaras += val;
+            if (mf.status === 'pago_levantado') resumoFinanceiro.alvarasLevantados += val;
+            else resumoFinanceiro.alvarasPendentes += val;
+          } else if (mf.tipo === 'pagamento') {
+            resumoFinanceiro.totalPagamentos += val;
+          } else if (mf.tipo === 'restituicao') {
+            resumoFinanceiro.totalRestituicoes += val;
+          } else if (mf.tipo === 'multa') {
+            resumoFinanceiro.totalMultas += val;
+          } else if (mf.tipo === 'custas') {
+            resumoFinanceiro.totalCustas += val;
+          }
+        }
+
         return {
           cliente,
           dadosFinanceiros: financeiro[0] ?? null,
@@ -369,6 +417,8 @@ export const appRouter = router({
           processos: processosComDetalhes,
           documentos: docs,
           conhecimentos: conhecimentosCliente,
+          movimentacoesFinanceiras: todasMovFin,
+          resumoFinanceiro,
           pasta: clientFolderKey(cliente.nomeCompleto, cliente.cpfCnpj),
         };
       }),
@@ -388,9 +438,11 @@ export const appRouter = router({
           await db.delete(cumprimentosSentenca).where(eq(cumprimentosSentenca.processoId, p.id));
           await db.delete(conhecimentos).where(eq(conhecimentos.processoOrigemId, p.id));
           await db.delete(documentos).where(eq(documentos.processoId, p.id));
+          await db.delete(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, p.id));
         }
         await db.delete(processos).where(eq(processos.clienteId, input.id));
         await db.delete(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, input.id));
+        await db.delete(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.clienteId, input.id));
         await db.delete(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, input.id));
         await db.delete(documentos).where(eq(documentos.clienteId, input.id));
         await db.delete(clientes).where(eq(clientes.id, input.id));
@@ -431,16 +483,41 @@ export const appRouter = router({
 
     stats: protectedProcedure.query(async () => {
       const db = await getDb();
-      if (!db) return { totalClientes: 0, totalProcessos: 0, processosAtivos: 0, valorTotalCausas: 0 };
+      if (!db) return { totalClientes: 0, totalProcessos: 0, processosAtivos: 0, valorTotalCausas: 0, honorarios: { total: 0, pagosLevantados: 0, depositadosALevantar: 0, pendentes: 0 }, depositos: { total: 0, levantados: 0, aLevantar: 0 }, alvaras: { total: 0, levantados: 0, pendentes: 0 } };
       const [cliCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(clientes);
       const [procCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(processos);
       const [ativosCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(processos).where(eq(processos.statusProcesso, "Ativo"));
       const [valorTotal] = await db.select({ total: sql<string>`COALESCE(SUM(valorCausa), 0)` }).from(processos);
+      // Honorários consolidados
+      const allMovFin = await db.select().from(movimentacoesFinanceiras);
+      const honorarios = { total: 0, pagosLevantados: 0, depositadosALevantar: 0, pendentes: 0 };
+      const depositos = { total: 0, levantados: 0, aLevantar: 0 };
+      const alvaras = { total: 0, levantados: 0, pendentes: 0 };
+      for (const mf of allMovFin) {
+        const val = parseFloat(String(mf.valor || '0'));
+        if (mf.tipo === 'honorarios_sucumbenciais' || mf.tipo === 'honorarios_contratuais') {
+          honorarios.total += val;
+          if (mf.status === 'pago_levantado') honorarios.pagosLevantados += val;
+          else if (mf.status === 'depositado_a_levantar') honorarios.depositadosALevantar += val;
+          else honorarios.pendentes += val;
+        } else if (mf.tipo === 'deposito_judicial') {
+          depositos.total += val;
+          if (mf.status === 'pago_levantado') depositos.levantados += val;
+          else depositos.aLevantar += val;
+        } else if (mf.tipo === 'alvara_levantamento') {
+          alvaras.total += val;
+          if (mf.status === 'pago_levantado') alvaras.levantados += val;
+          else alvaras.pendentes += val;
+        }
+      }
       return {
         totalClientes: cliCount?.count ?? 0,
         totalProcessos: procCount?.count ?? 0,
         processosAtivos: ativosCount?.count ?? 0,
         valorTotalCausas: parseFloat(String(valorTotal?.total ?? "0")),
+        honorarios,
+        depositos,
+        alvaras,
       };
     }),
   }),
@@ -2112,7 +2189,7 @@ ${textoExtraido}`;
           titulo: "Relatórios Financeiros",
           descricao: "Dados financeiros, empréstimos consignados, margem consignável",
           subcategorias: [
-            { id: "financeiro_margem", titulo: "Margem Consignável", descricao: "Análise de margem consignável por cliente (em breve)" },
+            { id: "financeiro_margem", titulo: "Margem Consignável", descricao: "Análise detalhada de margem consignável, empréstimos e aptidão por cliente" },
           ],
         },
         {
@@ -2120,10 +2197,312 @@ ${textoExtraido}`;
           titulo: "Relatórios Processuais",
           descricao: "Acompanhamento de processos, fases, valores, estratégias",
           subcategorias: [
-            { id: "processual_geral", titulo: "Panorama Processual", descricao: "Visão geral de todos os processos (em breve)" },
+            { id: "processual_geral", titulo: "Panorama Processual", descricao: "Visão geral de todos os processos por tipo, tribunal, status e valor" },
           ],
         },
       ];
+    }),
+
+    // ==================== RELATÓRIO DE MARGEM CONSIGNÁVEL ====================
+    dadosMargemRealtime: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return null;
+
+      const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+      const clientesPF = allClientes.filter(c => c.tipoPessoa === 'PF' && !c.cpfCnpj.startsWith('PENDENTE'));
+
+      const dadosMargem = await Promise.all(clientesPF.map(async (cli) => {
+        const financeiro = await db.select().from(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, cli.id)).limit(1);
+        const emprestimos = await db.select().from(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, cli.id));
+        const procs = await db.select().from(processos).where(eq(processos.clienteId, cli.id));
+
+        const fin = financeiro[0];
+        const remuneracaoBruta = fin ? parseFloat(String(fin.remuneracaoBruta || '0')) : 0;
+        const remuneracaoLiquida = fin ? parseFloat(String(fin.remuneracaoLiquida || '0')) : 0;
+        const margemPerc = fin ? parseFloat(String(fin.margemConsignavelPerc || '35')) : 35;
+        const margemValor = fin ? parseFloat(String(fin.margemConsignavelValor || '0')) : (remuneracaoLiquida * margemPerc / 100);
+        const totalConsignacoes = emprestimos.reduce((sum, e) => sum + parseFloat(String(e.valorParcela || '0')), 0);
+        const margemDisponivel = margemValor - totalConsignacoes;
+        const margemExcedida = totalConsignacoes > margemValor;
+        const aptoEmprestimo = !margemExcedida && margemDisponivel > 0 && remuneracaoLiquida > 0;
+        const comprometimentoPerc = remuneracaoLiquida > 0 ? (totalConsignacoes / remuneracaoLiquida * 100) : 0;
+
+        // Score de risco: 0-100 (0=alto risco, 100=baixo risco)
+        let scoreRisco = 100;
+        if (margemExcedida) scoreRisco -= 40;
+        if (comprometimentoPerc > 50) scoreRisco -= 20;
+        else if (comprometimentoPerc > 35) scoreRisco -= 10;
+        if (emprestimos.length > 5) scoreRisco -= 15;
+        else if (emprestimos.length > 3) scoreRisco -= 5;
+        if (remuneracaoLiquida === 0) scoreRisco -= 25;
+        scoreRisco = Math.max(0, Math.min(100, scoreRisco));
+
+        return {
+          id: cli.id,
+          nomeCompleto: cli.nomeCompleto,
+          cpfCnpj: cli.cpfCnpj,
+          profissao: cli.profissao,
+          cargo: cli.cargo,
+          orgaoEmpregador: cli.orgaoEmpregador,
+          remuneracaoBruta,
+          remuneracaoLiquida,
+          margemPerc,
+          margemValor,
+          totalConsignacoes,
+          margemDisponivel,
+          margemExcedida,
+          aptoEmprestimo,
+          comprometimentoPerc,
+          scoreRisco,
+          totalEmprestimos: emprestimos.length,
+          emprestimosAtivos: emprestimos.filter(e => e.status === 'Ativo').length,
+          emprestimos: emprestimos.map(e => ({
+            banco: e.banco,
+            contrato: e.contrato,
+            valorParcela: parseFloat(String(e.valorParcela || '0')),
+            totalParcelas: e.totalParcelas,
+            parcelasRestantes: e.parcelasRestantes,
+            saldoDevedor: parseFloat(String(e.valorTotal || '0')),
+            taxaJuros: e.taxaJuros,
+            status: e.status,
+          })),
+          totalProcessos: procs.length,
+          valorTotalCausas: procs.reduce((sum, p) => sum + parseFloat(String(p.valorCausa || '0')), 0),
+          fonteRenda: fin?.fonteRenda || null,
+          temDadosFinanceiros: !!fin,
+        };
+      }));
+
+      // Estatísticas consolidadas
+      const comDados = dadosMargem.filter(c => c.temDadosFinanceiros);
+      const semDados = dadosMargem.filter(c => !c.temDadosFinanceiros);
+      const aptos = dadosMargem.filter(c => c.aptoEmprestimo);
+      const excedidos = dadosMargem.filter(c => c.margemExcedida);
+      const totalMargemDisponivel = comDados.reduce((sum, c) => sum + Math.max(0, c.margemDisponivel), 0);
+      const totalConsignacoes = comDados.reduce((sum, c) => sum + c.totalConsignacoes, 0);
+      const totalRemuneracaoLiquida = comDados.reduce((sum, c) => sum + c.remuneracaoLiquida, 0);
+      const mediaComprometimento = comDados.length > 0 ? comDados.reduce((sum, c) => sum + c.comprometimentoPerc, 0) / comDados.length : 0;
+      const mediaScore = comDados.length > 0 ? comDados.reduce((sum, c) => sum + c.scoreRisco, 0) / comDados.length : 0;
+
+      return {
+        dataConsulta: new Date().toISOString(),
+        totalClientes: dadosMargem.length,
+        clientesComDados: comDados.length,
+        clientesSemDados: semDados.length,
+        clientesAptos: aptos.length,
+        clientesExcedidos: excedidos.length,
+        totalMargemDisponivel,
+        totalConsignacoes,
+        totalRemuneracaoLiquida,
+        mediaComprometimento,
+        mediaScore,
+        clientes: dadosMargem,
+      };
+    }),
+
+    gerarMargemConsignavel: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      // Reutilizar lógica do dadosMargemRealtime
+      const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+      const clientesPF = allClientes.filter(c => c.tipoPessoa === 'PF' && !c.cpfCnpj.startsWith('PENDENTE'));
+
+      const dadosMargem = await Promise.all(clientesPF.map(async (cli) => {
+        const financeiro = await db.select().from(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, cli.id)).limit(1);
+        const emprestimos = await db.select().from(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, cli.id));
+        const fin = financeiro[0];
+        const remuneracaoLiquida = fin ? parseFloat(String(fin.remuneracaoLiquida || '0')) : 0;
+        const margemValor = fin ? parseFloat(String(fin.margemConsignavelValor || '0')) : (remuneracaoLiquida * 0.35);
+        const totalConsignacoes = emprestimos.reduce((sum, e) => sum + parseFloat(String(e.valorParcela || '0')), 0);
+        return {
+          nomeCompleto: cli.nomeCompleto,
+          cpfCnpj: cli.cpfCnpj,
+          remuneracaoBruta: fin ? parseFloat(String(fin.remuneracaoBruta || '0')) : 0,
+          remuneracaoLiquida,
+          margemValor,
+          totalConsignacoes,
+          margemDisponivel: margemValor - totalConsignacoes,
+          margemExcedida: totalConsignacoes > margemValor,
+          aptoEmprestimo: totalConsignacoes <= margemValor && (margemValor - totalConsignacoes) > 0 && remuneracaoLiquida > 0,
+          totalEmprestimos: emprestimos.length,
+        };
+      }));
+
+      const relatorioData = {
+        titulo: 'Relatório de Margem Consignável',
+        dataGeracao: new Date().toISOString(),
+        escritorio: 'Melo & Preda Advogados',
+        totalClientes: dadosMargem.length,
+        clientes: dadosMargem,
+      };
+
+      const storageKey = `relatorios/margem/RELATORIO_MARGEM_${new Date().toISOString().split('T')[0].replace(/-/g, '')}.json`;
+      const { url } = await storagePut(storageKey, JSON.stringify(relatorioData, null, 2), 'application/json');
+
+      const existingReport = await db.select().from(relatorios).where(eq(relatorios.tipoRelatorio, 'financeiro_margem')).limit(1);
+      let relatorioId: number;
+      if (existingReport.length > 0) {
+        await db.update(relatorios).set({
+          titulo: 'Relatório de Margem Consignável',
+          descricao: `Análise de margem consignável de ${dadosMargem.length} clientes. Gerado em ${new Date().toLocaleString('pt-BR')}.`,
+          storageKey, storageUrl: url, dadosJson: relatorioData as any,
+        }).where(eq(relatorios.id, existingReport[0].id));
+        relatorioId = existingReport[0].id;
+      } else {
+        const [inserted] = await db.insert(relatorios).values({
+          titulo: 'Relatório de Margem Consignável',
+          categoria: 'Financeiro', subcategoria: 'Margem Consignável',
+          descricao: `Análise de margem consignável de ${dadosMargem.length} clientes. Gerado em ${new Date().toLocaleString('pt-BR')}.`,
+          tipoRelatorio: 'financeiro_margem', formato: 'JSON',
+          storageKey, storageUrl: url, dadosJson: relatorioData as any, geradoPor: 'Sistema',
+        }).$returningId();
+        relatorioId = inserted.id;
+      }
+
+      return { success: true, relatorioId, url, totalClientes: dadosMargem.length, dados: relatorioData };
+    }),
+
+    // ==================== RELATÓRIO PANORAMA PROCESSUAL ====================
+    dadosPanoramaRealtime: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return null;
+
+      const allProcessos = await db.select().from(processos).orderBy(desc(processos.updatedAt));
+      const allClientes = await db.select().from(clientes);
+      const allEstrategias = await db.select().from(estrategias);
+      const allMovimentacoes = await db.select().from(movimentacoes);
+      const allPartes = await db.select().from(partesProcessuais);
+
+      // Mapas auxiliares
+      const clienteMap = new Map(allClientes.map(c => [c.id, c]));
+
+      // Processos enriquecidos
+      const processosEnriquecidos = allProcessos.map(p => {
+        const cli = clienteMap.get(p.clienteId);
+        const ests = allEstrategias.filter(e => e.processoId === p.id);
+        const movs = allMovimentacoes.filter(m => m.processoId === p.id);
+        const pts = allPartes.filter(pt => pt.processoId === p.id);
+        return {
+          id: p.id,
+          numeroCnj: p.numeroCnj,
+          tribunal: p.tribunal,
+          vara: p.vara,
+          comarca: p.comarca,
+          tipoAcao: p.tipoAcao,
+          faseAtual: p.faseAtual,
+          statusProcesso: p.statusProcesso,
+          valorCausa: parseFloat(String(p.valorCausa || '0')),
+          dataDistribuicao: p.dataDistribuicao,
+          poloPassivo: p.poloPassivo,
+          clienteNome: cli?.nomeCompleto || 'N/A',
+          clienteCpf: cli?.cpfCnpj || 'N/A',
+          totalEstrategias: ests.length,
+          totalMovimentacoes: movs.length,
+          totalPartes: pts.length,
+          tesePrincipal: ests[0]?.tesePrincipal || null,
+          ultimaMovimentacao: movs.length > 0 ? movs[0]?.descricao : null,
+        };
+      });
+
+      // Agrupamentos
+      const porTipoAcao: Record<string, number> = {};
+      const porTribunal: Record<string, number> = {};
+      const porStatus: Record<string, number> = {};
+      const porFase: Record<string, number> = {};
+      const porComarca: Record<string, number> = {};
+      let valorTotal = 0;
+      let valorAtivos = 0;
+
+      for (const p of processosEnriquecidos) {
+        const tipo = p.tipoAcao || 'Não informado';
+        const trib = p.tribunal || 'Não informado';
+        const status = p.statusProcesso || 'Não informado';
+        const fase = p.faseAtual || 'Não informada';
+        const comarca = p.comarca || 'Não informada';
+        porTipoAcao[tipo] = (porTipoAcao[tipo] || 0) + 1;
+        porTribunal[trib] = (porTribunal[trib] || 0) + 1;
+        porStatus[status] = (porStatus[status] || 0) + 1;
+        porFase[fase] = (porFase[fase] || 0) + 1;
+        porComarca[comarca] = (porComarca[comarca] || 0) + 1;
+        valorTotal += p.valorCausa;
+        if (status === 'Ativo') valorAtivos += p.valorCausa;
+      }
+
+      // Polo passivo mais frequente
+      const poloPassivoCount: Record<string, number> = {};
+      for (const p of processosEnriquecidos) {
+        if (p.poloPassivo) {
+          poloPassivoCount[p.poloPassivo] = (poloPassivoCount[p.poloPassivo] || 0) + 1;
+        }
+      }
+      const polosPassivos = Object.entries(poloPassivoCount).sort((a, b) => b[1] - a[1]).map(([nome, qtd]) => ({ nome, qtd }));
+
+      return {
+        dataConsulta: new Date().toISOString(),
+        totalProcessos: allProcessos.length,
+        totalClientes: allClientes.length,
+        valorTotal,
+        valorAtivos,
+        totalEstrategias: allEstrategias.length,
+        totalMovimentacoes: allMovimentacoes.length,
+        porTipoAcao: Object.entries(porTipoAcao).sort((a, b) => b[1] - a[1]).map(([tipo, qtd]) => ({ tipo, qtd })),
+        porTribunal: Object.entries(porTribunal).sort((a, b) => b[1] - a[1]).map(([tribunal, qtd]) => ({ tribunal, qtd })),
+        porStatus: Object.entries(porStatus).sort((a, b) => b[1] - a[1]).map(([status, qtd]) => ({ status, qtd })),
+        porFase: Object.entries(porFase).sort((a, b) => b[1] - a[1]).map(([fase, qtd]) => ({ fase, qtd })),
+        porComarca: Object.entries(porComarca).sort((a, b) => b[1] - a[1]).map(([comarca, qtd]) => ({ comarca, qtd })),
+        polosPassivos,
+        processos: processosEnriquecidos,
+      };
+    }),
+
+    gerarPanoramaProcessual: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+
+      const allProcessos = await db.select().from(processos).orderBy(desc(processos.updatedAt));
+      const allClientes = await db.select().from(clientes);
+      const clienteMap = new Map(allClientes.map(c => [c.id, c]));
+
+      const processosData = allProcessos.map(p => {
+        const cli = clienteMap.get(p.clienteId);
+        return {
+          numeroCnj: p.numeroCnj, tribunal: p.tribunal, vara: p.vara, comarca: p.comarca,
+          tipoAcao: p.tipoAcao, faseAtual: p.faseAtual, statusProcesso: p.statusProcesso,
+          valorCausa: p.valorCausa, dataDistribuicao: p.dataDistribuicao, poloPassivo: p.poloPassivo,
+          clienteNome: cli?.nomeCompleto || 'N/A', clienteCpf: cli?.cpfCnpj || 'N/A',
+        };
+      });
+
+      const relatorioData = {
+        titulo: 'Panorama Processual', dataGeracao: new Date().toISOString(),
+        escritorio: 'Melo & Preda Advogados', totalProcessos: allProcessos.length, processos: processosData,
+      };
+
+      const storageKey = `relatorios/panorama/PANORAMA_PROCESSUAL_${new Date().toISOString().split('T')[0].replace(/-/g, '')}.json`;
+      const { url } = await storagePut(storageKey, JSON.stringify(relatorioData, null, 2), 'application/json');
+
+      const existingReport = await db.select().from(relatorios).where(eq(relatorios.tipoRelatorio, 'processual_geral')).limit(1);
+      let relatorioId: number;
+      if (existingReport.length > 0) {
+        await db.update(relatorios).set({
+          titulo: 'Panorama Processual',
+          descricao: `Panorama de ${allProcessos.length} processos. Gerado em ${new Date().toLocaleString('pt-BR')}.`,
+          storageKey, storageUrl: url, dadosJson: relatorioData as any,
+        }).where(eq(relatorios.id, existingReport[0].id));
+        relatorioId = existingReport[0].id;
+      } else {
+        const [inserted] = await db.insert(relatorios).values({
+          titulo: 'Panorama Processual',
+          categoria: 'Processual', subcategoria: 'Panorama Geral',
+          descricao: `Panorama de ${allProcessos.length} processos. Gerado em ${new Date().toLocaleString('pt-BR')}.`,
+          tipoRelatorio: 'processual_geral', formato: 'JSON',
+          storageKey, storageUrl: url, dadosJson: relatorioData as any, geradoPor: 'Sistema',
+        }).$returningId();
+        relatorioId = inserted.id;
+      }
+
+      return { success: true, relatorioId, url, totalProcessos: allProcessos.length, dados: relatorioData };
     }),
   }),
 
@@ -2391,6 +2770,141 @@ ${textoExtraido}`;
       if (!db) return { removidos: 0 };
       const result = await db.delete(jobs).where(eq(jobs.status, 'concluido'));
       return { removidos: result[0]?.affectedRows || 0 };
+    }),
+
+    // Reprocessar dados financeiros de TODOS os processos existentes
+    reprocessarFinanceiro: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      
+      // Buscar todos os processos com seus documentos
+      const allProcessos = await db.select().from(processos);
+      let processados = 0;
+      let erros = 0;
+      let movimentacoesInseridas = 0;
+      
+      for (const proc of allProcessos) {
+        try {
+          // Buscar documento PDF do processo
+          const docs = await db.select().from(documentos).where(eq(documentos.processoId, proc.id)).limit(1);
+          if (!docs.length || !docs[0].storageUrl) continue;
+          
+          // Verificar se já tem movimentações financeiras
+          const existentes = await db.select({ count: sql<number>`COUNT(*)` }).from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, proc.id));
+          if ((existentes[0]?.count || 0) > 0) {
+            processados++;
+            continue; // Já tem dados financeiros
+          }
+          
+          // Baixar o PDF do S3
+          let textoExtraido = '';
+          try {
+            const response = await fetch(docs[0].storageUrl);
+            if (response.ok) {
+              const pdfBuffer = Buffer.from(await response.arrayBuffer());
+              const pdfParse = (await import('pdf-parse') as any).default || (await import('pdf-parse'));
+              const pdfData = await pdfParse(pdfBuffer);
+              textoExtraido = pdfData.text || '';
+            }
+          } catch (e) {
+            console.error(`[ReprocessFinanceiro] Erro ao baixar PDF do processo ${proc.id}:`, e);
+            erros++;
+            continue;
+          }
+          
+          if (!textoExtraido.trim()) { erros++; continue; }
+          
+          // Analisar com IA focando APENAS em movimentações financeiras
+          const textoTruncado = textoExtraido.substring(0, 40000);
+          const prompt = `Analise o texto deste processo judicial e extraia TODAS as movimentações financeiras.
+
+Procure por:
+- Depósitos judiciais (valores depositados em juízo)
+- Alvarás de levantamento (expedidos ou cumpridos)
+- Honorários advocatícios sucumbenciais (fixados em sentença, pagos ou a pagar)
+- Pagamentos realizados
+- Restituições
+- Multas
+- Custas processuais
+- Valores de condenação
+- Cumprimentos de sentença com valores
+
+Para cada movimentação, classifique:
+- tipo: deposito_judicial | alvara_levantamento | honorarios_sucumbenciais | honorarios_contratuais | pagamento | restituicao | multa | custas
+- status: pago_levantado | depositado_a_levantar | pendente | parcial
+- valor: número
+
+Se o processo menciona valor da causa de R$ ${proc.valorCausa || '0'} e tipo de ação "${proc.tipoAcao || ''}", considere:
+- Se há sentença com honorários sucumbenciais, extraia com percentual e valor
+- Se é cumprimento de sentença, extraia os valores executados
+
+Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", "valor": number, "valorLevantado": number|null, "valorPendente": number|null, "dataMovimentacao": "DD/MM/YYYY"|null, "dataLevantamento": "DD/MM/YYYY"|null, "descricao": "...", "beneficiario": "..."|null, "banco": "..."|null, "contaDeposito": "..."|null, "numeroAlvara": "..."|null, "percentualHonorarios": number|null, "fundamentoLegal": "..."|null } ] }
+
+Se não encontrar nenhuma movimentação financeira explícita, mas o processo tem valor da causa, gere ao menos uma entrada de honorários sucumbenciais pendentes (10% do valor da causa como padrão).
+
+TEXTO DO PROCESSO:\n${textoTruncado}`;
+          
+          try {
+            const result = await invokeLLM({
+              messages: [
+                { role: 'system', content: 'Você é um extrator de dados financeiros jurídicos. Responda APENAS com JSON válido.' },
+                { role: 'user', content: prompt }
+              ],
+              responseFormat: { type: 'json_object' },
+            });
+            const content = result.choices[0]?.message?.content;
+            const textContent = typeof content === 'string' ? content : Array.isArray(content) ? content.map((c: any) => c.type === 'text' ? c.text : '').join('') : '';
+            const dados = JSON.parse(textContent);
+            
+            if (dados.movimentacoesFinanceiras?.length) {
+              for (const mf of dados.movimentacoesFinanceiras) {
+                const tiposValidos = ['deposito_judicial','alvara_levantamento','honorarios_sucumbenciais','honorarios_contratuais','pagamento','restituicao','multa','custas'];
+                const statusValidos = ['pago_levantado','depositado_a_levantar','pendente','parcial','cancelado'];
+                const tipoMov = tiposValidos.includes(mf.tipo) ? mf.tipo : 'pagamento';
+                const statusMov = statusValidos.includes(mf.status) ? mf.status : 'pendente';
+                const valorNum = parseFloat(String(mf.valor || '0'));
+                if (valorNum > 0) {
+                  await db.insert(movimentacoesFinanceiras).values({
+                    processoId: proc.id,
+                    clienteId: proc.clienteId,
+                    tipo: tipoMov as any,
+                    status: statusMov as any,
+                    valor: String(valorNum),
+                    valorLevantado: mf.valorLevantado ? String(mf.valorLevantado) : null,
+                    valorPendente: mf.valorPendente ? String(mf.valorPendente) : null,
+                    dataMovimentacao: mf.dataMovimentacao || null,
+                    dataLevantamento: mf.dataLevantamento || null,
+                    descricao: mf.descricao || null,
+                    beneficiario: mf.beneficiario || null,
+                    banco: mf.banco || null,
+                    contaDeposito: mf.contaDeposito || null,
+                    numeroAlvara: mf.numeroAlvara || null,
+                    percentualHonorarios: mf.percentualHonorarios ? String(mf.percentualHonorarios) : null,
+                    fundamentoLegal: mf.fundamentoLegal || null,
+                  });
+                  movimentacoesInseridas++;
+                }
+              }
+            }
+            processados++;
+          } catch (e) {
+            console.error(`[ReprocessFinanceiro] Erro IA processo ${proc.id}:`, e);
+            erros++;
+          }
+        } catch (e) {
+          console.error(`[ReprocessFinanceiro] Erro geral processo ${proc.id}:`, e);
+          erros++;
+        }
+      }
+      
+      return {
+        success: true,
+        totalProcessos: allProcessos.length,
+        processados,
+        erros,
+        movimentacoesInseridas,
+        message: `Reprocessamento financeiro concluído: ${processados} processos analisados, ${movimentacoesInseridas} movimentações financeiras inseridas, ${erros} erros`,
+      };
     }),
   }),
 
@@ -2766,8 +3280,34 @@ Retorne um JSON com esta estrutura exata:
       "descricao": "descrição detalhada do evento",
       "numero_evento": "número do evento PROJUDI se mencionado, ou null"
     }
+  ],
+  "movimentacoesFinanceiras": [
+    {
+      "tipo": "deposito_judicial|alvara_levantamento|honorarios_sucumbenciais|honorarios_contratuais|pagamento|restituicao|multa|custas",
+      "status": "pago_levantado|depositado_a_levantar|pendente|parcial",
+      "valor": "number (valor total)",
+      "valorLevantado": "number ou null (valor já levantado/pago)",
+      "valorPendente": "number ou null (valor ainda pendente)",
+      "dataMovimentacao": "DD/MM/YYYY ou null",
+      "dataLevantamento": "DD/MM/YYYY ou null",
+      "descricao": "string descritiva",
+      "beneficiario": "string ou null (quem recebeu/receberá)",
+      "banco": "string ou null (banco do depósito)",
+      "contaDeposito": "string ou null",
+      "numeroAlvara": "string ou null (número do alvará se houver)",
+      "percentualHonorarios": "number ou null (% de honorários sucumbenciais)",
+      "fundamentoLegal": "string ou null (artigo/fundamento legal)"
+    }
   ]
 }
+
+ATENÇÃO ESPECIAL PARA MOVIMENTAÇÕES FINANCEIRAS:
+- Identifique TODOS os depósitos judiciais mencionados no processo
+- Identifique TODOS os alvarás de levantamento expedidos ou cumpridos
+- Identifique TODOS os honorários advocatícios sucumbenciais (fixados em sentença, pagos ou a pagar)
+- Para cada honorário sucumbencial, classifique se foi PAGO/LEVANTADO ou se está DEPOSITADO/A LEVANTAR
+- Identifique pagamentos, restituições, multas e custas processuais
+- Se houver cumprimento de sentença, extraia os valores de execução como movimentações financeiras
 
 TEXTO DO PROCESSO:
 ${textoTruncado}`;
@@ -3019,6 +3559,59 @@ ${textoTruncado}`;
           data: mov.data || null,
           evento: (mov.evento || 'Movimentação').substring(0, 500),
           descricao: (numEvento + (mov.descricao || '')).substring(0, 5000),
+        });
+      }
+    }
+
+    await updateProgress(82, 'Salvando movimentações financeiras...');
+    // 9.7. Insert movimentacoes financeiras (depósitos, alvarás, honorários)
+    if (dadosExtraidos.movimentacoesFinanceiras?.length) {
+      for (const mf of dadosExtraidos.movimentacoesFinanceiras) {
+        const tiposValidos = ['deposito_judicial','alvara_levantamento','honorarios_sucumbenciais','honorarios_contratuais','pagamento','restituicao','multa','custas'];
+        const statusValidos = ['pago_levantado','depositado_a_levantar','pendente','parcial','cancelado'];
+        const tipoMov = tiposValidos.includes(mf.tipo) ? mf.tipo : 'pagamento';
+        const statusMov = statusValidos.includes(mf.status) ? mf.status : 'pendente';
+        const valorNum = parseFloat(String(mf.valor || '0'));
+        if (valorNum > 0) {
+          await db.insert(movimentacoesFinanceiras).values({
+            processoId,
+            clienteId,
+            tipo: tipoMov as any,
+            status: statusMov as any,
+            valor: String(valorNum),
+            valorLevantado: mf.valorLevantado ? String(mf.valorLevantado) : null,
+            valorPendente: mf.valorPendente ? String(mf.valorPendente) : null,
+            dataMovimentacao: mf.dataMovimentacao || null,
+            dataLevantamento: mf.dataLevantamento || null,
+            descricao: mf.descricao || null,
+            beneficiario: mf.beneficiario || null,
+            banco: mf.banco || null,
+            contaDeposito: mf.contaDeposito || null,
+            numeroAlvara: mf.numeroAlvara || null,
+            percentualHonorarios: mf.percentualHonorarios ? String(mf.percentualHonorarios) : null,
+            fundamentoLegal: mf.fundamentoLegal || null,
+          });
+        }
+      }
+    }
+    // Também gerar honorários sucumbenciais a partir da sentença se não vieram nas movimentações
+    const sentData = dadosExtraidos.sentenca || {};
+    const jaTemHonorarios = dadosExtraidos.movimentacoesFinanceiras?.some((m: any) => m.tipo === 'honorarios_sucumbenciais');
+    if (!jaTemHonorarios && (sentData.honorariosPerc || dadosExtraidos.processo?.valorCausa)) {
+      const valorCausa = parseFloat(String(dadosExtraidos.processo?.valorCausa || '0'));
+      const percHon = parseFloat(String(sentData.honorariosPerc || '10'));
+      const valorHon = valorCausa > 0 ? valorCausa * (percHon / 100) : 0;
+      if (valorHon > 0) {
+        const statusHon = sentData.resultado && (sentData.resultado.toLowerCase().includes('procedente') || sentData.resultado.toLowerCase().includes('acordo')) ? 'depositado_a_levantar' : 'pendente';
+        await db.insert(movimentacoesFinanceiras).values({
+          processoId,
+          clienteId,
+          tipo: 'honorarios_sucumbenciais',
+          status: statusHon as any,
+          valor: String(valorHon),
+          percentualHonorarios: String(percHon),
+          descricao: `Honorários sucumbenciais de ${percHon}% sobre valor da causa (R$ ${valorCausa.toFixed(2)})`,
+          fundamentoLegal: 'Art. 85 do CPC',
         });
       }
     }

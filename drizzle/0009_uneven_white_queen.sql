@@ -1,0 +1,22 @@
+CREATE TABLE `movimentacoes_financeiras` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`processoId` int NOT NULL,
+	`clienteId` int NOT NULL,
+	`tipo` enum('deposito_judicial','alvara_levantamento','honorarios_sucumbenciais','honorarios_contratuais','pagamento','restituicao','multa','custas') NOT NULL,
+	`statusMov` enum('pago_levantado','depositado_a_levantar','pendente','parcial','cancelado') NOT NULL DEFAULT 'pendente',
+	`valor` decimal(15,2) NOT NULL,
+	`valorLevantado` decimal(15,2),
+	`valorPendente` decimal(15,2),
+	`dataMovimentacao` varchar(10),
+	`dataLevantamento` varchar(10),
+	`descricao` text,
+	`beneficiario` varchar(255),
+	`banco` varchar(255),
+	`contaDeposito` varchar(100),
+	`numeroAlvara` varchar(100),
+	`percentualHonorarios` decimal(5,2),
+	`fundamentoLegal` text,
+	`observacoes` text,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `movimentacoes_financeiras_id` PRIMARY KEY(`id`)
+);

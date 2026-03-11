@@ -19,7 +19,8 @@ import {
 import {
   FileText, RefreshCw, Trash2, Download, FileBarChart, Users, Scale,
   ChevronDown, ChevronRight, Eye, Pencil, FolderOpen, Clock, CheckCircle2,
-  Building2, Briefcase, CreditCard, AlertCircle
+  Building2, Briefcase, CreditCard, AlertCircle, TrendingUp, TrendingDown,
+  ShieldCheck, ShieldAlert, Percent, Landmark, MapPin, Gavel
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -57,6 +58,18 @@ export default function Relatorios() {
   // Categorias disponíveis
   const categorias = trpc.relatorios.categorias.useQuery();
 
+  // Dados de Margem Consignável
+  const dadosMargem = trpc.relatorios.dadosMargemRealtime.useQuery(undefined, {
+    refetchInterval: 30000,
+    enabled: activeSection === 'financeiro_margem',
+  });
+
+  // Dados de Panorama Processual
+  const dadosPanorama = trpc.relatorios.dadosPanoramaRealtime.useQuery(undefined, {
+    refetchInterval: 30000,
+    enabled: activeSection === 'processual_geral',
+  });
+
   // Mutations
   const gerarCadastral = trpc.relatorios.gerarCadastral.useMutation({
     onSuccess: (data) => {
@@ -65,6 +78,24 @@ export default function Relatorios() {
       relatoriosList.refetch();
     },
     onError: (e) => toast.error(`Erro ao gerar relatório: ${e.message}`),
+  });
+
+  const gerarMargem = trpc.relatorios.gerarMargemConsignavel.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Relatório de margem gerado! ${data.totalClientes} clientes analisados.`);
+      dadosMargem.refetch();
+      relatoriosList.refetch();
+    },
+    onError: (e) => toast.error(`Erro: ${e.message}`),
+  });
+
+  const gerarPanorama = trpc.relatorios.gerarPanoramaProcessual.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Panorama gerado! ${data.totalProcessos} processos analisados.`);
+      dadosPanorama.refetch();
+      relatoriosList.refetch();
+    },
+    onError: (e) => toast.error(`Erro: ${e.message}`),
   });
 
   const deleteRelatorio = trpc.relatorios.delete.useMutation({
@@ -680,20 +711,266 @@ export default function Relatorios() {
         </div>
       )}
 
-      {/* Seções em breve */}
-      {(activeSection === "financeiro_margem" || activeSection === "processual_geral") && (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <FileBarChart className="h-16 w-16 text-muted-foreground/30 mb-4" />
-            <h3 className="font-semibold text-lg">Relatório em Desenvolvimento</h3>
-            <p className="text-muted-foreground text-sm mt-1 max-w-md">
-              {activeSection === "financeiro_margem"
-                ? "O relatório de Margem Consignável com análise detalhada por cliente será disponibilizado em breve."
-                : "O panorama processual com acompanhamento de fases e valores será disponibilizado em breve."}
-            </p>
-            <Badge variant="outline" className="mt-4">Em breve</Badge>
-          </CardContent>
-        </Card>
+      {/* ==================== RELATÓRIO MARGEM CONSIGNÁVEL ==================== */}
+      {activeSection === "financeiro_margem" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Percent className="h-5 w-5 text-[oklch(0.55_0.15_145)]" />
+                Relatório de Margem Consignável
+              </h2>
+              <p className="text-sm text-muted-foreground">Análise financeira detalhada por cliente com margem disponível</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => gerarMargem.mutate()}
+                disabled={gerarMargem.isPending}
+                className="bg-[oklch(0.55_0.15_145)] hover:bg-[oklch(0.50_0.15_145)] text-white"
+              >
+                {gerarMargem.isPending ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Gerando...</> : <><FileBarChart className="h-4 w-4 mr-2" />Gerar Relatório</>}
+              </Button>
+            </div>
+          </div>
+
+          {dadosMargem.isLoading ? (
+            <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}</div>
+          ) : dadosMargem.data && dadosMargem.data.clientes.length > 0 ? (
+            <>
+              {/* Resumo */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <Card className="border shadow-sm">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-xs text-muted-foreground">Clientes com Dados</p>
+                    <p className="text-2xl font-bold">{dadosMargem.data.clientesComDados}</p>
+                  </CardContent>
+                </Card>
+                <Card className="border shadow-sm">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-xs text-muted-foreground">Comprometimento Médio</p>
+                    <p className={`text-2xl font-bold ${(dadosMargem.data.mediaComprometimento || 0) > 35 ? 'text-red-600' : (dadosMargem.data.mediaComprometimento || 0) > 20 ? 'text-amber-600' : 'text-green-600'}`}>{(dadosMargem.data.mediaComprometimento || 0).toFixed(1)}%</p>
+                  </CardContent>
+                </Card>
+                <Card className="border shadow-sm">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-xs text-muted-foreground">Total Consignações</p>
+                    <p className="text-lg font-bold">{formatCurrency(String(dadosMargem.data.totalConsignacoes || 0))}</p>
+                  </CardContent>
+                </Card>
+                <Card className="border shadow-sm">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-xs text-muted-foreground">Rem. Bruta Total</p>
+                    <p className="text-lg font-bold">{formatCurrency(String(dadosMargem.data.totalRemuneracaoLiquida || 0))}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Tabela de clientes */}
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs">Cliente</TableHead>
+                          <TableHead className="text-xs text-right">Rem. Bruta</TableHead>
+                          <TableHead className="text-xs text-right">Rem. Líquida</TableHead>
+                          <TableHead className="text-xs text-right">Total Consig.</TableHead>
+                          <TableHead className="text-xs text-right">Margem %</TableHead>
+                          <TableHead className="text-xs text-right">Margem R$</TableHead>
+                          <TableHead className="text-xs text-center">Empréstimos</TableHead>
+                          <TableHead className="text-xs">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {dadosMargem.data.clientes.map((cli: any) => {
+                          const margPerc = parseFloat(cli.margemPerc || '0');
+                          const statusColor = margPerc > 20 ? 'text-green-600' : margPerc > 5 ? 'text-amber-600' : 'text-red-600';
+                          const statusIcon = margPerc > 20 ? <TrendingUp className="h-3 w-3" /> : margPerc > 5 ? <ShieldAlert className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />;
+                          const statusLabel = margPerc > 20 ? 'Saudável' : margPerc > 5 ? 'Atenção' : 'Comprometida';
+                          return (
+                            <TableRow key={cli.id}>
+                              <TableCell className="py-2">
+                                <p className="text-sm font-medium">{cli.nomeCompleto}</p>
+                                <p className="text-xs text-muted-foreground">{cli.orgaoEmpregador || cli.profissao || '—'}</p>
+                              </TableCell>
+                              <TableCell className="py-2 text-right font-mono text-sm">{formatCurrency(cli.remuneracaoBruta)}</TableCell>
+                              <TableCell className="py-2 text-right font-mono text-sm">{formatCurrency(cli.remuneracaoLiquida)}</TableCell>
+                              <TableCell className="py-2 text-right font-mono text-sm">{formatCurrency(cli.totalConsignacoes)}</TableCell>
+                              <TableCell className={`py-2 text-right font-bold text-sm ${statusColor}`}>{margPerc.toFixed(1)}%</TableCell>
+                              <TableCell className="py-2 text-right font-mono text-sm">{formatCurrency(cli.margemValor)}</TableCell>
+                              <TableCell className="py-2 text-center">
+                                <Badge variant="outline" className="text-xs">{cli.totalEmprestimos || 0}</Badge>
+                              </TableCell>
+                              <TableCell className="py-2">
+                                <Badge variant="outline" className={`text-xs ${statusColor}`}>
+                                  {statusIcon} <span className="ml-1">{statusLabel}</span>
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <Percent className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="font-semibold text-lg">Nenhum dado de margem disponível</h3>
+                <p className="text-muted-foreground text-sm mt-1">Importe contracheques para extrair dados financeiros</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ==================== PANORAMA PROCESSUAL ==================== */}
+      {activeSection === "processual_geral" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Gavel className="h-5 w-5 text-[oklch(0.55_0.12_250)]" />
+                Panorama Processual
+              </h2>
+              <p className="text-sm text-muted-foreground">Visão consolidada de todos os processos com fases, valores e status</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => gerarPanorama.mutate()}
+                disabled={gerarPanorama.isPending}
+                className="bg-[oklch(0.55_0.12_250)] hover:bg-[oklch(0.50_0.12_250)] text-white"
+              >
+                {gerarPanorama.isPending ? <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Gerando...</> : <><Gavel className="h-4 w-4 mr-2" />Gerar Relatório</>}
+              </Button>
+            </div>
+          </div>
+
+          {dadosPanorama.isLoading ? (
+            <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-lg" />)}</div>
+          ) : dadosPanorama.data ? (
+            <>
+              {/* Resumo */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <Card className="border shadow-sm">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-xs text-muted-foreground">Total Processos</p>
+                    <p className="text-2xl font-bold">{dadosPanorama.data.totalProcessos}</p>
+                  </CardContent>
+                </Card>
+                <Card className="border shadow-sm">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-xs text-muted-foreground">Ativos</p>
+                    <p className="text-2xl font-bold text-green-600">{dadosPanorama.data.porStatus?.find((s: any) => s.status === 'Ativo')?.qtd || 0}</p>
+                  </CardContent>
+                </Card>
+                <Card className="border shadow-sm">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-xs text-muted-foreground">Valor Total</p>
+                    <p className="text-lg font-bold">{formatCurrency(String(dadosPanorama.data.valorTotal || 0))}</p>
+                  </CardContent>
+                </Card>
+                <Card className="border shadow-sm">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-xs text-muted-foreground">Tribunais</p>
+                    <p className="text-2xl font-bold">{dadosPanorama.data.porTribunal?.length || 0}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Distribuição por fase e tipo */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {dadosPanorama.data.porFase && dadosPanorama.data.porFase.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold">Distribuição por Fase</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {dadosPanorama.data.porFase.map((f: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between p-2 rounded bg-muted/50">
+                          <span className="text-sm">{f.fase || 'Indefinida'}</span>
+                          <Badge variant="outline" className="text-xs">{f.qtd}</Badge>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+                {dadosPanorama.data.porTipoAcao && dadosPanorama.data.porTipoAcao.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold">Distribuição por Tipo de Ação</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {dadosPanorama.data.porTipoAcao.map((t: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between p-2 rounded bg-muted/50">
+                          <span className="text-sm truncate max-w-[60%]">{t.tipo || 'Não classificado'}</span>
+                          <Badge variant="outline" className="text-xs">{t.qtd}</Badge>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Tabela de processos */}
+              {dadosPanorama.data.processos && dadosPanorama.data.processos.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold">Todos os Processos ({dadosPanorama.data.processos.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">Cliente</TableHead>
+                            <TableHead className="text-xs">Nº CNJ</TableHead>
+                            <TableHead className="text-xs">Tipo Ação</TableHead>
+                            <TableHead className="text-xs">Tribunal</TableHead>
+                            <TableHead className="text-xs">Fase</TableHead>
+                            <TableHead className="text-xs">Status</TableHead>
+                            <TableHead className="text-xs text-right">Valor Causa</TableHead>
+                            <TableHead className="text-xs text-right">Condenação</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {dadosPanorama.data.processos.map((p: any) => (
+                            <TableRow key={p.id}>
+                              <TableCell className="py-2 text-sm font-medium">{p.clienteNome || '—'}</TableCell>
+                              <TableCell className="py-2 font-mono text-xs">{p.numeroCnj || '—'}</TableCell>
+                              <TableCell className="py-2 text-xs">{p.tipoAcao || '—'}</TableCell>
+                              <TableCell className="py-2 text-xs">{p.tribunal || '—'}</TableCell>
+                              <TableCell className="py-2 text-xs">{p.faseAtual || '—'}</TableCell>
+                              <TableCell className="py-2">
+                                <Badge className={`text-[10px] ${p.statusProcesso === 'Ativo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                  {p.statusProcesso || '—'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="py-2 text-right font-mono text-xs">{formatCurrency(p.valorCausa)}</TableCell>
+                              <TableCell className="py-2 text-right font-mono text-xs">{formatCurrency(p.valorCondenacao)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <Gavel className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h3 className="font-semibold text-lg">Nenhum processo importado</h3>
+                <p className="text-muted-foreground text-sm mt-1">Importe processos para gerar o panorama processual</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
       {/* Dialog de edição */}

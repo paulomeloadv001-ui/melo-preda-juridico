@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Users, FileText, Scale, DollarSign, RefreshCw, Upload, Download,
   Shield, BookOpen, Briefcase, MapPin, TrendingUp, Gavel, Building2,
-  ChevronRight, BarChart3, Target, Brain
+  ChevronRight, BarChart3, Target, Brain, Banknote, CheckCircle2, Clock, AlertCircle, Landmark, Receipt
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "wouter";
@@ -16,6 +16,13 @@ export default function Dashboard() {
   const stats = trpc.clientes.stats.useQuery();
   const analise = trpc.analise.visaoGeral.useQuery();
   const [, setLocation] = useLocation();
+  const reprocessarFinanceiro = trpc.jobs.reprocessarFinanceiro.useMutation({
+    onSuccess: (data) => {
+      stats.refetch();
+      alert(`Reprocessamento concluído!\n${data.message}`);
+    },
+    onError: (err) => alert(`Erro: ${err.message}`),
+  });
 
   const formatCurrency = (value: number | string) => {
     const num = typeof value === "string" ? parseFloat(value) : value;
@@ -62,7 +69,7 @@ export default function Dashboard() {
     { title: "Conhecimentos Jurídicos", value: est?.totalConhecimentos ?? 0, icon: Brain, color: "text-[oklch(0.55_0.15_145)]", bgColor: "bg-[oklch(0.55_0.15_145)]/10" },
     { title: "Estratégias Processuais", value: est?.totalEstrategias ?? 0, icon: Target, color: "text-[oklch(0.65_0.15_30)]", bgColor: "bg-[oklch(0.65_0.15_30)]/10" },
     { title: "Documentos Armazenados", value: est?.totalDocumentos ?? 0, icon: Briefcase, color: "text-[oklch(0.55_0.12_250)]", bgColor: "bg-[oklch(0.55_0.12_250)]/10" },
-    { title: "Valor Total em Causas", value: formatCurrency(est?.valorTotalCausas ?? stats.data?.valorTotalCausas ?? 0), icon: DollarSign, color: "text-[oklch(0.75_0.12_85)]", bgColor: "bg-[oklch(0.75_0.12_85)]/10" },
+    { title: "Honorários Totais", value: formatCurrency(stats.data?.honorarios?.total ?? 0), icon: Banknote, color: "text-[oklch(0.55_0.15_145)]", bgColor: "bg-[oklch(0.55_0.15_145)]/10" },
   ];
 
   return (
@@ -97,6 +104,112 @@ export default function Dashboard() {
           </Card>
         ))}
       </div>
+
+      {/* ==================== PAINEL FINANCEIRO CONSOLIDADO ==================== */}
+      <Card className="border-2 border-[oklch(0.55_0.15_145)]/30 shadow-md">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Banknote className="h-5 w-5 text-[oklch(0.55_0.15_145)]" />
+            <CardTitle className="text-lg">Painel Financeiro — Honorários Advocatícios</CardTitle>
+          </div>
+          <CardDescription>Visão consolidada de honorários sucumbenciais, depósitos judiciais e alvarás de todos os processos</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Honorários Sucumbenciais */}
+          <div>
+            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <Banknote className="h-4 w-4" /> Honorários Advocatícios Sucumbenciais
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="border rounded-lg p-4 bg-green-500/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">Pagos / Levantados</span>
+                </div>
+                <p className="text-2xl font-bold text-green-700 dark:text-green-400">{formatCurrency(stats.data?.honorarios?.pagosLevantados ?? 0)}</p>
+              </div>
+              <div className="border rounded-lg p-4 bg-amber-500/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-amber-600" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">Depositados / A Levantar</span>
+                </div>
+                <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">{formatCurrency(stats.data?.honorarios?.depositadosALevantar ?? 0)}</p>
+              </div>
+              <div className="border rounded-lg p-4 bg-red-500/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">Pendentes</span>
+                </div>
+                <p className="text-2xl font-bold text-red-700 dark:text-red-400">{formatCurrency(stats.data?.honorarios?.pendentes ?? 0)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Depósitos e Alvarás */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="border rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Landmark className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-semibold">Depósitos Judiciais</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total Depositado</span>
+                  <span className="font-medium">{formatCurrency(stats.data?.depositos?.total ?? 0)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-green-600">Levantados</span>
+                  <span className="font-medium text-green-600">{formatCurrency(stats.data?.depositos?.levantados ?? 0)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-amber-600">A Levantar</span>
+                  <span className="font-medium text-amber-600">{formatCurrency(stats.data?.depositos?.aLevantar ?? 0)}</span>
+                </div>
+                <Progress value={(stats.data?.depositos?.total ?? 0) > 0 ? ((stats.data?.depositos?.levantados ?? 0) / (stats.data?.depositos?.total ?? 1)) * 100 : 0} className="h-2" />
+              </div>
+            </div>
+            <div className="border rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Receipt className="h-4 w-4 text-purple-600" />
+                <span className="text-sm font-semibold">Alvarás de Levantamento</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total em Alvarás</span>
+                  <span className="font-medium">{formatCurrency(stats.data?.alvaras?.total ?? 0)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-green-600">Levantados</span>
+                  <span className="font-medium text-green-600">{formatCurrency(stats.data?.alvaras?.levantados ?? 0)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-amber-600">Pendentes</span>
+                  <span className="font-medium text-amber-600">{formatCurrency(stats.data?.alvaras?.pendentes ?? 0)}</span>
+                </div>
+                <Progress value={(stats.data?.alvaras?.total ?? 0) > 0 ? ((stats.data?.alvaras?.levantados ?? 0) / (stats.data?.alvaras?.total ?? 1)) * 100 : 0} className="h-2" />
+              </div>
+            </div>
+          </div>
+
+          {(stats.data?.honorarios?.total ?? 0) === 0 && (stats.data?.depositos?.total ?? 0) === 0 && (
+            <div className="text-center py-4 text-muted-foreground">
+              <Banknote className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">Os dados financeiros serão extraídos automaticamente ao importar processos</p>
+              <p className="text-xs mt-1">Depósitos judiciais, alvarás, honorários sucumbenciais e pagamentos</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => reprocessarFinanceiro.mutate()}
+                disabled={reprocessarFinanceiro.isPending}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${reprocessarFinanceiro.isPending ? 'animate-spin' : ''}`} />
+                {reprocessarFinanceiro.isPending ? 'Reprocessando... (pode levar alguns minutos)' : 'Reprocessar Dados Financeiros dos Processos Existentes'}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Perfil do Escritório + Área de Atuação */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

@@ -135,3 +135,15 @@
 - [x] BUG: Importação em massa não estava inserindo todos os dados (documentos, partes, empréstimos, estratégias, movimentações) - CORRIGIDO: reescrito processarJobImportacaoPdf e processarJobImportacaoContracheque com prompt completo idêntico ao upload individual
 - [x] BUG: Após upload e análise, dados agora são inseridos automaticamente na aba Clientes com informações completas (cliente, processo, financeiro, empréstimos, partes, movimentações, estratégias, conhecimentos, documentos, pasta S3)
 - [x] Verificar e corrigir fluxo completo: upload → análise → inserção automática em Clientes (69 testes passando)
+- [x] Implementar Relatório de Margem Consignável (análise financeira detalhada por cliente com margem disponível, excedente, aptidão)
+- [x] Implementar Panorama Processual (visão geral dos processos por tipo, tribunal, status, valor)
+- [ ] Gravar conhecimento sobre o fluxo de correção no banco de conhecimentos (item pendente)
+- [ ] Gerar relatório de erros encontrados e correções aplicadas (item pendente)
+- [x] Revisão completa de ponta a ponta pelo navegador (todas as 9 abas)
+- [x] Corrigir bugs e problemas encontrados na revisão final
+- [x] Criar tabelas no banco: movimentacoes_financeiras (depósitos judiciais, alvarás, pagamentos, levantamentos, honorários sucumbenciais)
+- [x] Backend: rotas financeiras por cliente + integrar extração financeira ao fluxo de análise de processos
+- [x] Backend: rota de totais consolidados de honorários para o Dashboard
+- [x] Frontend: aba Financeiro nos detalhes de cada cliente (depósitos, alvarás, pagamentos, levantamentos, honorários pagos/levantados vs depositados/a levantar)
+- [x] Frontend: substituir "Valor em Causas" por "Honorários" no Painel Geral com totais consolidados
+- [x] Concluir frontend dos relatórios de Margem Consignável e Panorama Processual
