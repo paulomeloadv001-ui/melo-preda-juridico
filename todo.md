@@ -122,3 +122,13 @@
 - [ ] Gravar conhecimento sobre o fluxo de correção no banco de conhecimentos
 - [ ] Gerar relatório de erros encontrados e correções aplicadas
 - [x] Criar guia explicativo do fluxo de trabalho passo a passo na página inicial (Dashboard)
+- [x] Implementar importação em lote com fluxo automatizado completo (processos + contracheques misturados)
+- [x] Nova aba "Importação em Lote" na página Upload com drag-and-drop massivo
+- [x] Detecção automática do tipo de documento (processo vs contracheque) via IA
+- [x] Processamento paralelo via fila de jobs com progresso em tempo real
+- [x] Painel de monitoramento em tempo real da importação em lote (progresso geral + individual)
+- [x] Geração automática de conhecimentos jurídicos após importação em lote
+- [x] Geração automática de relatórios consolidados após importação em lote
+- [x] Deduplicação automática durante importação em lote (CPF + CNJ)
+- [x] Resumo final da importação em lote (total importado, erros, duplicados, conhecimentos gerados)
+- [x] Testes unitários para importação em lote (50 testes passando)

@@ -4,12 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch as SwitchUI } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Upload, FileText, CheckCircle2, AlertCircle, Loader2, X,
   FolderOpen, ExternalLink, ArrowRight, RefreshCw,
-  Receipt, TrendingUp, TrendingDown, DollarSign, AlertTriangle, Wallet
+  Receipt, TrendingUp, TrendingDown, DollarSign, AlertTriangle, Wallet,
+  Layers, Zap, Settings2, BarChart3, BookOpen, Shield, Users, Clock,
+  PackageCheck, FileStack
 } from "lucide-react";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
@@ -581,6 +585,478 @@ function ContrachequeUpload() {
   );
 }
 
+// ==================== IMPORTAÇÃO EM LOTE ====================
+type LoteFileItem = {
+  file: File;
+  tipoDetectado: 'processo' | 'contracheque' | 'auto';
+  tipoManual?: 'processo' | 'contracheque';
+  status: 'pending' | 'queued' | 'processing' | 'done' | 'error';
+};
+
+function detectarTipoDocumento(fileName: string): 'processo' | 'contracheque' {
+  const nome = fileName.toLowerCase();
+  if (nome.includes('contracheque') || nome.includes('demonstrativo') || nome.includes('holerite') || nome.includes('pagamento') || nome.includes('folha')) {
+    return 'contracheque';
+  }
+  return 'processo';
+}
+
+function ImportacaoLote() {
+  const [files, setFiles] = useState<LoteFileItem[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [masterJobId, setMasterJobId] = useState<number | null>(null);
+  const [loteId, setLoteId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [, setLocation] = useLocation();
+
+  // Opções de importação
+  const [opcoes, setOpcoes] = useState({
+    gerarConhecimentos: true,
+    gerarRelatorios: true,
+    deduplicarAutomatico: true,
+    gerarPastaCliente: true,
+  });
+
+  const importarLoteMutation = trpc.jobs.importacaoLoteAvancada.useMutation();
+  const { data: statusLote, refetch: refetchStatus } = trpc.jobs.statusLote.useQuery(
+    { masterJobId: masterJobId! },
+    { enabled: !!masterJobId, refetchInterval: masterJobId ? 2000 : false }
+  );
+  const utils = trpc.useUtils();
+
+  // Parar polling quando lote concluir
+  useEffect(() => {
+    if (statusLote?.master?.status === 'concluido' || statusLote?.master?.status === 'erro') {
+      setIsProcessing(false);
+      if (statusLote.master.status === 'concluido') {
+        toast.success('Importação em lote concluída com sucesso!');
+        utils.clientes.list.invalidate();
+        utils.clientes.stats.invalidate();
+        utils.conhecimentosRouter.list.invalidate();
+      }
+    }
+  }, [statusLote?.master?.status]);
+
+  const handleFileSelect = useCallback((selectedFiles: FileList | null) => {
+    if (!selectedFiles) return;
+    const newFiles: LoteFileItem[] = Array.from(selectedFiles)
+      .filter(f => f.type === 'application/pdf')
+      .map(f => ({
+        file: f,
+        tipoDetectado: detectarTipoDocumento(f.name),
+        status: 'pending' as const,
+      }));
+    if (newFiles.length === 0) {
+      toast.error('Selecione apenas arquivos PDF');
+      return;
+    }
+    setFiles(prev => [...prev, ...newFiles]);
+    toast.success(`${newFiles.length} arquivo(s) adicionado(s) à fila`);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    handleFileSelect(e.dataTransfer.files);
+  }, [handleFileSelect]);
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const alterarTipo = (index: number, tipo: 'processo' | 'contracheque') => {
+    setFiles(prev => prev.map((f, i) => i === index ? { ...f, tipoManual: tipo } : f));
+  };
+
+  const iniciarImportacao = async () => {
+    const pendingFiles = files.filter(f => f.status === 'pending');
+    if (pendingFiles.length === 0) {
+      toast.error('Nenhum arquivo pendente para importar');
+      return;
+    }
+
+    setIsProcessing(true);
+    setFiles(prev => prev.map(f => f.status === 'pending' ? { ...f, status: 'queued' } : f));
+
+    try {
+      // Converter arquivos para base64
+      const arquivos = await Promise.all(
+        pendingFiles.map(async (item) => {
+          const buffer = await item.file.arrayBuffer();
+          const base64 = btoa(
+            new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+          );
+          return {
+            fileName: item.file.name,
+            fileBase64: base64,
+            fileSize: item.file.size,
+            tipoDocumento: (item.tipoManual || item.tipoDetectado) as 'processo' | 'contracheque' | 'auto',
+          };
+        })
+      );
+
+      const result = await importarLoteMutation.mutateAsync({
+        arquivos,
+        opcoes: { ...opcoes, prioridade: 0 },
+      });
+
+      setMasterJobId(result.masterJobId);
+      setLoteId(result.loteId);
+      toast.success(`${result.total} arquivo(s) enviados para processamento em lote`);
+    } catch (error: any) {
+      toast.error(`Erro ao iniciar importação: ${error.message}`);
+      setIsProcessing(false);
+      setFiles(prev => prev.map(f => f.status === 'queued' ? { ...f, status: 'pending' } : f));
+    }
+  };
+
+  const resetarLote = () => {
+    setFiles([]);
+    setMasterJobId(null);
+    setLoteId(null);
+    setIsProcessing(false);
+  };
+
+  const totalFiles = files.length;
+  const processos = files.filter(f => (f.tipoManual || f.tipoDetectado) === 'processo');
+  const contracheques = files.filter(f => (f.tipoManual || f.tipoDetectado) === 'contracheque');
+
+  // Resumo do lote
+  const resumoLote = statusLote?.resumo;
+  const masterStatus = statusLote?.master?.status;
+  const masterProgresso = statusLote?.master?.progresso || 0;
+  const masterMsg = statusLote?.master?.mensagemProgresso || '';
+
+  return (
+    <div className="space-y-4">
+      {/* Banner Informativo */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+        <Layers className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+        <div>
+          <h4 className="font-medium text-sm text-amber-900">Importação em Lote — Fluxo Automatizado Completo</h4>
+          <p className="text-xs text-amber-700 mt-1">
+            Arraste dezenas ou centenas de PDFs de uma vez. O sistema detecta automaticamente o tipo de cada documento
+            (processo judicial ou contracheque), processa em sequência via fila de trabalhos, extrai dados via IA,
+            gera conhecimentos jurídicos, atualiza relatórios e deduplica automaticamente.
+          </p>
+        </div>
+      </div>
+
+      {/* Opções de Importação */}
+      {!isProcessing && !masterJobId && (
+        <Card className="border shadow-sm">
+          <CardHeader className="py-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Settings2 className="h-4 w-4 text-muted-foreground" />
+              Opções do Lote
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex items-center gap-2">
+                <SwitchUI checked={opcoes.gerarConhecimentos} onCheckedChange={(v) => setOpcoes(p => ({ ...p, gerarConhecimentos: v }))} id="opt-conhecimentos" />
+                <Label htmlFor="opt-conhecimentos" className="text-xs cursor-pointer">
+                  <BookOpen className="h-3 w-3 inline mr-1" /> Gerar Conhecimentos
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <SwitchUI checked={opcoes.gerarRelatorios} onCheckedChange={(v) => setOpcoes(p => ({ ...p, gerarRelatorios: v }))} id="opt-relatorios" />
+                <Label htmlFor="opt-relatorios" className="text-xs cursor-pointer">
+                  <BarChart3 className="h-3 w-3 inline mr-1" /> Atualizar Relatórios
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <SwitchUI checked={opcoes.deduplicarAutomatico} onCheckedChange={(v) => setOpcoes(p => ({ ...p, deduplicarAutomatico: v }))} id="opt-dedup" />
+                <Label htmlFor="opt-dedup" className="text-xs cursor-pointer">
+                  <Shield className="h-3 w-3 inline mr-1" /> Deduplicar Automático
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <SwitchUI checked={opcoes.gerarPastaCliente} onCheckedChange={(v) => setOpcoes(p => ({ ...p, gerarPastaCliente: v }))} id="opt-pasta" />
+                <Label htmlFor="opt-pasta" className="text-xs cursor-pointer">
+                  <FolderOpen className="h-3 w-3 inline mr-1" /> Gerar Pasta Cliente
+                </Label>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Drop Zone */}
+      {!isProcessing && !masterJobId && (
+        <Card
+          className="border-2 border-dashed hover:border-amber-400 transition-colors cursor-pointer bg-gradient-to-b from-white to-amber-50/30"
+          onClick={() => fileInputRef.current?.click()}
+          onDrop={handleDrop}
+          onDragOver={(e) => e.preventDefault()}
+        >
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <div className="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
+              <FileStack className="h-8 w-8 text-amber-600" />
+            </div>
+            <h3 className="font-semibold text-lg">Arraste todos os PDFs aqui ou clique para selecionar</h3>
+            <p className="text-muted-foreground text-sm mt-1">Processos judiciais e contracheques misturados — o sistema detecta automaticamente</p>
+            <div className="flex gap-4 mt-4">
+              <Badge variant="outline" className="gap-1"><FileText className="h-3 w-3" /> Processos</Badge>
+              <Badge variant="outline" className="gap-1"><Receipt className="h-3 w-3" /> Contracheques</Badge>
+              <Badge variant="outline" className="gap-1"><Zap className="h-3 w-3" /> Detecção Automática</Badge>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              multiple
+              className="hidden"
+              onChange={(e) => handleFileSelect(e.target.files)}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Lista de Arquivos Selecionados */}
+      {files.length > 0 && !masterJobId && (
+        <Card className="border shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between py-3">
+            <div>
+              <CardTitle className="text-base">
+                Fila de Importação ({totalFiles} arquivo{totalFiles !== 1 ? 's' : ''})
+              </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                {processos.length} processo(s) | {contracheques.length} contracheque(s)
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Badge variant="default" className="bg-blue-600 gap-1">
+                <FileText className="h-3 w-3" /> {processos.length} Processos
+              </Badge>
+              <Badge variant="default" className="bg-green-600 gap-1">
+                <Receipt className="h-3 w-3" /> {contracheques.length} Contracheques
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {files.map((item, index) => (
+                <div key={index} className="flex items-center justify-between border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {(item.tipoManual || item.tipoDetectado) === 'processo'
+                      ? <FileText className="h-4 w-4 text-blue-500 shrink-0" />
+                      : <Receipt className="h-4 w-4 text-green-500 shrink-0" />
+                    }
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{item.file.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(item.file.size / 1024 / 1024).toFixed(1)} MB —
+                        Detectado: <span className="font-medium">{item.tipoDetectado === 'processo' ? 'Processo Judicial' : 'Contracheque'}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <select
+                      className="text-xs border rounded px-2 py-1 bg-white"
+                      value={item.tipoManual || item.tipoDetectado}
+                      onChange={(e) => alterarTipo(index, e.target.value as 'processo' | 'contracheque')}
+                    >
+                      <option value="processo">Processo</option>
+                      <option value="contracheque">Contracheque</option>
+                    </select>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeFile(index)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3 mt-4 pt-4 border-t">
+              <Button
+                onClick={iniciarImportacao}
+                disabled={isProcessing || files.filter(f => f.status === 'pending').length === 0}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Iniciar Importação em Lote ({files.filter(f => f.status === 'pending').length} arquivo{files.filter(f => f.status === 'pending').length !== 1 ? 's' : ''})
+              </Button>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="h-4 w-4 mr-2" /> Adicionar Mais
+              </Button>
+              <Button variant="outline" onClick={() => setFiles([])}>
+                Limpar Fila
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Painel de Monitoramento em Tempo Real */}
+      {masterJobId && statusLote && (
+        <div className="space-y-4">
+          {/* Progresso Geral */}
+          <Card className={`border-2 shadow-sm ${
+            masterStatus === 'concluido' ? 'border-green-300 bg-green-50/30' :
+            masterStatus === 'erro' ? 'border-red-300 bg-red-50/30' :
+            'border-amber-300 bg-amber-50/30'
+          }`}>
+            <CardHeader className="py-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  {masterStatus === 'concluido' ? (
+                    <><PackageCheck className="h-5 w-5 text-green-600" /> Importação Concluída</>
+                  ) : masterStatus === 'erro' ? (
+                    <><AlertCircle className="h-5 w-5 text-red-600" /> Erro na Importação</>
+                  ) : (
+                    <><Loader2 className="h-5 w-5 text-amber-600 animate-spin" /> Processando Lote...</>
+                  )}
+                </CardTitle>
+                <Badge variant="outline" className="text-xs font-mono">{loteId}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">{masterMsg}</span>
+                  <span className="font-bold text-lg">{masterProgresso}%</span>
+                </div>
+                <Progress value={masterProgresso} className="h-3" />
+
+                {/* Stats do Lote */}
+                {resumoLote && (
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
+                    <div className="bg-white rounded-lg p-3 border text-center">
+                      <p className="text-xs text-muted-foreground">Total</p>
+                      <p className="text-xl font-bold">{resumoLote.total}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border text-center">
+                      <p className="text-xs text-green-600">Concluídos</p>
+                      <p className="text-xl font-bold text-green-600">{resumoLote.concluidos}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border text-center">
+                      <p className="text-xs text-blue-600">Processando</p>
+                      <p className="text-xl font-bold text-blue-600">{resumoLote.processando}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border text-center">
+                      <p className="text-xs text-yellow-600">Pendentes</p>
+                      <p className="text-xl font-bold text-yellow-600">{resumoLote.pendentes}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border text-center">
+                      <p className="text-xs text-red-600">Erros</p>
+                      <p className="text-xl font-bold text-red-600">{resumoLote.erros}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Detalhes dos Jobs Individuais */}
+          {statusLote.filhos && statusLote.filhos.length > 0 && (
+            <Card className="border shadow-sm">
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm">Detalhes do Processamento</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {statusLote.filhos.map((job: any) => (
+                    <div key={job.id} className={`flex items-center justify-between border rounded-lg p-3 transition-all ${
+                      job.status === 'processando' ? 'bg-blue-50/50 border-blue-200' :
+                      job.status === 'concluido' ? 'bg-green-50/50 border-green-200' :
+                      job.status === 'erro' ? 'bg-red-50/50 border-red-200' :
+                      'bg-gray-50/50'
+                    }`}>
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {job.status === 'pendente' && <Clock className="h-4 w-4 text-gray-400 shrink-0" />}
+                        {job.status === 'processando' && <Loader2 className="h-4 w-4 text-blue-500 animate-spin shrink-0" />}
+                        {job.status === 'concluido' && <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />}
+                        {job.status === 'erro' && <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{job.titulo?.replace('[Lote] ', '')}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {job.status === 'processando' && (job.mensagemProgresso || 'Processando...')}
+                            {job.status === 'concluido' && 'Processado com sucesso'}
+                            {job.status === 'erro' && (job.erroDetalhes || 'Erro no processamento')}
+                            {job.status === 'pendente' && 'Aguardando na fila'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant="outline" className="text-xs">
+                          {job.tipo === 'importacao_pdf' ? 'Processo' : 'Contracheque'}
+                        </Badge>
+                        {job.status === 'processando' && (
+                          <span className="text-xs font-medium text-blue-600">{job.progresso || 0}%</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Resumo Final */}
+          {masterStatus === 'concluido' && resumoLote && (
+            <Card className="border-2 border-green-300 shadow-sm">
+              <CardHeader className="py-3 bg-green-50/50">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <PackageCheck className="h-5 w-5 text-green-600" />
+                  Resumo da Importação em Lote
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-green-50 rounded-lg p-4 border border-green-200 text-center">
+                    <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto mb-1" />
+                    <p className="text-2xl font-bold text-green-700">{resumoLote.concluidos}</p>
+                    <p className="text-xs text-green-600">Processados com Sucesso</p>
+                  </div>
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 text-center">
+                    <Users className="h-6 w-6 text-blue-600 mx-auto mb-1" />
+                    <p className="text-2xl font-bold text-blue-700">{resumoLote.clientesImportados}</p>
+                    <p className="text-xs text-blue-600">Clientes Identificados</p>
+                  </div>
+                  <div className="bg-amber-50 rounded-lg p-4 border border-amber-200 text-center">
+                    <FileText className="h-6 w-6 text-amber-600 mx-auto mb-1" />
+                    <p className="text-2xl font-bold text-amber-700">{resumoLote.processosImportados}</p>
+                    <p className="text-xs text-amber-600">Processos Importados</p>
+                  </div>
+                  {resumoLote.erros > 0 && (
+                    <div className="bg-red-50 rounded-lg p-4 border border-red-200 text-center">
+                      <AlertCircle className="h-6 w-6 text-red-600 mx-auto mb-1" />
+                      <p className="text-2xl font-bold text-red-700">{resumoLote.erros}</p>
+                      <p className="text-xs text-red-600">Erros</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {opcoes.gerarConhecimentos && <Badge variant="default" className="bg-purple-600 gap-1"><BookOpen className="h-3 w-3" /> Conhecimentos Gerados</Badge>}
+                  {opcoes.gerarRelatorios && <Badge variant="default" className="bg-blue-600 gap-1"><BarChart3 className="h-3 w-3" /> Relatórios Atualizados</Badge>}
+                  {opcoes.deduplicarAutomatico && <Badge variant="default" className="bg-green-600 gap-1"><Shield className="h-3 w-3" /> Deduplicado</Badge>}
+                  {opcoes.gerarPastaCliente && <Badge variant="default" className="bg-amber-600 gap-1"><FolderOpen className="h-3 w-3" /> Pastas Geradas</Badge>}
+                </div>
+
+                <div className="flex gap-3">
+                  <Button onClick={() => setLocation('/clientes')} className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Users className="h-4 w-4 mr-2" /> Ver Clientes
+                  </Button>
+                  <Button variant="outline" onClick={() => setLocation('/conhecimentos')}>
+                    <BookOpen className="h-4 w-4 mr-2" /> Ver Conhecimentos
+                  </Button>
+                  <Button variant="outline" onClick={() => setLocation('/relatorios')}>
+                    <BarChart3 className="h-4 w-4 mr-2" /> Ver Relatórios
+                  </Button>
+                  <Button variant="outline" onClick={resetarLote}>
+                    <RefreshCw className="h-4 w-4 mr-2" /> Nova Importação
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ==================== PÁGINA PRINCIPAL ====================
 export default function UploadProcessos() {
   return (
@@ -592,17 +1068,25 @@ export default function UploadProcessos() {
         </div>
       </div>
 
-      <Tabs defaultValue="processos" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+      <Tabs defaultValue="lote" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 max-w-lg">
+          <TabsTrigger value="lote" className="flex items-center gap-2">
+            <Layers className="h-4 w-4" />
+            Importação em Lote
+          </TabsTrigger>
           <TabsTrigger value="processos" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            Processos Judiciais
+            Processo Individual
           </TabsTrigger>
           <TabsTrigger value="contracheque" className="flex items-center gap-2">
             <Receipt className="h-4 w-4" />
             Contracheque
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="lote" className="mt-4">
+          <ImportacaoLote />
+        </TabsContent>
 
         <TabsContent value="processos" className="mt-4">
           <ProcessoUpload />

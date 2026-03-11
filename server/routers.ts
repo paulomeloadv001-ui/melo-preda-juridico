@@ -2171,7 +2171,7 @@ ${textoExtraido}`;
       };
     }),
 
-    // Criar job de importação em lote
+    // Criar job de importação em lote (legado - mantido para compatibilidade)
     criarImportacaoLote: protectedProcedure
       .input(z.object({
         arquivos: z.array(z.object({
@@ -2205,11 +2205,159 @@ ${textoExtraido}`;
           jobIds.push(result.insertId);
         }
 
-        // Processar jobs em background (sem await para retornar imediatamente)
         processarFilaJobs(jobIds).catch(err => console.error('[Jobs] Erro na fila:', err));
-
         return { jobIds, total: jobIds.length, message: `${jobIds.length} arquivo(s) na fila de processamento` };
       }),
+
+    // ==================== IMPORTAÇÃO EM LOTE AVANÇADA ====================
+    importacaoLoteAvancada: protectedProcedure
+      .input(z.object({
+        arquivos: z.array(z.object({
+          fileName: z.string(),
+          fileBase64: z.string(),
+          fileSize: z.number(),
+          tipoDocumento: z.enum(['processo', 'contracheque', 'auto']).default('auto'),
+        })),
+        opcoes: z.object({
+          gerarConhecimentos: z.boolean().default(true),
+          gerarRelatorios: z.boolean().default(true),
+          deduplicarAutomatico: z.boolean().default(true),
+          gerarPastaCliente: z.boolean().default(true),
+          prioridade: z.number().default(0),
+        }).default({ gerarConhecimentos: true, gerarRelatorios: true, deduplicarAutomatico: true, gerarPastaCliente: true, prioridade: 0 }),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        const jobIds: number[] = [];
+        const loteId = `LOTE_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+
+        // Criar job mestre do lote
+        const [masterJob] = await db.insert(jobs).values({
+          tipo: 'lote_master',
+          status: 'processando',
+          prioridade: input.opcoes.prioridade,
+          titulo: `Importação em Lote: ${input.arquivos.length} arquivo(s)`,
+          descricao: `Lote ${loteId} — ${input.arquivos.length} documentos para processamento automático`,
+          inputData: JSON.stringify({
+            loteId,
+            totalArquivos: input.arquivos.length,
+            opcoes: input.opcoes,
+            arquivosNomes: input.arquivos.map(a => a.fileName),
+          }),
+          progresso: 0,
+          mensagemProgresso: `Preparando ${input.arquivos.length} arquivo(s)...`,
+        });
+        const masterJobId = masterJob.insertId;
+
+        // Criar jobs individuais para cada arquivo
+        for (let i = 0; i < input.arquivos.length; i++) {
+          const arquivo = input.arquivos[i];
+          // Detecção automática do tipo de documento
+          let tipoFinal = arquivo.tipoDocumento;
+          if (tipoFinal === 'auto') {
+            const nomeNorm = arquivo.fileName.toLowerCase();
+            if (nomeNorm.includes('contracheque') || nomeNorm.includes('demonstrativo') || nomeNorm.includes('holerite') || nomeNorm.includes('pagamento') || nomeNorm.includes('folha')) {
+              tipoFinal = 'contracheque';
+            } else {
+              tipoFinal = 'processo';
+            }
+          }
+
+          const [result] = await db.insert(jobs).values({
+            tipo: tipoFinal === 'contracheque' ? 'importacao_contracheque' : 'importacao_pdf',
+            status: 'pendente',
+            prioridade: input.opcoes.prioridade,
+            titulo: `[Lote] ${arquivo.fileName}`,
+            descricao: `Lote ${loteId} — Arquivo ${i + 1}/${input.arquivos.length}: ${arquivo.fileName} (${(arquivo.fileSize / 1024).toFixed(1)} KB) — Tipo: ${tipoFinal}`,
+            inputData: JSON.stringify({
+              fileName: arquivo.fileName,
+              fileBase64: arquivo.fileBase64,
+              fileSize: arquivo.fileSize,
+              tipoDocumento: tipoFinal,
+              loteId,
+              masterJobId,
+              opcoes: input.opcoes,
+              posicaoNoLote: i + 1,
+              totalNoLote: input.arquivos.length,
+            }),
+            progresso: 0,
+          });
+          jobIds.push(result.insertId);
+        }
+
+        // Processar jobs em background com callback de finalização do lote
+        processarLoteCompleto(masterJobId, jobIds, loteId, input.opcoes).catch(err => {
+          console.error('[Lote] Erro no processamento em lote:', err);
+        });
+
+        return {
+          loteId,
+          masterJobId,
+          jobIds,
+          total: jobIds.length,
+          message: `${jobIds.length} arquivo(s) na fila de processamento em lote (ID: ${loteId})`,
+        };
+      }),
+
+    // Obter status do lote
+    statusLote: protectedProcedure
+      .input(z.object({ masterJobId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const [master] = await db.select().from(jobs).where(eq(jobs.id, input.masterJobId));
+        if (!master) return null;
+
+        // Buscar todos os jobs filhos do lote
+        const masterInput = typeof master.inputData === 'string' ? JSON.parse(master.inputData) : master.inputData;
+        const loteId = masterInput?.loteId;
+        if (!loteId) return { master, filhos: [], resumo: null };
+
+        // Buscar filhos pelo loteId na descrição
+        const allJobs = await db.select().from(jobs)
+          .where(sql`${jobs.descricao} LIKE ${`%${loteId}%`} AND ${jobs.tipo} != 'lote_master'`)
+          .orderBy(jobs.id);
+
+        const concluidos = allJobs.filter(j => j.status === 'concluido');
+        const erros = allJobs.filter(j => j.status === 'erro');
+        const processando = allJobs.filter(j => j.status === 'processando');
+        const pendentes = allJobs.filter(j => j.status === 'pendente');
+
+        // Extrair resultados dos concluídos
+        const resultados = concluidos.map(j => {
+          try {
+            return typeof j.outputData === 'string' ? JSON.parse(j.outputData) : j.outputData;
+          } catch { return null; }
+        }).filter(Boolean);
+
+        return {
+          master,
+          filhos: allJobs,
+          resumo: {
+            total: allJobs.length,
+            concluidos: concluidos.length,
+            erros: erros.length,
+            processando: processando.length,
+            pendentes: pendentes.length,
+            progressoGeral: allJobs.length > 0 ? Math.round((concluidos.length / allJobs.length) * 100) : 0,
+            clientesImportados: Array.from(new Set(resultados.map(r => r?.clienteId).filter(Boolean))).length,
+            processosImportados: resultados.filter(r => r?.processoId).length,
+            resultados,
+          },
+        };
+      }),
+
+    // Listar lotes
+    listarLotes: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      const lotes = await db.select().from(jobs)
+        .where(eq(jobs.tipo, 'lote_master'))
+        .orderBy(desc(jobs.createdAt))
+        .limit(20);
+      return lotes;
+    }),
 
     // Cancelar job
     cancelar: protectedProcedure
@@ -2807,6 +2955,294 @@ async function processarJobImportacaoContracheque(jobId: number, inputData: any)
 
   } catch (error: any) {
     throw error;
+  }
+}
+
+// ==================== PROCESSADOR DE LOTE COMPLETO ====================
+async function processarLoteCompleto(
+  masterJobId: number,
+  jobIds: number[],
+  loteId: string,
+  opcoes: { gerarConhecimentos?: boolean; gerarRelatorios?: boolean; deduplicarAutomatico?: boolean; gerarPastaCliente?: boolean }
+) {
+  const db = await getDb();
+  if (!db) return;
+
+  const totalJobs = jobIds.length;
+  let concluidos = 0;
+  let erros = 0;
+  const clientesProcessados = new Set<number>();
+  const processosProcessados: number[] = [];
+
+  // Processar cada job sequencialmente
+  for (let i = 0; i < jobIds.length; i++) {
+    const jobId = jobIds[i];
+    try {
+      // Atualizar progresso do master
+      const progressoGeral = Math.round(((i) / totalJobs) * 80);
+      await db.update(jobs).set({
+        progresso: progressoGeral,
+        mensagemProgresso: `Processando arquivo ${i + 1}/${totalJobs}...`,
+      }).where(eq(jobs.id, masterJobId));
+
+      // Buscar job
+      const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId));
+      if (!job || job.status === 'cancelado') continue;
+
+      // Marcar como processando
+      await db.update(jobs).set({
+        status: 'processando',
+        iniciadoEm: new Date(),
+        progresso: 5,
+        mensagemProgresso: 'Iniciando processamento...',
+        tentativas: (job.tentativas || 0) + 1,
+      }).where(eq(jobs.id, jobId));
+
+      const inputData = typeof job.inputData === 'string' ? JSON.parse(job.inputData) : job.inputData;
+
+      if (job.tipo === 'importacao_pdf') {
+        await processarJobImportacaoPdf(jobId, inputData);
+      } else if (job.tipo === 'importacao_contracheque') {
+        await processarJobImportacaoContracheque(jobId, inputData);
+      }
+
+      // Coletar resultados
+      const [completedJob] = await db.select().from(jobs).where(eq(jobs.id, jobId));
+      if (completedJob?.status === 'concluido') {
+        concluidos++;
+        if (completedJob.clienteId) clientesProcessados.add(completedJob.clienteId);
+        if (completedJob.processoId) processosProcessados.push(completedJob.processoId);
+      } else {
+        erros++;
+      }
+    } catch (error: any) {
+      console.error(`[Lote] Erro no job ${jobId}:`, error);
+      await db.update(jobs).set({
+        status: 'erro',
+        erroDetalhes: error?.message || 'Erro desconhecido',
+        concluidoEm: new Date(),
+        progresso: 0,
+        mensagemProgresso: 'Falha no processamento',
+      }).where(eq(jobs.id, jobId));
+      erros++;
+    }
+  }
+
+  // ==================== PÓS-PROCESSAMENTO DO LOTE ====================
+  try {
+    await db.update(jobs).set({
+      progresso: 85,
+      mensagemProgresso: 'Finalizando lote: gerando conhecimentos e relatórios...',
+    }).where(eq(jobs.id, masterJobId));
+
+    // 1. Gerar conhecimentos automáticos para processos importados
+    if (opcoes.gerarConhecimentos && processosProcessados.length > 0) {
+      try {
+        await gerarConhecimentosLote(processosProcessados);
+        console.log(`[Lote] Conhecimentos gerados para ${processosProcessados.length} processos`);
+      } catch (e) {
+        console.error('[Lote] Erro ao gerar conhecimentos:', e);
+      }
+    }
+
+    await db.update(jobs).set({
+      progresso: 90,
+      mensagemProgresso: 'Deduplicando dados...',
+    }).where(eq(jobs.id, masterJobId));
+
+    // 2. Deduplicar automaticamente
+    if (opcoes.deduplicarAutomatico) {
+      try {
+        // Normalizar CPFs
+        const allClientes = await db.select().from(clientes);
+        for (const cli of allClientes) {
+          const cpfNorm = cli.cpfCnpj.replace(/[.\-\/]/g, '');
+          if (cpfNorm !== cli.cpfCnpj && !cli.cpfCnpj.startsWith('PEND') && !cli.cpfCnpj.startsWith('SEM_CPF')) {
+            const existing = await db.select().from(clientes).where(eq(clientes.cpfCnpj, cpfNorm)).limit(1);
+            if (existing.length === 0) {
+              await db.update(clientes).set({ cpfCnpj: cpfNorm }).where(eq(clientes.id, cli.id));
+            }
+          }
+        }
+        console.log('[Lote] Deduplicação automática concluída');
+      } catch (e) {
+        console.error('[Lote] Erro na deduplicação:', e);
+      }
+    }
+
+    await db.update(jobs).set({
+      progresso: 95,
+      mensagemProgresso: 'Gerando relatórios consolidados...',
+    }).where(eq(jobs.id, masterJobId));
+
+    // 3. Gerar relatórios consolidados
+    if (opcoes.gerarRelatorios) {
+      try {
+        await autoUpdateRelatorioCadastral(db);
+        console.log('[Lote] Relatório cadastral atualizado');
+      } catch (e) {
+        console.error('[Lote] Erro ao atualizar relatório:', e);
+      }
+    }
+
+    // 4. Gerar pastas de clientes
+    if (opcoes.gerarPastaCliente) {
+      for (const clienteId of Array.from(clientesProcessados)) {
+        try {
+          const [cli] = await db.select().from(clientes).where(eq(clientes.id, clienteId)).limit(1);
+          if (cli) {
+            await buildClientFolder(clienteId, cli.nomeCompleto, cli.cpfCnpj);
+          }
+        } catch (e) {
+          console.error(`[Lote] Erro ao gerar pasta do cliente ${clienteId}:`, e);
+        }
+      }
+    }
+
+    // Finalizar master job
+    await db.update(jobs).set({
+      status: 'concluido',
+      progresso: 100,
+      mensagemProgresso: `Lote concluído: ${concluidos} sucesso, ${erros} erro(s)`,
+      concluidoEm: new Date(),
+      outputData: JSON.stringify({
+        loteId,
+        totalArquivos: totalJobs,
+        concluidos,
+        erros,
+        clientesProcessados: Array.from(clientesProcessados),
+        processosProcessados,
+        totalClientesUnicos: clientesProcessados.size,
+        totalProcessosImportados: processosProcessados.length,
+      }),
+    }).where(eq(jobs.id, masterJobId));
+
+    console.log(`[Lote] ${loteId} finalizado: ${concluidos}/${totalJobs} sucesso, ${erros} erros, ${clientesProcessados.size} clientes, ${processosProcessados.length} processos`);
+
+  } catch (finalError: any) {
+    console.error('[Lote] Erro na finalização:', finalError);
+    await db.update(jobs).set({
+      status: 'erro',
+      erroDetalhes: `Erro na finalização do lote: ${finalError?.message}`,
+      concluidoEm: new Date(),
+    }).where(eq(jobs.id, masterJobId));
+  }
+}
+
+// ==================== GERADOR DE CONHECIMENTOS EM LOTE ====================
+async function gerarConhecimentosLote(processoIds: number[]) {
+  const db = await getDb();
+  if (!db) return;
+
+  for (const processoId of processoIds) {
+    try {
+      const [proc] = await db.select().from(processos).where(eq(processos.id, processoId)).limit(1);
+      if (!proc) continue;
+
+      // Verificar se já existem conhecimentos para este processo
+      const existingKnowledge = await db.select().from(conhecimentos).where(eq(conhecimentos.processoOrigemId, processoId));
+      if (existingKnowledge.length >= 3) continue; // Já tem conhecimentos suficientes
+
+      // Buscar estratégias do processo
+      const estrats = await db.select().from(estrategias).where(eq(estrategias.processoId, processoId));
+      
+      // Buscar cliente
+      const [cliente] = await db.select().from(clientes).where(eq(clientes.id, proc.clienteId)).limit(1);
+      const nomeCliente = cliente?.nomeCompleto || 'Cliente';
+
+      // Gerar conhecimentos a partir das estratégias existentes
+      for (const est of estrats) {
+        if (est.tesePrincipal && !existingKnowledge.some(k => k.categoria === 'Tese' && k.processoOrigemId === processoId)) {
+          await db.insert(conhecimentos).values({
+            categoria: 'Tese',
+            titulo: `Tese: ${proc.tipoAcao || 'Processo'} - ${nomeCliente}`,
+            conteudo: est.tesePrincipal,
+            tribunal: proc.tribunal,
+            tipoAcao: proc.tipoAcao,
+            processoOrigemId: processoId,
+          });
+        }
+        if (est.jurisprudenciaCitada && !existingKnowledge.some(k => k.categoria === 'Jurisprudencia' && k.processoOrigemId === processoId)) {
+          await db.insert(conhecimentos).values({
+            categoria: 'Jurisprudencia',
+            titulo: `Jurisprudência: ${proc.tipoAcao || 'Processo'} - ${nomeCliente}`,
+            conteudo: est.jurisprudenciaCitada,
+            tribunal: proc.tribunal,
+            tipoAcao: proc.tipoAcao,
+            processoOrigemId: processoId,
+          });
+        }
+        if (est.fundamentacaoLegal && !existingKnowledge.some(k => k.categoria === 'Legislacao' && k.processoOrigemId === processoId)) {
+          await db.insert(conhecimentos).values({
+            categoria: 'Legislacao',
+            titulo: `Fundamentação: ${proc.tipoAcao || 'Processo'} - ${nomeCliente}`,
+            conteudo: est.fundamentacaoLegal,
+            tribunal: proc.tribunal,
+            tipoAcao: proc.tipoAcao,
+            processoOrigemId: processoId,
+          });
+        }
+        if (est.pontosFortes && !existingKnowledge.some(k => k.categoria === 'Estrategia' && k.processoOrigemId === processoId)) {
+          await db.insert(conhecimentos).values({
+            categoria: 'Estrategia',
+            titulo: `Estratégia: ${proc.tipoAcao || 'Processo'} - ${nomeCliente}`,
+            conteudo: `Pontos Fortes: ${est.pontosFortes}\n\nRiscos: ${est.riscosIdentificados || 'N/A'}`,
+            tribunal: proc.tribunal,
+            tipoAcao: proc.tipoAcao,
+            processoOrigemId: processoId,
+          });
+        }
+      }
+
+      // Se não tem estratégias mas tem texto extraído, gerar via IA
+      if (estrats.length === 0 && proc.textoExtraido && proc.textoExtraido.length > 100) {
+        try {
+          const llmResp = await invokeLLM({
+            messages: [
+              { role: 'system', content: 'Você é um assistente jurídico. Extraia a tese principal, fundamentação legal e jurisprudência citada do texto do processo. Retorne JSON com: tesePrincipal, fundamentacaoLegal, jurisprudenciaCitada, pontosFortes, riscosIdentificados.' },
+              { role: 'user', content: proc.textoExtraido.substring(0, 8000) },
+            ],
+          });
+          const content = llmResp.choices[0]?.message?.content;
+          const textContent = typeof content === 'string' ? content : '';
+          const dados = JSON.parse(textContent);
+
+          if (dados.tesePrincipal) {
+            await db.insert(estrategias).values({
+              processoId,
+              tesePrincipal: dados.tesePrincipal,
+              fundamentacaoLegal: dados.fundamentacaoLegal,
+              jurisprudenciaCitada: dados.jurisprudenciaCitada,
+              pontosFortes: dados.pontosFortes,
+              riscosIdentificados: dados.riscosIdentificados,
+            });
+            // Gerar conhecimentos
+            await db.insert(conhecimentos).values({
+              categoria: 'Tese',
+              titulo: `Tese: ${proc.tipoAcao || 'Processo'} - ${nomeCliente}`,
+              conteudo: dados.tesePrincipal,
+              tribunal: proc.tribunal,
+              tipoAcao: proc.tipoAcao,
+              processoOrigemId: processoId,
+            });
+            if (dados.jurisprudenciaCitada) {
+              await db.insert(conhecimentos).values({
+                categoria: 'Jurisprudencia',
+                titulo: `Jurisprudência: ${proc.tipoAcao || 'Processo'} - ${nomeCliente}`,
+                conteudo: dados.jurisprudenciaCitada,
+                tribunal: proc.tribunal,
+                tipoAcao: proc.tipoAcao,
+                processoOrigemId: processoId,
+              });
+            }
+          }
+        } catch (e) {
+          console.error(`[Lote] Erro ao gerar conhecimentos via IA para processo ${processoId}:`, e);
+        }
+      }
+    } catch (e) {
+      console.error(`[Lote] Erro ao gerar conhecimentos para processo ${processoId}:`, e);
+    }
   }
 }
 
