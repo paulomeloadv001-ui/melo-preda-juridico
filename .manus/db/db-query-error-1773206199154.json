@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, nomeCompleto, cpfCnpj, tipoPessoa, profissao, orgaoLotacao, matricula, cidade, estado FROM clientes ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, nomeCompleto, cpfCnpj, tipoPessoa, profissao, orgaoLotacao, matricula, cidade, estado FROM clientes ORDER BY id;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'orgaolotacao' in 'field list'"
+  ]
+}

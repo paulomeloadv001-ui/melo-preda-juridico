@@ -1,0 +1,22 @@
+{
+  "query": "SELECT categoria, COUNT(*) as total FROM conhecimentos GROUP BY categoria ORDER BY total DESC;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT categoria, COUNT(*) as total FROM conhecimentos GROUP BY categoria ORDER BY total DESC;",
+  "rows": [
+    {
+      "categoria": "Tese",
+      "total": "18"
+    },
+    {
+      "categoria": "Jurisprudencia",
+      "total": "14"
+    },
+    {
+      "categoria": "Legislacao",
+      "total": "10"
+    }
+  ],
+  "messages": [],
+  "stdout": "categoria\ttotal\nTese\t18\nJurisprudencia\t14\nLegislacao\t10\n",
+  "stderr": "",
+  "execution_time_ms": 58
+}

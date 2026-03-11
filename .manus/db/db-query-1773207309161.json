@@ -1,0 +1,80 @@
+{
+  "query": "SELECT id, categoria, titulo, LEFT(conteudo, 80) as conteudo_resumo, ordem FROM analise_geral ORDER BY ordem LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, categoria, titulo, LEFT(conteudo, 80) as conteudo_resumo, ordem FROM analise_geral ORDER BY ordem LIMIT 20;",
+  "rows": [
+    {
+      "id": "1",
+      "categoria": "institucional",
+      "titulo": "Perfil do Escritório",
+      "conteudo_resumo": "O escritório Melo & Preda Advogados, sob a direção do Dr. Paulo Filho, atua pred",
+      "ordem": "1"
+    },
+    {
+      "id": "2",
+      "categoria": "estatisticas",
+      "titulo": "Panorama de Clientes",
+      "conteudo_resumo": "O banco de dados contém 13 clientes únicos identificados por CPF/CNPJ. A base é ",
+      "ordem": "2"
+    },
+    {
+      "id": "3",
+      "categoria": "estatisticas",
+      "titulo": "Panorama dos Processos Judiciais",
+      "conteudo_resumo": "O banco registra 16 processos judiciais, sendo 14 ativos e 2 em acompanhamento. ",
+      "ordem": "3"
+    },
+    {
+      "id": "4",
+      "categoria": "conhecimento",
+      "titulo": "Teses Jurídicas Recorrentes",
+      "conteudo_resumo": "A tese central que permeia a maioria dos processos é a abusividade do comprometi",
+      "ordem": "4"
+    },
+    {
+      "id": "5",
+      "categoria": "conhecimento",
+      "titulo": "Fundamentação Legal Padrão",
+      "conteudo_resumo": "O escritório utiliza um arsenal jurídico consistente: Lei Estadual 16.898/2010 d",
+      "ordem": "5"
+    },
+    {
+      "id": "6",
+      "categoria": "conhecimento",
+      "titulo": "Estilo de Peticionamento",
+      "conteudo_resumo": "O Dr. Paulo Filho utiliza estrutura argumentativa em camadas: primeiro estabelec",
+      "ordem": "6"
+    },
+    {
+      "id": "7",
+      "categoria": "conhecimento",
+      "titulo": "Estratégias Processuais Avançadas",
+      "conteudo_resumo": "O escritório emprega estratégias processuais avançadas que incluem: (1) Pedido d",
+      "ordem": "7"
+    },
+    {
+      "id": "8",
+      "categoria": "financeiro",
+      "titulo": "Panorama Financeiro dos Clientes",
+      "conteudo_resumo": "Os dados financeiros extraídos dos processos revelam que a maioria dos clientes ",
+      "ordem": "8"
+    },
+    {
+      "id": "9",
+      "categoria": "estatisticas",
+      "titulo": "Banco de Conhecimentos Jurídicos",
+      "conteudo_resumo": "O banco de conhecimentos acumulou 42 registros distribuídos entre teses processu",
+      "ordem": "9"
+    },
+    {
+      "id": "10",
+      "categoria": "diagnostico",
+      "titulo": "Diagnóstico e Oportunidades de Expansão",
+      "conteudo_resumo": "O sistema está preparado para expansões estratégicas: (1) Módulo de empréstimos ",
+      "ordem": "10"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcategoria\ttitulo\tconteudo_resumo\tordem\n1\tinstitucional\tPerfil do Escritório\tO escritório Melo & Preda Advogados, sob a direção do Dr. Paulo Filho, atua pred\t1\n2\testatisticas\tPanorama de Clientes\tO banco de dados contém 13 clientes únicos identificados por CPF/CNPJ. A base é \t2\n3\testatisticas\tPanorama dos Processos Judiciais\tO banco registra 16 processos judiciais, sendo 14 ativos e 2 em acompanhamento. \t3\n4\tconhecimento\tTeses Jurídicas Recorrentes\tA tese central que permeia a maioria dos processos é a abusividade do comprometi\t4\n5\tconhecimento\tFundamentação Legal Padrão\tO escritório utiliza um arsenal jurídico consistente: Lei Estadual 16.898/2010 d\t5\n6\tconhecimento\tEstilo de Peticionamento\tO Dr. Paulo Filho utiliza estrutura argumentativa em camadas: primeiro estabelec\t6\n7\tconhecimento\tEstratégias Processuais Avançadas\tO escritório emprega estratégias processuais avançadas que incluem: (1) Pedido d\t7\n8\tfinanceiro\tPanorama Financeiro dos Clientes\tOs dados financeiros extraídos dos processos revelam que a maioria dos clientes \t8\n9\testatisticas\tBanco de Conhecimentos Jurídicos\tO banco de conhecimentos acumulou 42 registros distribuídos entre teses processu\t9\n10\tdiagnostico\tDiagnóstico e Oportunidades de Expansão\tO sistema está preparado para expansões estratégicas: (1) Módulo de empréstimos \t10\n",
+  "stderr": "",
+  "execution_time_ms": 62
+}

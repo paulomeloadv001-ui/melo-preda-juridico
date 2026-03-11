@@ -48,3 +48,16 @@
 - [x] Rota de exclusão de cliente no backend
 - [x] Rota de exclusão de processo no backend
 - [x] Registrar rota /correcao no App.tsx e sidebar
+- [x] Criar tabela analise_geral no banco de dados para gravar visão geral do escritório
+- [x] Gravar dados de análise (perfil do escritório, especialização, estatísticas, teses, fundamentação) no banco (10 registros)
+- [x] Reescrever página Dashboard com visão geral completa de apresentação do escritório
+- [x] Incluir seções: perfil do escritório, panorama de clientes, processos, estratégias, conhecimentos, diagnóstico
+- [x] Criar rota analiseGeral no backend para servir dados da tabela analise_geral
+- [x] Reescrever Dashboard com visão geral completa de apresentação do escritório (dados reais do banco)
+- [x] Aprofundar extração de dados de cada um dos 13 clientes com máximo rigor (22 PDFs reprocessados)
+- [x] Preencher dados financeiros detalhados de cada cliente (21 registros)
+- [x] Preencher empréstimos consignados de cada cliente (64 registros)
+- [x] Preencher estratégias processuais detalhadas de cada processo (15 registros)
+- [ ] Preencher movimentações processuais de cada processo (pendente - 0 registros)
+- [x] Preencher partes processuais de cada processo (20 registros)
+- [x] Preencher banco de conhecimentos com teses e jurisprudência de cada processo (42 registros)

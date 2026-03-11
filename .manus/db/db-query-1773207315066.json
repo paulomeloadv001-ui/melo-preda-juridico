@@ -1,0 +1,70 @@
+{
+  "query": "SELECT id, categoria, titulo, ordem FROM analise_geral ORDER BY ordem;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, categoria, titulo, ordem FROM analise_geral ORDER BY ordem;",
+  "rows": [
+    {
+      "id": "1",
+      "categoria": "institucional",
+      "titulo": "Perfil do Escritório",
+      "ordem": "1"
+    },
+    {
+      "id": "2",
+      "categoria": "estatisticas",
+      "titulo": "Panorama de Clientes",
+      "ordem": "2"
+    },
+    {
+      "id": "3",
+      "categoria": "estatisticas",
+      "titulo": "Panorama dos Processos Judiciais",
+      "ordem": "3"
+    },
+    {
+      "id": "4",
+      "categoria": "conhecimento",
+      "titulo": "Teses Jurídicas Recorrentes",
+      "ordem": "4"
+    },
+    {
+      "id": "5",
+      "categoria": "conhecimento",
+      "titulo": "Fundamentação Legal Padrão",
+      "ordem": "5"
+    },
+    {
+      "id": "6",
+      "categoria": "conhecimento",
+      "titulo": "Estilo de Peticionamento",
+      "ordem": "6"
+    },
+    {
+      "id": "7",
+      "categoria": "conhecimento",
+      "titulo": "Estratégias Processuais Avançadas",
+      "ordem": "7"
+    },
+    {
+      "id": "8",
+      "categoria": "financeiro",
+      "titulo": "Panorama Financeiro dos Clientes",
+      "ordem": "8"
+    },
+    {
+      "id": "9",
+      "categoria": "estatisticas",
+      "titulo": "Banco de Conhecimentos Jurídicos",
+      "ordem": "9"
+    },
+    {
+      "id": "10",
+      "categoria": "diagnostico",
+      "titulo": "Diagnóstico e Oportunidades de Expansão",
+      "ordem": "10"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tcategoria\ttitulo\tordem\n1\tinstitucional\tPerfil do Escritório\t1\n2\testatisticas\tPanorama de Clientes\t2\n3\testatisticas\tPanorama dos Processos Judiciais\t3\n4\tconhecimento\tTeses Jurídicas Recorrentes\t4\n5\tconhecimento\tFundamentação Legal Padrão\t5\n6\tconhecimento\tEstilo de Peticionamento\t6\n7\tconhecimento\tEstratégias Processuais Avançadas\t7\n8\tfinanceiro\tPanorama Financeiro dos Clientes\t8\n9\testatisticas\tBanco de Conhecimentos Jurídicos\t9\n10\tdiagnostico\tDiagnóstico e Oportunidades de Expansão\t10\n",
+  "stderr": "",
+  "execution_time_ms": 64
+}

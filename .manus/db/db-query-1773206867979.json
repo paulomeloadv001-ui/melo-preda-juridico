@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `analise_geral` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `chave` varchar(100) NOT NULL,\n  `titulo` varchar(255) NOT NULL,\n  `categoria` varchar(100) NOT NULL,\n  `conteudo` text NOT NULL,\n  `dados` json,\n  `ordem` int DEFAULT 0,\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `analise_geral_id` PRIMARY KEY(`id`),\n  CONSTRAINT `analise_geral_chave_unique` UNIQUE(`chave`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute CREATE TABLE IF NOT EXISTS `analise_geral` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `chave` varchar(100) NOT NULL,\n  `titulo` varchar(255) NOT NULL,\n  `categoria` varchar(100) NOT NULL,\n  `conteudo` text NOT NULL,\n  `dados` json,\n  `ordem` int DEFAULT 0,\n  `createdAt` timestamp NOT NULL DEFAULT (now()),\n  `updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n  CONSTRAINT `analise_geral_id` PRIMARY KEY(`id`),\n  CONSTRAINT `analise_geral_chave_unique` UNIQUE(`chave`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 424
+}

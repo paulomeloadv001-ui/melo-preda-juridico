@@ -232,3 +232,19 @@ export const cumprimentosSentenca = mysqlTable("cumprimentos_sentenca", {
 
 export type CumprimentoSentenca = typeof cumprimentosSentenca.$inferSelect;
 export type InsertCumprimentoSentenca = typeof cumprimentosSentenca.$inferInsert;
+
+// ==================== ANÁLISE GERAL DO ESCRITÓRIO ====================
+export const analiseGeral = mysqlTable("analise_geral", {
+  id: int("id").autoincrement().primaryKey(),
+  chave: varchar("chave", { length: 100 }).notNull().unique(),
+  titulo: varchar("titulo", { length: 255 }).notNull(),
+  categoria: varchar("categoria", { length: 100 }).notNull(),
+  conteudo: text("conteudo").notNull(),
+  dados: json("dados"),
+  ordem: int("ordem").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AnaliseGeral = typeof analiseGeral.$inferSelect;
+export type InsertAnaliseGeral = typeof analiseGeral.$inferInsert;

@@ -7,7 +7,7 @@ import { getDb } from "./db";
 import {
   clientes, processos, dadosFinanceiros, emprestimosConsignados,
   estrategias, partesProcessuais, movimentacoes, documentos,
-  conhecimentos, cumprimentosSentenca
+  conhecimentos, cumprimentosSentenca, analiseGeral
 } from "../drizzle/schema";
 import { eq, like, desc, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -990,6 +990,39 @@ ${textoExtraido}`;
       }
 
       return { processosRemovidos: removidos };
+    }),
+  }),
+
+  // ==================== ANÁLISE GERAL ====================
+  analise: router({
+    visaoGeral: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { registros: [], estatisticas: null };
+      const registros = await db.select().from(analiseGeral).orderBy(analiseGeral.ordem);
+      // Estatísticas dinâmicas em tempo real
+      const totalClientes = await db.select({ count: sql<number>`COUNT(*)` }).from(clientes);
+      const totalProcessos = await db.select({ count: sql<number>`COUNT(*)` }).from(processos);
+      const totalConhecimentos = await db.select({ count: sql<number>`COUNT(*)` }).from(conhecimentos);
+      const totalEstrategias = await db.select({ count: sql<number>`COUNT(*)` }).from(estrategias);
+      const totalDocumentos = await db.select({ count: sql<number>`COUNT(*)` }).from(documentos);
+      const valorTotal = await db.select({ total: sql<string>`COALESCE(SUM(valorCausa), 0)` }).from(processos);
+      const tiposAcao = await db.select({ tipo: processos.tipoAcao, count: sql<number>`COUNT(*)` }).from(processos).groupBy(processos.tipoAcao).orderBy(sql`COUNT(*) DESC`);
+      const fases = await db.select({ fase: processos.faseAtual, count: sql<number>`COUNT(*)` }).from(processos).groupBy(processos.faseAtual);
+      const cidades = await db.select({ cidade: clientes.cidade, count: sql<number>`COUNT(*)` }).from(clientes).where(sql`${clientes.cidade} IS NOT NULL AND ${clientes.cidade} != ''`).groupBy(clientes.cidade).orderBy(sql`COUNT(*) DESC`);
+      return {
+        registros,
+        estatisticas: {
+          totalClientes: totalClientes[0]?.count || 0,
+          totalProcessos: totalProcessos[0]?.count || 0,
+          totalConhecimentos: totalConhecimentos[0]?.count || 0,
+          totalEstrategias: totalEstrategias[0]?.count || 0,
+          totalDocumentos: totalDocumentos[0]?.count || 0,
+          valorTotalCausas: valorTotal[0]?.total || "0",
+          tiposAcao,
+          fases,
+          cidades,
+        },
+      };
     }),
   }),
 

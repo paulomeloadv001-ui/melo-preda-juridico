@@ -1,0 +1,127 @@
+{
+  "query": "SELECT id, nomeCompleto, cpfCnpj, tipoPessoa, profissao, cidade, estado FROM clientes ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, nomeCompleto, cpfCnpj, tipoPessoa, profissao, cidade, estado FROM clientes ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "nomeCompleto": "VANDERSON OLIVEIRA DINIZ LIMA",
+      "cpfCnpj": "04056581177",
+      "tipoPessoa": "PF",
+      "profissao": "MILITAR",
+      "cidade": "Chapadão do Céu",
+      "estado": "GO"
+    },
+    {
+      "id": "2",
+      "nomeCompleto": "ARIEL ANSELMO DE OLIVEIRA",
+      "cpfCnpj": "39154017149",
+      "tipoPessoa": "PF",
+      "profissao": "servidor público",
+      "cidade": "SENADOR CANEDO",
+      "estado": "GO"
+    },
+    {
+      "id": "4",
+      "nomeCompleto": "O.J.S COMÉRCIO E SERVIÇOS LTDA",
+      "cpfCnpj": "37355845000100",
+      "tipoPessoa": "PJ",
+      "profissao": "NULL",
+      "cidade": "Goiânia",
+      "estado": "GO"
+    },
+    {
+      "id": "5",
+      "nomeCompleto": "ANA TEONILA FAGUNDES DA CUNHA",
+      "cpfCnpj": "03237672149",
+      "tipoPessoa": "PF",
+      "profissao": "funcionária pública estadual",
+      "cidade": "Goiânia",
+      "estado": "Go"
+    },
+    {
+      "id": "6",
+      "nomeCompleto": "MAEVE PRODUTOS HOSPITALARES LTDA",
+      "cpfCnpj": "09034672000192",
+      "tipoPessoa": "PJ",
+      "profissao": "NULL",
+      "cidade": "Aparecida de Goiânia",
+      "estado": "GO"
+    },
+    {
+      "id": "7",
+      "nomeCompleto": "STELA CARDOSO DA SILVA SANTOS",
+      "cpfCnpj": "53000625100",
+      "tipoPessoa": "PF",
+      "profissao": "PROFESSORA",
+      "cidade": "Bom Jesus de Goiás",
+      "estado": "GO"
+    },
+    {
+      "id": "8",
+      "nomeCompleto": "BANCO BRADESCO S/A",
+      "cpfCnpj": "60746948000112",
+      "tipoPessoa": "PJ",
+      "profissao": "NULL",
+      "cidade": "Osasco",
+      "estado": "SP"
+    },
+    {
+      "id": "9",
+      "nomeCompleto": "IRENE MARIA DOS SANTOS",
+      "cpfCnpj": "06726666187",
+      "tipoPessoa": "PF",
+      "profissao": "PROFESSORA INATIVA",
+      "cidade": "Goiânia",
+      "estado": "GO"
+    },
+    {
+      "id": "11",
+      "nomeCompleto": "NATALICIO LUIZ DA COSTA",
+      "cpfCnpj": "24357677149",
+      "tipoPessoa": "PF",
+      "profissao": "SEGUNDO SARGENTO",
+      "cidade": "Goiânia",
+      "estado": "Goiás"
+    },
+    {
+      "id": "12",
+      "nomeCompleto": "GLAYSON CHARLLES REZENDE REIS",
+      "cpfCnpj": "34813039120",
+      "tipoPessoa": "PF",
+      "profissao": "servidor público estadual aposentado",
+      "cidade": "Anápolis",
+      "estado": "GO"
+    },
+    {
+      "id": "13",
+      "nomeCompleto": "MARIA JULIA DE LIMA",
+      "cpfCnpj": "36342718172",
+      "tipoPessoa": "PF",
+      "profissao": "PROFESSORA",
+      "cidade": "Senador Canedo",
+      "estado": "Goiás"
+    },
+    {
+      "id": "14",
+      "nomeCompleto": "ANA MARIA DE SOUZA",
+      "cpfCnpj": "P5418079",
+      "tipoPessoa": "PF",
+      "profissao": "NULL",
+      "cidade": "NULL",
+      "estado": "NULL"
+    },
+    {
+      "id": "15",
+      "nomeCompleto": "VERANEIDE SOARES CAMPOS LUCY",
+      "cpfCnpj": "PENDENTE_VER",
+      "tipoPessoa": "PF",
+      "profissao": "NULL",
+      "cidade": "NULL",
+      "estado": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tnomeCompleto\tcpfCnpj\ttipoPessoa\tprofissao\tcidade\testado\n1\tVANDERSON OLIVEIRA DINIZ LIMA\t04056581177\tPF\tMILITAR\tChapadão do Céu\tGO\n2\tARIEL ANSELMO DE OLIVEIRA\t39154017149\tPF\tservidor público\tSENADOR CANEDO\tGO\n4\tO.J.S COMÉRCIO E SERVIÇOS LTDA\t37355845000100\tPJ\tNULL\tGoiânia\tGO\n5\tANA TEONILA FAGUNDES DA CUNHA\t03237672149\tPF\tfuncionária pública estadual\tGoiânia\tGo\n6\tMAEVE PRODUTOS HOSPITALARES LTDA\t09034672000192\tPJ\tNULL\tAparecida de Goiânia\tGO\n7\tSTELA CARDOSO DA SILVA SANTOS\t53000625100\tPF\tPROFESSORA\tBom Jesus de Goiás\tGO\n8\tBANCO BRADESCO S/A\t60746948000112\tPJ\tNULL\tOsasco\tSP\n9\tIRENE MARIA DOS SANTOS\t06726666187\tPF\tPROFESSORA INATIVA\tGoiânia\tGO\n11\tNATALICIO LUIZ DA COSTA\t24357677149\tPF\tSEGUNDO SARGENTO\tGoiânia\tGoiás\n12\tGLAYSON CHARLLES REZENDE REIS\t34813039120\tPF\tservidor público estadual aposentado\tAnápolis\tGO\n13\tMARIA JULIA DE LIMA\t36342718172\tPF\tPROFESSORA\tSenador Canedo\tGoiás\n14\tANA MARIA DE SOUZA\tP5418079\tPF\tNULL\tNULL\tNULL\n15\tVERANEIDE SOARES CAMPOS LUCY\tPENDENTE_VER\tPF\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}

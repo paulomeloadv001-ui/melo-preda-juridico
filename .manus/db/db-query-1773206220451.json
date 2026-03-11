@@ -1,0 +1,304 @@
+{
+  "query": "SELECT id, titulo, categoria, processoOrigemId, LEFT(conteudo, 200) as resumo FROM conhecimentos ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, titulo, categoria, processoOrigemId, LEFT(conteudo, 200) as resumo FROM conhecimentos ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "titulo": "Tese: AÇÃO DE OBRIGAÇÃO DE FAZER - VANDERSON OLIVEIRA DINIZ LIMA",
+      "categoria": "Tese",
+      "processoOrigemId": "1",
+      "resumo": "Readequação dos empréstimos consignados para o limite de 35% dos proventos líquidos, conforme Lei Estadual 16.898/2010 e suas alterações (Leis Estaduais 21.063/2021 e 21.665/22), devido ao comprometim"
+    },
+    {
+      "id": "2",
+      "titulo": "Jurisprudência: AÇÃO DE OBRIGAÇÃO DE FAZER - VANDERSON OLIVEIRA DINIZ LIMA",
+      "categoria": "Jurisprudencia",
+      "processoOrigemId": "1",
+      "resumo": "TJ-GO - Apelação Cível: 5407476-85.2022.8.09.0051 GOIÂNIA, Relator: Des(a). DESEMBARGADORA NELMA BRANCO FERREIRA PERILO, 4ª Câmara Cível, Data de Publicação: (S/R) DJ)"
+    },
+    {
+      "id": "3",
+      "titulo": "Fundamentação: AÇÃO DE OBRIGAÇÃO DE FAZER - VANDERSON OLIVEIRA DINIZ LIMA",
+      "categoria": "Legislacao",
+      "processoOrigemId": "1",
+      "resumo": "Art. 5º da Lei Estadual 16.898/2010 (alterada pelas Leis Estaduais 21.063/2021 e 21.665/22); Arts. 14, 39 e 51 do CDC; Súmula 297 STJ; Súmula 60 TJ/GO; Art. 1º, III e Art. 7º, X da CF; Art. 421 CC; Ar"
+    },
+    {
+      "id": "4",
+      "titulo": "Tese: EXECUÇÃO DE TÍTULO EXTRAJUDICIAL - ARIEL ANSELMO DE OLIVEIRA",
+      "categoria": "Tese",
+      "processoOrigemId": "2",
+      "resumo": "Execução de Título Extrajudicial (Cédula de Crédito Bancário - Empréstimo Consignado) devido ao inadimplemento do executado."
+    },
+    {
+      "id": "5",
+      "titulo": "Jurisprudência: EXECUÇÃO DE TÍTULO EXTRAJUDICIAL - ARIEL ANSELMO DE OLIVEIRA",
+      "categoria": "Jurisprudencia",
+      "processoOrigemId": "2",
+      "resumo": "null"
+    },
+    {
+      "id": "6",
+      "titulo": "Fundamentação: EXECUÇÃO DE TÍTULO EXTRAJUDICIAL - ARIEL ANSELMO DE OLIVEIRA",
+      "categoria": "Legislacao",
+      "processoOrigemId": "2",
+      "resumo": "Lei Federal nº 10.931/2004 (Art. 26, 28); Código de Processo Civil (Art. 784, XII; Art. 778; Art. 779, I, IV, V; Art. 319, VII; Art. 425, VI; Art. 827, § 1º; Art. 835, I; Art. 272, § 2º e 5º)."
+    },
+    {
+      "id": "7",
+      "titulo": "Tese: CUMPRIMENTO PROVISÓRIO DE SENTENÇA - ARIEL ANSELMO DE OLIVEIRA",
+      "categoria": "Tese",
+      "processoOrigemId": "3",
+      "resumo": "Cabimento do cumprimento provisório de sentença sem caução, devido à preclusão da extinção da execução e ineficácia do recurso de apelação do executado para retomar o processo executivo principal, lim"
+    },
+    {
+      "id": "8",
+      "titulo": "Jurisprudência: CUMPRIMENTO PROVISÓRIO DE SENTENÇA - ARIEL ANSELMO DE OLIVEIRA",
+      "categoria": "Jurisprudencia",
+      "processoOrigemId": "3",
+      "resumo": "AgInt no AREsp 1.264.411/ES (Rel. Min. Gurgel de Faria, Primeira Turma, julgado em 07/05/2019, DJe 24/05/2019); REsp 1.348.657/MG (Rel. Min. Maria Isabel Gallotti, Quarta Turma, julgado em 05/02/2015,"
+    },
+    {
+      "id": "9",
+      "titulo": "Fundamentação: CUMPRIMENTO PROVISÓRIO DE SENTENÇA - ARIEL ANSELMO DE OLIVEIRA",
+      "categoria": "Legislacao",
+      "processoOrigemId": "3",
+      "resumo": "Art. 520 e seguintes do Código de Processo Civil; Art. 521, III, CPC (por analogia/espírito); Súmula 283/STF; Tema Repetitivo 929 do STJ."
+    },
+    {
+      "id": "10",
+      "titulo": "Tese: AÇÃO CAUTELAR DE TUTELA DE URGÊNCIA ANTECEDENTE - O.J.S COMÉRCIO E SERVIÇOS LTDA",
+      "categoria": "Tese",
+      "processoOrigemId": "4",
+      "resumo": "Suspensão da consolidação da propriedade fiduciária e do leilão extrajudicial do imóvel, condicionada ao depósito judicial do valor da mora, devido a indícios de abusividade contratual (juros acima da"
+    },
+    {
+      "id": "11",
+      "titulo": "Jurisprudência: AÇÃO CAUTELAR DE TUTELA DE URGÊNCIA ANTECEDENTE - O.J.S COMÉRCIO E SERVIÇOS LTDA",
+      "categoria": "Jurisprudencia",
+      "processoOrigemId": "4",
+      "resumo": "AgInt no CC 161.831/SP, Rel. Min. Nancy Andrighi; AgInt no REsp 1.351.544/GO, Rel. Min. Luis Felipe Salomão; AgInt no REsp 1.825.527/PR, Rel. Min. Paulo de Tarso Sanseverino."
+    },
+    {
+      "id": "12",
+      "titulo": "Fundamentação: AÇÃO CAUTELAR DE TUTELA DE URGÊNCIA ANTECEDENTE - O.J.S COMÉRCIO E SERVIÇOS LTDA",
+      "categoria": "Legislacao",
+      "processoOrigemId": "4",
+      "resumo": "Art. 300 e 305 do CPC (tutela de urgência), Art. 26 da Lei 9.514/97 (consolidação da propriedade), Art. 47, §1º do CPC (competência territorial), CDC, art. 51, IV; CC, art. 317; MP 2.170-36/2001 (abus"
+    },
+    {
+      "id": "13",
+      "titulo": "Tese: Agravo de Instrumento - ANA TEONILA FAGUNDES DA CUNHA",
+      "categoria": "Tese",
+      "processoOrigemId": "5",
+      "resumo": "Nulidade da execução por iliquidez e inexigibilidade do título executivo extrajudicial (Cédula de Crédito Bancário) devido à ausência de planilha discriminada do débito, inexistência de cláusula clara"
+    },
+    {
+      "id": "14",
+      "titulo": "Jurisprudência: Agravo de Instrumento - ANA TEONILA FAGUNDES DA CUNHA",
+      "categoria": "Jurisprudencia",
+      "processoOrigemId": "5",
+      "resumo": "TJ-GO - Apelação Cível: 5461100-48.2023.8.09.0137 RIO VERDE, Relator.: Des(a). JULIANA PEREIRA DINIZ PRUDENTE, 8ª Câmara Cível."
+    },
+    {
+      "id": "15",
+      "titulo": "Fundamentação: Agravo de Instrumento - ANA TEONILA FAGUNDES DA CUNHA",
+      "categoria": "Legislacao",
+      "processoOrigemId": "5",
+      "resumo": "Art. 1.015, inciso I, CPC; Art. 1.003, §5º, CPC; Art. 98 e ss., CPC; Art. 203, §1º, CPC; Art. 1.015, parágrafo único, CPC; Art. 28, §2º, inciso I, Lei nº 10.931/2004; Art. 803, I, CPC; Art. 28, §1º, I"
+    },
+    {
+      "id": "16",
+      "titulo": "Tese: AÇÃO DECLARATÓRIA DE INEXISTÊNCIA DE DÉBITO COM PEDIDO DE TUTELA ANTECIPADA DE URGÊNCIA - MAEVE PRODUTOS HOSPITALARES LTDA",
+      "categoria": "Tese",
+      "processoOrigemId": "6",
+      "resumo": "Inexistência de débito referente a multa e aviso prévio por rescisão contratual, alegando que a rescisão ocorreu de pleno direito devido ao término do prazo de vigência do contrato, sem prorrogação."
+    },
+    {
+      "id": "17",
+      "titulo": "Jurisprudência: AÇÃO DECLARATÓRIA DE INEXISTÊNCIA DE DÉBITO COM PEDIDO DE TUTELA ANTECIPADA DE URGÊNCIA - MAEVE PRODUTOS HOSPITALARES LTDA",
+      "categoria": "Jurisprudencia",
+      "processoOrigemId": "6",
+      "resumo": "Nelson NERY JÚNIOR e Rosa Maria de Andrade NERY. Código de processo civil comentado e legislação extravagante. 10ª ed. São Paulo: RT, 2007, p. 525 (sobre a obrigatoriedade da concessão da tutela antec"
+    },
+    {
+      "id": "18",
+      "titulo": "Fundamentação: AÇÃO DECLARATÓRIA DE INEXISTÊNCIA DE DÉBITO COM PEDIDO DE TUTELA ANTECIPADA DE URGÊNCIA - MAEVE PRODUTOS HOSPITALARES LTDA",
+      "categoria": "Legislacao",
+      "processoOrigemId": "6",
+      "resumo": "Art. 2º e 3º do CDC (relação de consumo e inversão do ônus da prova); Art. 113 e 422 do Código Civil (boa-fé contratual); Art. 573 do Código Civil (locação por tempo determinado cessa de pleno direito"
+    },
+    {
+      "id": "19",
+      "titulo": "Tese: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - STELA CARDOSO DA SILVA SANTOS",
+      "categoria": "Tese",
+      "processoOrigemId": "7",
+      "resumo": "Readequação de empréstimos consignados que superam 35% dos proventos líquidos da Autora, em flagrante desrespeito à Lei Estadual 16.898/2010 e suas alterações, configurando comprometimento excessivo d"
+    },
+    {
+      "id": "20",
+      "titulo": "Jurisprudência: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - STELA CARDOSO DA SILVA SANTOS",
+      "categoria": "Jurisprudencia",
+      "processoOrigemId": "7",
+      "resumo": "Súmula 297 do STJ; Súmula 60 do TJ/GO; TJ-GO - Apelação Cível: 5407476-85.2022.8.09.0051 GOIÂNIA, Relator: Des(a). DESEMBARGADORA NELMA BRANCO FERREIRA PERILO, 4ª Câmara Cível."
+    },
+    {
+      "id": "21",
+      "titulo": "Fundamentação: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - STELA CARDOSO DA SILVA SANTOS",
+      "categoria": "Legislacao",
+      "processoOrigemId": "7",
+      "resumo": "Art. 5º da Lei Estadual 16.898/2010 (alterada pelas Leis Estaduais 21.063/2021 e 21.665/2022); Art. 14, 39 e 51 do Código de Defesa do Consumidor; Art. 421 do Código Civil; Art. 1º, inciso III, e Art."
+    },
+    {
+      "id": "22",
+      "titulo": "Tese: AÇÃO DE COBRANÇA - BANCO BRADESCO S/A",
+      "categoria": "Tese",
+      "processoOrigemId": "8",
+      "resumo": "Cobrança de dívida decorrente de Liberação de Crédito em Conta Corrente não honrada pela requerida, gerando inadimplemento do saldo devedor."
+    },
+    {
+      "id": "23",
+      "titulo": "Jurisprudência: AÇÃO DE COBRANÇA - BANCO BRADESCO S/A",
+      "categoria": "Jurisprudencia",
+      "processoOrigemId": "8",
+      "resumo": "null"
+    },
+    {
+      "id": "24",
+      "titulo": "Fundamentação: AÇÃO DE COBRANÇA - BANCO BRADESCO S/A",
+      "categoria": "Legislacao",
+      "processoOrigemId": "8",
+      "resumo": "Artigos 319, 771 e seguintes do Novo Código de Processo Civil (mencionado no início); Artigos 319, inciso VI, 320 e 369 do Código de Processo Civil (mencionado nos fatos); Artigo 292, inciso I, e Arti"
+    },
+    {
+      "id": "25",
+      "titulo": "Tese: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - IRENE MARIA DOS SANTOS",
+      "categoria": "Tese",
+      "processoOrigemId": "9",
+      "resumo": "Readequação dos empréstimos consignados aos limites legais (35% da remuneração líquida) devido ao comprometimento excessivo da verba alimentar, em desacordo com a Lei Estadual 16.898/2010 e suas alter"
+    },
+    {
+      "id": "26",
+      "titulo": "Jurisprudência: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - IRENE MARIA DOS SANTOS",
+      "categoria": "Jurisprudencia",
+      "processoOrigemId": "9",
+      "resumo": "TJ-GO - Apelação Cível: 5407476-85.2022.8.09.0051 GOIÂNIA, Relator: Des(a). DESEMBARGADORA NELMA BRANCO FERREIRA PERILO, 4ª Câmara Cível."
+    },
+    {
+      "id": "27",
+      "titulo": "Fundamentação: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - IRENE MARIA DOS SANTOS",
+      "categoria": "Legislacao",
+      "processoOrigemId": "9",
+      "resumo": "Lei Estadual 16.898/2010 (Art. 5º, §§ 3º e 5º), Leis Estaduais 21.063/2021 e 21.665/2022 (margem consignável de 35%), Código de Defesa do Consumidor (Arts. 6º, VII, 14, 39, 51), Código de Processo Civ"
+    },
+    {
+      "id": "28",
+      "titulo": "Tese: AÇÃO DE REPACTUAÇÃO DE DÍVIDAS com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - NATALICIO LUIZ DA COSTA",
+      "categoria": "Tese",
+      "processoOrigemId": "10",
+      "resumo": "Repactuação de dívidas por superendividamento, com base na Lei 14.871/2021 c/c artigos 54-A e seguintes do Código de Defesa do Consumidor (LEI DO SUPERENDIVIDAMENTO), devido ao comprometimento excessi"
+    },
+    {
+      "id": "29",
+      "titulo": "Jurisprudência: AÇÃO DE REPACTUAÇÃO DE DÍVIDAS com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - NATALICIO LUIZ DA COSTA",
+      "categoria": "Jurisprudencia",
+      "processoOrigemId": "10",
+      "resumo": "Súmula 297 STJ; Súmula 60 TJ/GO; Conflito de Competência STJ: 193066 DF 2022/0362595-2, Relator: Ministro MARCO BUZZI, Data de Julgamento: 22/03/2023, S2 - SEGUNDA SEÇÃO, Data de Publicação: DJe 31/03"
+    },
+    {
+      "id": "30",
+      "titulo": "Fundamentação: AÇÃO DE REPACTUAÇÃO DE DÍVIDAS com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - NATALICIO LUIZ DA COSTA",
+      "categoria": "Legislacao",
+      "processoOrigemId": "10",
+      "resumo": "Lei 14.871/2021; Artigos 54-A e seguintes do CDC (Lei do Superendividamento); Artigo 292, inciso II do CPC; Artigo 98 e seguintes do CPC (Assistência Judiciária Gratuita); Art. 5º da Lei Estadual 16.8"
+    },
+    {
+      "id": "31",
+      "titulo": "Tese: AÇÃO DE CUMPRIMENTO DE OBRIGAÇÃO DE FAZER com Pedido de Antecipação dos Efeitos da Tutela Específica",
+      "categoria": "Tese",
+      "processoOrigemId": "11",
+      "resumo": "Bloqueio indevido de valores de empréstimo consignado, descumprimento de obrigação de fazer e violação da boa-fé contratual pelo banco, enquanto as parcelas são regularmente descontadas do contrachequ"
+    },
+    {
+      "id": "32",
+      "titulo": "Jurisprudência: AÇÃO DE CUMPRIMENTO DE OBRIGAÇÃO DE FAZER com Pedido de Antecipação dos Efeitos da Tutela Específica",
+      "categoria": "Jurisprudencia",
+      "processoOrigemId": "11",
+      "resumo": "TJ-GO - APL: 01982784920138090103 MINAÇU, Relator: Des(a). GILBERTO MARQUES FILHO, Data de Julgamento: 11/02/2021, 3ª Câmara Cível, Data de Publicação: DJ de 11/02/2021 (sobre pagamento de custas ao f"
+    },
+    {
+      "id": "33",
+      "titulo": "Tese: AÇÃO DE OBRIGAÇÃO DE FAZER",
+      "categoria": "Tese",
+      "processoOrigemId": "12",
+      "resumo": "Ilicitude da conduta dos bancos réus por comprometimento excessivo da folha de pagamento, extrapolando a margem consignável legal de 35% e confisco de verba alimentar, em violação ao CDC e à Lei Estad"
+    },
+    {
+      "id": "34",
+      "titulo": "Jurisprudência: AÇÃO DE OBRIGAÇÃO DE FAZER",
+      "categoria": "Jurisprudencia",
+      "processoOrigemId": "12",
+      "resumo": "Súmula 297 do STJ; Súmula 60 do TJ/GO; Apelação Cível: 5407476-85.2022.8.09.0051 GOIÂNIA (TJ-GO, 4ª Câmara Cível, Relator: Des(a). DESEMBARGADORA NELMA BRANCO FERREIRA PERILO)."
+    },
+    {
+      "id": "35",
+      "titulo": "Tese: AÇÃO CAUTELAR DE TUTELA DE URGÊNCIA ANTECEDENTE",
+      "categoria": "Tese",
+      "processoOrigemId": "4",
+      "resumo": "Suspensão do procedimento de consolidação da propriedade fiduciária e leilão extrajudicial devido à controvérsia sobre o débito e indícios de abusividade contratual (juros superiores à média, capitali"
+    },
+    {
+      "id": "36",
+      "titulo": "Jurisprudência: AÇÃO CAUTELAR DE TUTELA DE URGÊNCIA ANTECEDENTE",
+      "categoria": "Jurisprudencia",
+      "processoOrigemId": "4",
+      "resumo": "AgInt no CC 161.831/SP (Rel. Min. Nancy Andrighi); AgInt no REsp 1.351.544/GO (Rel. Min. Luis Felipe Salomão); AgInt no REsp 1.825.527/PR (Rel. Min. Paulo de Tarso Sanseverino)."
+    },
+    {
+      "id": "37",
+      "titulo": "Tese: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA",
+      "categoria": "Tese",
+      "processoOrigemId": "9",
+      "resumo": "Abusividade e ilegalidade do patamar de consignações facultativas que superam 35% da remuneração líquida, em desrespeito à Lei Estadual 16.898/2010 (alterada pelas Leis Estaduais 21.063/2021 e 21.665/"
+    },
+    {
+      "id": "38",
+      "titulo": "Jurisprudência: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA",
+      "categoria": "Jurisprudencia",
+      "processoOrigemId": "9",
+      "resumo": "TJ-GO - Apelação Cível: 5407476-85.2022.8.09.0051 GOIÂNIA, Relator: Des(a). DESEMBARGADORA NELMA BRANCO FERREIRA PERILO, 4ª Câmara Cível."
+    },
+    {
+      "id": "39",
+      "titulo": "Tese: AÇÃO DE COBRANÇA",
+      "categoria": "Tese",
+      "processoOrigemId": "8",
+      "resumo": "Cobrança de dívida decorrente de contrato de Liberação de Crédito em Conta Corrente não honrado pela requerida, gerando inadimplemento."
+    },
+    {
+      "id": "40",
+      "titulo": "Tese: Cumprimento Definitivo de Sentença",
+      "categoria": "Tese",
+      "processoOrigemId": "13",
+      "resumo": "Execução de honorários advocatícios sucumbenciais com base na coisa julgada progressiva e natureza alimentar do crédito"
+    },
+    {
+      "id": "41",
+      "titulo": "Tese: Cumprimento Definitivo de Sentença",
+      "categoria": "Tese",
+      "processoOrigemId": "14",
+      "resumo": "Execução definitiva de honorários advocatícios sucumbenciais com base em coisa julgada progressiva, que possui natureza alimentar e direito autônomo do advogado."
+    },
+    {
+      "id": "42",
+      "titulo": "Tese: Cumprimento Definitivo de Sentença - Honorários Advocatícios Sucumbenciais",
+      "categoria": "Tese",
+      "processoOrigemId": "16",
+      "resumo": "Cobrança de honorários advocatícios sucumbenciais em fase de cumprimento definitivo de sentença, com base em coisa julgada progressiva."
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitulo\tcategoria\tprocessoOrigemId\tresumo\n1\tTese: AÇÃO DE OBRIGAÇÃO DE FAZER - VANDERSON OLIVEIRA DINIZ LIMA\tTese\t1\tReadequação dos empréstimos consignados para o limite de 35% dos proventos líquidos, conforme Lei Estadual 16.898/2010 e suas alterações (Leis Estaduais 21.063/2021 e 21.665/22), devido ao comprometim\n2\tJurisprudência: AÇÃO DE OBRIGAÇÃO DE FAZER - VANDERSON OLIVEIRA DINIZ LIMA\tJurisprudencia\t1\tTJ-GO - Apelação Cível: 5407476-85.2022.8.09.0051 GOIÂNIA, Relator: Des(a). DESEMBARGADORA NELMA BRANCO FERREIRA PERILO, 4ª Câmara Cível, Data de Publicação: (S/R) DJ)\n3\tFundamentação: AÇÃO DE OBRIGAÇÃO DE FAZER - VANDERSON OLIVEIRA DINIZ LIMA\tLegislacao\t1\tArt. 5º da Lei Estadual 16.898/2010 (alterada pelas Leis Estaduais 21.063/2021 e 21.665/22); Arts. 14, 39 e 51 do CDC; Súmula 297 STJ; Súmula 60 TJ/GO; Art. 1º, III e Art. 7º, X da CF; Art. 421 CC; Ar\n4\tTese: EXECUÇÃO DE TÍTULO EXTRAJUDICIAL - ARIEL ANSELMO DE OLIVEIRA\tTese\t2\tExecução de Título Extrajudicial (Cédula de Crédito Bancário - Empréstimo Consignado) devido ao inadimplemento do executado.\n5\tJurisprudência: EXECUÇÃO DE TÍTULO EXTRAJUDICIAL - ARIEL ANSELMO DE OLIVEIRA\tJurisprudencia\t2\tnull\n6\tFundamentação: EXECUÇÃO DE TÍTULO EXTRAJUDICIAL - ARIEL ANSELMO DE OLIVEIRA\tLegislacao\t2\tLei Federal nº 10.931/2004 (Art. 26, 28); Código de Processo Civil (Art. 784, XII; Art. 778; Art. 779, I, IV, V; Art. 319, VII; Art. 425, VI; Art. 827, § 1º; Art. 835, I; Art. 272, § 2º e 5º).\n7\tTese: CUMPRIMENTO PROVISÓRIO DE SENTENÇA - ARIEL ANSELMO DE OLIVEIRA\tTese\t3\tCabimento do cumprimento provisório de sentença sem caução, devido à preclusão da extinção da execução e ineficácia do recurso de apelação do executado para retomar o processo executivo principal, lim\n8\tJurisprudência: CUMPRIMENTO PROVISÓRIO DE SENTENÇA - ARIEL ANSELMO DE OLIVEIRA\tJurisprudencia\t3\tAgInt no AREsp 1.264.411/ES (Rel. Min. Gurgel de Faria, Primeira Turma, julgado em 07/05/2019, DJe 24/05/2019); REsp 1.348.657/MG (Rel. Min. Maria Isabel Gallotti, Quarta Turma, julgado em 05/02/2015,\n9\tFundamentação: CUMPRIMENTO PROVISÓRIO DE SENTENÇA - ARIEL ANSELMO DE OLIVEIRA\tLegislacao\t3\tArt. 520 e seguintes do Código de Processo Civil; Art. 521, III, CPC (por analogia/espírito); Súmula 283/STF; Tema Repetitivo 929 do STJ.\n10\tTese: AÇÃO CAUTELAR DE TUTELA DE URGÊNCIA ANTECEDENTE - O.J.S COMÉRCIO E SERVIÇOS LTDA\tTese\t4\tSuspensão da consolidação da propriedade fiduciária e do leilão extrajudicial do imóvel, condicionada ao depósito judicial do valor da mora, devido a indícios de abusividade contratual (juros acima da\n11\tJurisprudência: AÇÃO CAUTELAR DE TUTELA DE URGÊNCIA ANTECEDENTE - O.J.S COMÉRCIO E SERVIÇOS LTDA\tJurisprudencia\t4\tAgInt no CC 161.831/SP, Rel. Min. Nancy Andrighi; AgInt no REsp 1.351.544/GO, Rel. Min. Luis Felipe Salomão; AgInt no REsp 1.825.527/PR, Rel. Min. Paulo de Tarso Sanseverino.\n12\tFundamentação: AÇÃO CAUTELAR DE TUTELA DE URGÊNCIA ANTECEDENTE - O.J.S COMÉRCIO E SERVIÇOS LTDA\tLegislacao\t4\tArt. 300 e 305 do CPC (tutela de urgência), Art. 26 da Lei 9.514/97 (consolidação da propriedade), Art. 47, §1º do CPC (competência territorial), CDC, art. 51, IV; CC, art. 317; MP 2.170-36/2001 (abus\n13\tTese: Agravo de Instrumento - ANA TEONILA FAGUNDES DA CUNHA\tTese\t5\tNulidade da execução por iliquidez e inexigibilidade do título executivo extrajudicial (Cédula de Crédito Bancário) devido à ausência de planilha discriminada do débito, inexistência de cláusula clara\n14\tJurisprudência: Agravo de Instrumento - ANA TEONILA FAGUNDES DA CUNHA\tJurisprudencia\t5\tTJ-GO - Apelação Cível: 5461100-48.2023.8.09.0137 RIO VERDE, Relator.: Des(a). JULIANA PEREIRA DINIZ PRUDENTE, 8ª Câmara Cível.\n15\tFundamentação: Agravo de Instrumento - ANA TEONILA FAGUNDES DA CUNHA\tLegislacao\t5\tArt. 1.015, inciso I, CPC; Art. 1.003, §5º, CPC; Art. 98 e ss., CPC; Art. 203, §1º, CPC; Art. 1.015, parágrafo único, CPC; Art. 28, §2º, inciso I, Lei nº 10.931/2004; Art. 803, I, CPC; Art. 28, §1º, I\n16\tTese: AÇÃO DECLARATÓRIA DE INEXISTÊNCIA DE DÉBITO COM PEDIDO DE TUTELA ANTECIPADA DE URGÊNCIA - MAEVE PRODUTOS HOSPITALARES LTDA\tTese\t6\tInexistência de débito referente a multa e aviso prévio por rescisão contratual, alegando que a rescisão ocorreu de pleno direito devido ao término do prazo de vigência do contrato, sem prorrogação.\n17\tJurisprudência: AÇÃO DECLARATÓRIA DE INEXISTÊNCIA DE DÉBITO COM PEDIDO DE TUTELA ANTECIPADA DE URGÊNCIA - MAEVE PRODUTOS HOSPITALARES LTDA\tJurisprudencia\t6\tNelson NERY JÚNIOR e Rosa Maria de Andrade NERY. Código de processo civil comentado e legislação extravagante. 10ª ed. São Paulo: RT, 2007, p. 525 (sobre a obrigatoriedade da concessão da tutela antec\n18\tFundamentação: AÇÃO DECLARATÓRIA DE INEXISTÊNCIA DE DÉBITO COM PEDIDO DE TUTELA ANTECIPADA DE URGÊNCIA - MAEVE PRODUTOS HOSPITALARES LTDA\tLegislacao\t6\tArt. 2º e 3º do CDC (relação de consumo e inversão do ônus da prova); Art. 113 e 422 do Código Civil (boa-fé contratual); Art. 573 do Código Civil (locação por tempo determinado cessa de pleno direito\n19\tTese: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - STELA CARDOSO DA SILVA SANTOS\tTese\t7\tReadequação de empréstimos consignados que superam 35% dos proventos líquidos da Autora, em flagrante desrespeito à Lei Estadual 16.898/2010 e suas alterações, configurando comprometimento excessivo d\n20\tJurisprudência: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - STELA CARDOSO DA SILVA SANTOS\tJurisprudencia\t7\tSúmula 297 do STJ; Súmula 60 do TJ/GO; TJ-GO - Apelação Cível: 5407476-85.2022.8.09.0051 GOIÂNIA, Relator: Des(a). DESEMBARGADORA NELMA BRANCO FERREIRA PERILO, 4ª Câmara Cível.\n21\tFundamentação: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - STELA CARDOSO DA SILVA SANTOS\tLegislacao\t7\tArt. 5º da Lei Estadual 16.898/2010 (alterada pelas Leis Estaduais 21.063/2021 e 21.665/2022); Art. 14, 39 e 51 do Código de Defesa do Consumidor; Art. 421 do Código Civil; Art. 1º, inciso III, e Art.\n22\tTese: AÇÃO DE COBRANÇA - BANCO BRADESCO S/A\tTese\t8\tCobrança de dívida decorrente de Liberação de Crédito em Conta Corrente não honrada pela requerida, gerando inadimplemento do saldo devedor.\n23\tJurisprudência: AÇÃO DE COBRANÇA - BANCO BRADESCO S/A\tJurisprudencia\t8\tnull\n24\tFundamentação: AÇÃO DE COBRANÇA - BANCO BRADESCO S/A\tLegislacao\t8\tArtigos 319, 771 e seguintes do Novo Código de Processo Civil (mencionado no início); Artigos 319, inciso VI, 320 e 369 do Código de Processo Civil (mencionado nos fatos); Artigo 292, inciso I, e Arti\n25\tTese: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - IRENE MARIA DOS SANTOS\tTese\t9\tReadequação dos empréstimos consignados aos limites legais (35% da remuneração líquida) devido ao comprometimento excessivo da verba alimentar, em desacordo com a Lei Estadual 16.898/2010 e suas alter\n26\tJurisprudência: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - IRENE MARIA DOS SANTOS\tJurisprudencia\t9\tTJ-GO - Apelação Cível: 5407476-85.2022.8.09.0051 GOIÂNIA, Relator: Des(a). DESEMBARGADORA NELMA BRANCO FERREIRA PERILO, 4ª Câmara Cível.\n27\tFundamentação: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - IRENE MARIA DOS SANTOS\tLegislacao\t9\tLei Estadual 16.898/2010 (Art. 5º, §§ 3º e 5º), Leis Estaduais 21.063/2021 e 21.665/2022 (margem consignável de 35%), Código de Defesa do Consumidor (Arts. 6º, VII, 14, 39, 51), Código de Processo Civ\n28\tTese: AÇÃO DE REPACTUAÇÃO DE DÍVIDAS com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - NATALICIO LUIZ DA COSTA\tTese\t10\tRepactuação de dívidas por superendividamento, com base na Lei 14.871/2021 c/c artigos 54-A e seguintes do Código de Defesa do Consumidor (LEI DO SUPERENDIVIDAMENTO), devido ao comprometimento excessi\n29\tJurisprudência: AÇÃO DE REPACTUAÇÃO DE DÍVIDAS com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - NATALICIO LUIZ DA COSTA\tJurisprudencia\t10\tSúmula 297 STJ; Súmula 60 TJ/GO; Conflito de Competência STJ: 193066 DF 2022/0362595-2, Relator: Ministro MARCO BUZZI, Data de Julgamento: 22/03/2023, S2 - SEGUNDA SEÇÃO, Data de Publicação: DJe 31/03\n30\tFundamentação: AÇÃO DE REPACTUAÇÃO DE DÍVIDAS com Pedido de TUTELA ANTECIPADA DE URGÊNCIA - NATALICIO LUIZ DA COSTA\tLegislacao\t10\tLei 14.871/2021; Artigos 54-A e seguintes do CDC (Lei do Superendividamento); Artigo 292, inciso II do CPC; Artigo 98 e seguintes do CPC (Assistência Judiciária Gratuita); Art. 5º da Lei Estadual 16.8\n31\tTese: AÇÃO DE CUMPRIMENTO DE OBRIGAÇÃO DE FAZER com Pedido de Antecipação dos Efeitos da Tutela Específica\tTese\t11\tBloqueio indevido de valores de empréstimo consignado, descumprimento de obrigação de fazer e violação da boa-fé contratual pelo banco, enquanto as parcelas são regularmente descontadas do contrachequ\n32\tJurisprudência: AÇÃO DE CUMPRIMENTO DE OBRIGAÇÃO DE FAZER com Pedido de Antecipação dos Efeitos da Tutela Específica\tJurisprudencia\t11\tTJ-GO - APL: 01982784920138090103 MINAÇU, Relator: Des(a). GILBERTO MARQUES FILHO, Data de Julgamento: 11/02/2021, 3ª Câmara Cível, Data de Publicação: DJ de 11/02/2021 (sobre pagamento de custas ao f\n33\tTese: AÇÃO DE OBRIGAÇÃO DE FAZER\tTese\t12\tIlicitude da conduta dos bancos réus por comprometimento excessivo da folha de pagamento, extrapolando a margem consignável legal de 35% e confisco de verba alimentar, em violação ao CDC e à Lei Estad\n34\tJurisprudência: AÇÃO DE OBRIGAÇÃO DE FAZER\tJurisprudencia\t12\tSúmula 297 do STJ; Súmula 60 do TJ/GO; Apelação Cível: 5407476-85.2022.8.09.0051 GOIÂNIA (TJ-GO, 4ª Câmara Cível, Relator: Des(a). DESEMBARGADORA NELMA BRANCO FERREIRA PERILO).\n35\tTese: AÇÃO CAUTELAR DE TUTELA DE URGÊNCIA ANTECEDENTE\tTese\t4\tSuspensão do procedimento de consolidação da propriedade fiduciária e leilão extrajudicial devido à controvérsia sobre o débito e indícios de abusividade contratual (juros superiores à média, capitali\n36\tJurisprudência: AÇÃO CAUTELAR DE TUTELA DE URGÊNCIA ANTECEDENTE\tJurisprudencia\t4\tAgInt no CC 161.831/SP (Rel. Min. Nancy Andrighi); AgInt no REsp 1.351.544/GO (Rel. Min. Luis Felipe Salomão); AgInt no REsp 1.825.527/PR (Rel. Min. Paulo de Tarso Sanseverino).\n37\tTese: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA\tTese\t9\tAbusividade e ilegalidade do patamar de consignações facultativas que superam 35% da remuneração líquida, em desrespeito à Lei Estadual 16.898/2010 (alterada pelas Leis Estaduais 21.063/2021 e 21.665/\n38\tJurisprudência: AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA\tJurisprudencia\t9\tTJ-GO - Apelação Cível: 5407476-85.2022.8.09.0051 GOIÂNIA, Relator: Des(a). DESEMBARGADORA NELMA BRANCO FERREIRA PERILO, 4ª Câmara Cível.\n39\tTese: AÇÃO DE COBRANÇA\tTese\t8\tCobrança de dívida decorrente de contrato de Liberação de Crédito em Conta Corrente não honrado pela requerida, gerando inadimplemento.\n40\tTese: Cumprimento Definitivo de Sentença\tTese\t13\tExecução de honorários advocatícios sucumbenciais com base na coisa julgada progressiva e natureza alimentar do crédito\n41\tTese: Cumprimento Definitivo de Sentença\tTese\t14\tExecução definitiva de honorários advocatícios sucumbenciais com base em coisa julgada progressiva, que possui natureza alimentar e direito autônomo do advogado.\n42\tTese: Cumprimento Definitivo de Sentença - Honorários Advocatícios Sucumbenciais\tTese\t16\tCobrança de honorários advocatícios sucumbenciais em fase de cumprimento definitivo de sentença, com base em coisa julgada progressiva.\n",
+  "stderr": "",
+  "execution_time_ms": 66
+}

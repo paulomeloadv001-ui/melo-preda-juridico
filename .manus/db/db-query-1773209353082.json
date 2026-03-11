@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO dados_financeiros (clienteId, remuneracaoLiquida, margemConsignavelValor, totalConsignacoes, margemExcedida, fonteRenda) VALUES \n(6, 10717.00, 2579.00, 9250.00, 1, 'Servidor Público - Estado de Goiás'),\n(7, 4403.00, 1033.00, 4035.00, 1, 'Professora - Estado de Goiás'),\n(1, 4515.00, 1852.00, 8534.00, 1, 'Militar - Estado de Goiás'),\n(9, 1108.00, 1113.00, 4094.00, 1, 'Professora - Estado de Goiás'),\n(12, 11129.00, NULL, NULL, 0, 'Agente de Segurança Prisional - DGAP/GO')\nON DUPLICATE KEY UPDATE remuneracaoLiquida = VALUES(remuneracaoLiquida);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute INSERT INTO dados_financeiros (clienteId, remuneracaoLiquida, margemConsignavelValor, totalConsignacoes, margemExcedida, fonteRenda) VALUES \n(6, 10717.00, 2579.00, 9250.00, 1, 'Servidor Público - Estado de Goiás'),\n(7, 4403.00, 1033.00, 4035.00, 1, 'Professora - Estado de Goiás'),\n(1, 4515.00, 1852.00, 8534.00, 1, 'Militar - Estado de Goiás'),\n(9, 1108.00, 1113.00, 4094.00, 1, 'Professora - Estado de Goiás'),\n(12, 11129.00, NULL, NULL, 0, 'Agente de Segurança Prisional - DGAP/GO')\nON DUPLICATE KEY UPDATE remuneracaoLiquida = VALUES(remuneracaoLiquida);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 79
+}
