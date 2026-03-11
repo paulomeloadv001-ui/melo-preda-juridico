@@ -15,7 +15,15 @@
 - [x] Exportação em massa de todo o banco de dados
 - [x] Dashboard com estatísticas gerais
 - [x] Banco de conhecimentos jurídicos (estratégias, jurisprudência, teses)
-- [x] Testes unitários (7 testes passando)
+- [x] Testes unitários (11 testes passando)
 - [x] Design profissional com identidade Melo & Preda
 - [x] Aba de exportação em massa para fluxo rápido e integração urgente
 - [x] Exportação completa do banco de dados em JSON, CSV, Excel para integração externa
+- [x] Gerar pasta única do cliente (Nome_CPF) no S3 ao fazer upload
+- [x] Dentro da pasta: PDF original, ficha_cliente.json, processos.json, financeiro.json, conhecimentos.json
+- [x] Banco de conhecimento individual por cliente (teses, jurisprudência, estratégias)
+- [x] Script reutilizável de geração de pasta do cliente (buildClientFolder)
+- [ ] Skill processo-extractor completa com script de pasta
+- [ ] Skill cliente-database completa
+- [ ] Skill analise-processual completa
+- [x] Atualizar plataforma web para exibir e exportar pasta do cliente

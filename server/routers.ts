@@ -13,6 +13,179 @@ import { eq, like, desc, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
 import { storagePut, storageGet } from "./storage";
 
+// Helper: sanitize name for folder path
+function sanitizeName(name: string): string {
+  return name
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9\s]/g, "")
+    .replace(/\s+/g, "_")
+    .toUpperCase()
+    .substring(0, 60);
+}
+
+// Helper: generate client folder key
+function clientFolderKey(nome: string, cpf: string): string {
+  const safeName = sanitizeName(nome);
+  const safeCpf = cpf.replace(/[.\-\/]/g, "");
+  return `clientes/${safeName}_${safeCpf}`;
+}
+
+// Helper: build full client folder with all JSON files
+async function buildClientFolder(clienteId: number, nome: string, cpf: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const folder = clientFolderKey(nome, cpf);
+
+  // Fetch all data
+  const [cliente] = await db.select().from(clientes).where(eq(clientes.id, clienteId)).limit(1);
+  if (!cliente) return null;
+
+  const procs = await db.select().from(processos).where(eq(processos.clienteId, clienteId)).orderBy(desc(processos.updatedAt));
+  const financeiro = await db.select().from(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, clienteId)).orderBy(desc(dadosFinanceiros.updatedAt));
+  const emprestimos = await db.select().from(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, clienteId));
+  const docs = await db.select().from(documentos).where(eq(documentos.clienteId, clienteId)).orderBy(desc(documentos.createdAt));
+  const conhecs = await db.select().from(conhecimentos).where(eq(conhecimentos.processoOrigemId, sql`ANY(SELECT id FROM processos WHERE clienteId = ${clienteId})`)).catch(() => [] as any[]);
+
+  // Fetch knowledge linked to this client's processes
+  const procIds = procs.map(p => p.id);
+  let conhecimentosCliente: any[] = [];
+  if (procIds.length > 0) {
+    for (const pid of procIds) {
+      const kn = await db.select().from(conhecimentos).where(eq(conhecimentos.processoOrigemId, pid));
+      conhecimentosCliente.push(...kn);
+    }
+  }
+
+  const processosDetalhados = await Promise.all(procs.map(async (p) => {
+    const estrats = await db.select().from(estrategias).where(eq(estrategias.processoId, p.id));
+    const partes = await db.select().from(partesProcessuais).where(eq(partesProcessuais.processoId, p.id));
+    const movs = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, p.id)).orderBy(desc(movimentacoes.createdAt));
+    const cumps = await db.select().from(cumprimentosSentenca).where(eq(cumprimentosSentenca.processoId, p.id));
+    // Remove textoExtraido from export (too large)
+    const { textoExtraido, ...procData } = p;
+    return { ...procData, estrategias: estrats, partes, movimentacoes: movs, cumprimentos: cumps };
+  }));
+
+  // 1. ficha_cliente.json - dados pessoais completos
+  const fichaCliente = {
+    exportDate: new Date().toISOString(),
+    id: cliente.id,
+    cpfCnpj: cliente.cpfCnpj,
+    nomeCompleto: cliente.nomeCompleto,
+    tipoPessoa: cliente.tipoPessoa,
+    rg: cliente.rg,
+    profissao: cliente.profissao,
+    cargo: cliente.cargo,
+    orgaoEmpregador: cliente.orgaoEmpregador,
+    vinculoFuncional: cliente.vinculoFuncional,
+    endereco: cliente.endereco,
+    cidade: cliente.cidade,
+    estado: cliente.estado,
+    cep: cliente.cep,
+    telefone: cliente.telefone,
+    email: cliente.email,
+    dataNascimento: cliente.dataNascimento,
+    estadoCivil: cliente.estadoCivil,
+    nacionalidade: cliente.nacionalidade,
+    observacoes: cliente.observacoes,
+    totalProcessos: procs.length,
+    processosAtivos: procs.filter(p => p.statusProcesso === "Ativo").length,
+    processosInativos: procs.filter(p => p.statusProcesso !== "Ativo").length,
+  };
+  const fichaUrl = await storagePut(`${folder}/ficha_cliente.json`, JSON.stringify(fichaCliente, null, 2), "application/json");
+
+  // 2. processos.json - todos os processos com detalhes
+  const processosExport = {
+    exportDate: new Date().toISOString(),
+    clienteNome: cliente.nomeCompleto,
+    clienteCpf: cliente.cpfCnpj,
+    totalProcessos: processosDetalhados.length,
+    processos: processosDetalhados.map(p => ({
+      ...p,
+      naturezaAcao: p.tipoAcao,
+      statusAtual: p.statusProcesso,
+      faseProcessual: p.faseAtual,
+    })),
+  };
+  const processosUrl = await storagePut(`${folder}/processos.json`, JSON.stringify(processosExport, null, 2), "application/json");
+
+  // 3. financeiro.json - dados financeiros e empréstimos
+  const financeiroExport = {
+    exportDate: new Date().toISOString(),
+    clienteNome: cliente.nomeCompleto,
+    clienteCpf: cliente.cpfCnpj,
+    dadosFinanceiros: financeiro,
+    emprestimosConsignados: emprestimos,
+    resumo: {
+      totalEmprestimos: emprestimos.length,
+      remuneracaoBruta: financeiro[0]?.remuneracaoBruta || null,
+      remuneracaoLiquida: financeiro[0]?.remuneracaoLiquida || null,
+      margemConsignavelPerc: financeiro[0]?.margemConsignavelPerc || null,
+      margemConsignavelValor: financeiro[0]?.margemConsignavelValor || null,
+      totalConsignacoes: financeiro[0]?.totalConsignacoes || null,
+      margemDisponivel: financeiro[0]?.margemDisponivel || null,
+      aptoEmprestimo: financeiro[0]?.aptoEmprestimo === 1,
+    },
+  };
+  const financeiroUrl = await storagePut(`${folder}/financeiro.json`, JSON.stringify(financeiroExport, null, 2), "application/json");
+
+  // 4. conhecimentos.json - banco de conhecimento individual
+  const conhecimentosExport = {
+    exportDate: new Date().toISOString(),
+    clienteNome: cliente.nomeCompleto,
+    clienteCpf: cliente.cpfCnpj,
+    totalConhecimentos: conhecimentosCliente.length,
+    teses: conhecimentosCliente.filter(k => k.categoria === "Tese"),
+    jurisprudencias: conhecimentosCliente.filter(k => k.categoria === "Jurisprudencia"),
+    estrategias: conhecimentosCliente.filter(k => k.categoria === "Estrategia"),
+    legislacoes: conhecimentosCliente.filter(k => k.categoria === "Legislacao"),
+  };
+  const conhecimentosUrl = await storagePut(`${folder}/conhecimentos.json`, JSON.stringify(conhecimentosExport, null, 2), "application/json");
+
+  // 5. documentos.json - lista de documentos vinculados
+  const documentosExport = {
+    exportDate: new Date().toISOString(),
+    clienteNome: cliente.nomeCompleto,
+    clienteCpf: cliente.cpfCnpj,
+    totalDocumentos: docs.length,
+    documentos: docs.map(d => ({
+      tipo: d.tipo,
+      nomeArquivo: d.nomeArquivo,
+      url: d.storageUrl,
+      tamanho: d.tamanho,
+      mimeType: d.mimeType,
+      dataCriacao: d.createdAt,
+    })),
+  };
+  const documentosUrl = await storagePut(`${folder}/documentos.json`, JSON.stringify(documentosExport, null, 2), "application/json");
+
+  // 6. banco_completo.json - tudo junto para exportação total
+  const bancoCompleto = {
+    exportDate: new Date().toISOString(),
+    version: "2.0",
+    pastaCliente: folder,
+    ficha: fichaCliente,
+    processos: processosExport,
+    financeiro: financeiroExport,
+    conhecimentos: conhecimentosExport,
+    documentos: documentosExport,
+  };
+  const bancoUrl = await storagePut(`${folder}/banco_completo.json`, JSON.stringify(bancoCompleto, null, 2), "application/json");
+
+  return {
+    folder,
+    files: {
+      fichaCliente: fichaUrl.url,
+      processos: processosUrl.url,
+      financeiro: financeiroUrl.url,
+      conhecimentos: conhecimentosUrl.url,
+      documentos: documentosUrl.url,
+      bancoCompleto: bancoUrl.url,
+    },
+  };
+}
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -77,12 +250,22 @@ export const appRouter = router({
           return { ...p, estrategias: estrats, partes, movimentacoes: movs, cumprimentos: cumps };
         }));
 
+        // Get knowledge for this client
+        const procIds = procs.map(p => p.id);
+        let conhecimentosCliente: any[] = [];
+        for (const pid of procIds) {
+          const kn = await db.select().from(conhecimentos).where(eq(conhecimentos.processoOrigemId, pid));
+          conhecimentosCliente.push(...kn);
+        }
+
         return {
           cliente,
           dadosFinanceiros: financeiro[0] ?? null,
           emprestimos,
           processos: processosComDetalhes,
           documentos: docs,
+          conhecimentos: conhecimentosCliente,
+          pasta: clientFolderKey(cliente.nomeCompleto, cliente.cpfCnpj),
         };
       }),
 
@@ -114,22 +297,18 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
-        // 1. Upload PDF to S3
+        // 1. Extract text from PDF
         const buffer = Buffer.from(input.fileBase64, "base64");
-        const storageKey = `processos/${Date.now()}_${input.fileName}`;
-        const { key, url } = await storagePut(storageKey, buffer, "application/pdf");
-
-        // 2. Extract text from PDF using pdf-parse
         const pdfParse = (await import("pdf-parse")) as any;
         let textoExtraido = "";
         try {
           const pdfData = await pdfParse(buffer);
-          textoExtraido = pdfData.text.substring(0, 50000); // Limit to 50k chars
+          textoExtraido = pdfData.text.substring(0, 50000);
         } catch (e) {
           textoExtraido = "Erro na extração de texto do PDF";
         }
 
-        // 3. Use AI to extract structured data
+        // 2. Use AI to extract structured data
         const extractionPrompt = `Você é um assistente jurídico especializado em análise de processos judiciais brasileiros.
 Analise o texto extraído de um processo judicial e extraia TODOS os dados estruturados possíveis.
 
@@ -139,6 +318,9 @@ REGRAS IMPORTANTES:
 - Valores monetários devem ser números sem formatação (ex: 487150.30)
 - Datas no formato DD/MM/YYYY
 - Se não encontrar um campo, retorne null
+- Identifique a natureza da ação (cível, trabalhista, consumerista, etc.)
+- Classifique se o processo está ativo ou inativo
+- Extraia TODOS os empréstimos consignados mencionados
 
 Retorne um JSON com esta estrutura exata:
 {
@@ -242,7 +424,7 @@ ${textoExtraido}`;
           dadosExtraidos = { error: "Falha na extração via IA" };
         }
 
-        // 4. Save to database with deduplication by CPF
+        // 3. Deduplication and save to DB
         let clienteId: number;
         const cpf = dadosExtraidos.cliente?.cpfCnpj;
         const nome = dadosExtraidos.cliente?.nomeCompleto || input.fileName.replace(".pdf", "");
@@ -251,7 +433,6 @@ ${textoExtraido}`;
           const existing = await db.select().from(clientes).where(eq(clientes.cpfCnpj, cpf)).limit(1);
           if (existing.length > 0) {
             clienteId = existing[0].id;
-            // Update existing client with new data
             await db.update(clientes).set({
               profissao: dadosExtraidos.cliente?.profissao || existing[0].profissao,
               cargo: dadosExtraidos.cliente?.cargo || existing[0].cargo,
@@ -280,7 +461,6 @@ ${textoExtraido}`;
             clienteId = inserted.id;
           }
         } else {
-          // No CPF found, create with placeholder
           const [inserted] = await db.insert(clientes).values({
             cpfCnpj: `PENDENTE_${Date.now()}`,
             nomeCompleto: nome,
@@ -288,14 +468,19 @@ ${textoExtraido}`;
           clienteId = inserted.id;
         }
 
-        // 5. Insert processo (check dedup by numeroCnj)
+        // 4. Upload PDF to client folder in S3
+        const clienteCpf = cpf || `PENDENTE_${Date.now()}`;
+        const folder = clientFolderKey(nome, clienteCpf);
+        const pdfKey = `${folder}/processos_pdf/${input.fileName}`;
+        const { key, url } = await storagePut(pdfKey, buffer, "application/pdf");
+
+        // 5. Insert processo (dedup by numeroCnj)
         const numCnj = dadosExtraidos.processo?.numeroCnj || `SEM_NUMERO_${Date.now()}`;
         const existingProc = await db.select().from(processos).where(eq(processos.numeroCnj, numCnj)).limit(1);
         let processoId: number;
 
         if (existingProc.length > 0) {
           processoId = existingProc[0].id;
-          // Update existing
           await db.update(processos).set({
             faseAtual: dadosExtraidos.processo?.faseAtual || existingProc[0].faseAtual,
             statusProcesso: dadosExtraidos.processo?.statusProcesso || existingProc[0].statusProcesso,
@@ -429,6 +614,19 @@ ${textoExtraido}`;
             processoOrigemId: processoId,
           });
         }
+        if (dadosExtraidos.estrategia?.fundamentacaoLegal) {
+          await db.insert(conhecimentos).values({
+            categoria: "Legislacao",
+            titulo: `Fundamentação: ${dadosExtraidos.processo?.tipoAcao || "Processo"} - ${nome}`,
+            conteudo: dadosExtraidos.estrategia.fundamentacaoLegal,
+            tribunal: dadosExtraidos.processo?.tribunal,
+            tipoAcao: dadosExtraidos.processo?.tipoAcao,
+            processoOrigemId: processoId,
+          });
+        }
+
+        // 12. Build client folder with all JSON files in S3
+        const pastaCliente = await buildClientFolder(clienteId, nome, clienteCpf);
 
         return {
           success: true,
@@ -437,8 +635,44 @@ ${textoExtraido}`;
           clienteNome: nome,
           cpf: cpf || "PENDENTE",
           numeroCnj: numCnj,
+          pastaCliente: pastaCliente?.folder || folder,
+          arquivosPasta: pastaCliente?.files || null,
           dadosExtraidos,
         };
+      }),
+  }),
+
+  // ==================== PASTA DO CLIENTE ====================
+  pasta: router({
+    generate: protectedProcedure
+      .input(z.object({ clienteId: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const [cliente] = await db.select().from(clientes).where(eq(clientes.id, input.clienteId)).limit(1);
+        if (!cliente) throw new Error("Cliente não encontrado");
+        const result = await buildClientFolder(input.clienteId, cliente.nomeCompleto, cliente.cpfCnpj);
+        return result;
+      }),
+
+    getFiles: protectedProcedure
+      .input(z.object({ clienteId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const [cliente] = await db.select().from(clientes).where(eq(clientes.id, input.clienteId)).limit(1);
+        if (!cliente) return null;
+        const folder = clientFolderKey(cliente.nomeCompleto, cliente.cpfCnpj);
+        // Try to get URLs for known files
+        const files: Record<string, string> = {};
+        const fileNames = ["ficha_cliente.json", "processos.json", "financeiro.json", "conhecimentos.json", "documentos.json", "banco_completo.json"];
+        for (const fn of fileNames) {
+          try {
+            const { url } = await storageGet(`${folder}/${fn}`);
+            files[fn] = url;
+          } catch { /* file not yet generated */ }
+        }
+        return { folder, files };
       }),
   }),
 
@@ -461,12 +695,14 @@ ${textoExtraido}`;
           const partes = await db.select().from(partesProcessuais).where(eq(partesProcessuais.processoId, p.id));
           const movs = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, p.id));
           const cumps = await db.select().from(cumprimentosSentenca).where(eq(cumprimentosSentenca.processoId, p.id));
-          return { ...p, estrategias: estrats, partes, movimentacoes: movs, cumprimentos: cumps };
+          const { textoExtraido, ...procData } = p;
+          return { ...procData, estrategias: estrats, partes, movimentacoes: movs, cumprimentos: cumps };
         }));
 
         return {
           exportDate: new Date().toISOString(),
-          version: "1.0",
+          version: "2.0",
+          pasta: clientFolderKey(cliente.nomeCompleto, cliente.cpfCnpj),
           cliente,
           dadosFinanceiros: financeiro,
           emprestimos,
@@ -483,9 +719,15 @@ ${textoExtraido}`;
         const procs = await db.select().from(processos).where(eq(processos.clienteId, cli.id));
         const financeiro = await db.select().from(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, cli.id));
         const emprestimos = await db.select().from(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, cli.id));
-        return { cliente: cli, processos: procs, dadosFinanceiros: financeiro, emprestimos };
+        return {
+          pasta: clientFolderKey(cli.nomeCompleto, cli.cpfCnpj),
+          cliente: cli,
+          processos: procs.map(p => { const { textoExtraido, ...rest } = p; return rest; }),
+          dadosFinanceiros: financeiro,
+          emprestimos,
+        };
       }));
-      return { exportDate: new Date().toISOString(), version: "1.0", totalClientes: allClientes.length, dados: result };
+      return { exportDate: new Date().toISOString(), version: "2.0", totalClientes: allClientes.length, dados: result };
     }),
 
     conhecimentosJson: protectedProcedure.query(async () => {

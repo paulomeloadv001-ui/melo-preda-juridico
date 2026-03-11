@@ -2,8 +2,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Download, Database, FileText, BookOpen, Loader2, Users } from "lucide-react";
+import { Download, Database, FileText, BookOpen, Loader2, Users, FolderOpen, ExternalLink, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -61,6 +60,7 @@ export default function Exportacao() {
   const { data: stats } = trpc.clientes.stats.useQuery();
   const exportAllMutation = trpc.exportar.todosClientesJson.useQuery(undefined, { enabled: false });
   const exportKnowledgeMutation = trpc.exportar.conhecimentosJson.useQuery(undefined, { enabled: false });
+  const generatePasta = trpc.pasta.generate.useMutation();
 
   const handleExportAllJson = async () => {
     setLoadingType("all-json");
@@ -82,6 +82,7 @@ export default function Exportacao() {
       const result = await exportAllMutation.refetch();
       if (result.data && (result.data as any).dados) {
         const flatData = (result.data as any).dados.map((d: any) => ({
+          pasta: d.pasta,
           cpfCnpj: d.cliente.cpfCnpj,
           nomeCompleto: d.cliente.nomeCompleto,
           profissao: d.cliente.profissao,
@@ -137,12 +138,62 @@ export default function Exportacao() {
     setLoadingType(null);
   };
 
+  const handleGeneratePasta = async (clienteId: number, nome: string) => {
+    setLoadingType(`pasta-${clienteId}`);
+    try {
+      const result = await generatePasta.mutateAsync({ clienteId });
+      if (result?.files) {
+        toast.success(`Pasta de ${nome} gerada com sucesso! ${Object.keys(result.files).length} arquivos.`);
+      }
+    } catch (e: any) {
+      toast.error(`Erro: ${e.message}`);
+    }
+    setLoadingType(null);
+  };
+
+  const handleGenerateAllPastas = async () => {
+    if (!clientesList?.length) return;
+    setLoadingType("all-pastas");
+    let success = 0;
+    let errors = 0;
+    for (const cli of clientesList) {
+      try {
+        await generatePasta.mutateAsync({ clienteId: cli.id });
+        success++;
+      } catch {
+        errors++;
+      }
+    }
+    toast.success(`Pastas geradas: ${success} sucesso, ${errors} erros`);
+    setLoadingType(null);
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Exportação em Massa</h1>
         <p className="text-muted-foreground mt-1">Exporte dados do banco para integração com outros sistemas e projetos</p>
       </div>
+
+      {/* Geração de Pastas em Massa */}
+      <Card className="border-2 border-[oklch(0.75_0.12_85)]/30 shadow-sm bg-[oklch(0.75_0.12_85)]/5">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <FolderOpen className="h-4 w-4 text-[oklch(0.75_0.12_85)]" /> Gerar Pastas de Todos os Clientes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Gera uma pasta individual para cada cliente no armazenamento com todos os arquivos JSON (ficha, processos, financeiro, conhecimentos, documentos e banco completo). Ideal para integração em massa com outros sistemas.
+          </p>
+          <div className="flex items-center justify-between">
+            <Badge variant="secondary">{stats?.totalClientes ?? 0} clientes</Badge>
+            <Button onClick={handleGenerateAllPastas} disabled={loadingType !== null} size="sm" className="gold-gradient text-white">
+              {loadingType === "all-pastas" ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Gerando...</> : <><FolderOpen className="h-4 w-4 mr-2" /> Gerar Todas as Pastas</>}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Exportação Completa */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -221,23 +272,35 @@ export default function Exportacao() {
             <div className="space-y-2">
               {clientesList.map((cli) => (
                 <div key={cli.id} className="flex items-center justify-between border rounded-lg p-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     <div className="h-8 w-8 rounded-full gold-gradient flex items-center justify-center text-white font-bold text-xs shrink-0">
                       {cli.nomeCompleto.charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                      <p className="text-sm font-medium">{cli.nomeCompleto}</p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{cli.nomeCompleto}</p>
                       <p className="text-xs text-muted-foreground font-mono">{cli.cpfCnpj}</p>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleExportClienteIndividual(cli.id, cli.nomeCompleto)}
-                    disabled={loadingType !== null}
-                  >
-                    {loadingType === `cli-${cli.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                  </Button>
+                  <div className="flex gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleGeneratePasta(cli.id, cli.nomeCompleto)}
+                      disabled={loadingType !== null}
+                      title="Gerar Pasta S3"
+                    >
+                      {loadingType === `pasta-${cli.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderOpen className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleExportClienteIndividual(cli.id, cli.nomeCompleto)}
+                      disabled={loadingType !== null}
+                      title="Baixar JSON"
+                    >
+                      {loadingType === `cli-${cli.id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

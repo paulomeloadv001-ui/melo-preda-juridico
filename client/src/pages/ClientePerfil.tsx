@@ -4,8 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, FileText, DollarSign, Scale, Download, ExternalLink } from "lucide-react";
+import { ArrowLeft, FileText, DollarSign, Scale, Download, ExternalLink, FolderOpen, BookOpen, Lightbulb, RefreshCw, Database } from "lucide-react";
 import { useLocation, useParams } from "wouter";
+import { toast } from "sonner";
 
 function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null;
@@ -26,11 +27,20 @@ export default function ClientePerfil() {
   const params = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const clienteId = parseInt(params.id || "0");
-  const { data: profile, isLoading } = trpc.clientes.getFullProfile.useQuery({ id: clienteId });
+  const { data: profile, isLoading, refetch } = trpc.clientes.getFullProfile.useQuery({ id: clienteId });
+  const { data: pastaFiles, refetch: refetchPasta } = trpc.pasta.getFiles.useQuery({ clienteId });
+  const generatePasta = trpc.pasta.generate.useMutation({
+    onSuccess: () => {
+      toast.success("Pasta do cliente gerada com sucesso!");
+      refetchPasta();
+    },
+    onError: (e) => toast.error(`Erro: ${e.message}`),
+  });
 
   const handleExportJson = () => {
     if (!profile) return;
-    const blob = new Blob([JSON.stringify(profile, null, 2)], { type: "application/json" });
+    const { ...exportData } = profile;
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -57,10 +67,11 @@ export default function ClientePerfil() {
     );
   }
 
-  const { cliente, dadosFinanceiros, emprestimos, processos, documentos } = profile;
+  const { cliente, dadosFinanceiros, emprestimos, processos, documentos, conhecimentos } = profile;
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => setLocation("/clientes")}>
@@ -71,10 +82,41 @@ export default function ClientePerfil() {
             <p className="text-muted-foreground text-sm font-mono">{cliente.cpfCnpj}</p>
           </div>
         </div>
-        <Button onClick={handleExportJson} variant="outline" size="sm">
-          <Download className="h-4 w-4 mr-2" /> Exportar JSON
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => generatePasta.mutate({ clienteId })} variant="outline" size="sm" disabled={generatePasta.isPending}>
+            {generatePasta.isPending ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <FolderOpen className="h-4 w-4 mr-2" />}
+            Gerar Pasta
+          </Button>
+          <Button onClick={handleExportJson} variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" /> Exportar JSON
+          </Button>
+        </div>
       </div>
+
+      {/* Pasta do Cliente no S3 */}
+      {pastaFiles && Object.keys(pastaFiles.files).length > 0 && (
+        <Card className="border-2 border-[oklch(0.75_0.12_85)]/30 shadow-sm bg-[oklch(0.75_0.12_85)]/5">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Database className="h-4 w-4 text-[oklch(0.75_0.12_85)]" />
+              Pasta do Cliente — {profile.pasta || ""}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs text-muted-foreground mb-3">Arquivos gerados automaticamente com todos os dados do cliente para exportação e integração.</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {Object.entries(pastaFiles.files).map(([name, url]) => (
+                <a key={name} href={url} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2 border rounded-lg p-2.5 hover:bg-accent transition-colors text-sm">
+                  <FileText className="h-4 w-4 text-[oklch(0.75_0.12_85)] shrink-0" />
+                  <span className="truncate font-medium">{name}</span>
+                  <ExternalLink className="h-3 w-3 ml-auto shrink-0 text-muted-foreground" />
+                </a>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Dados Pessoais */}
       <Card className="border shadow-sm">
@@ -142,6 +184,36 @@ export default function ClientePerfil() {
         </Card>
       )}
 
+      {/* Banco de Conhecimento Individual */}
+      {conhecimentos && conhecimentos.length > 0 && (
+        <Card className="border shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-[oklch(0.75_0.12_85)]" /> Banco de Conhecimento ({conhecimentos.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {conhecimentos.map((kn: any) => (
+                <div key={kn.id} className="border rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{kn.titulo}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {kn.categoria === "Tese" && <Lightbulb className="h-3 w-3 mr-1" />}
+                      {kn.categoria === "Jurisprudencia" && <Scale className="h-3 w-3 mr-1" />}
+                      {kn.categoria === "Legislacao" && <FileText className="h-3 w-3 mr-1" />}
+                      {kn.categoria}
+                    </Badge>
+                  </div>
+                  {kn.conteudo && <p className="text-sm text-muted-foreground leading-relaxed">{kn.conteudo}</p>}
+                  {kn.tipoAcao && <p className="text-xs text-muted-foreground">Tipo: {kn.tipoAcao} | Tribunal: {kn.tribunal || "—"}</p>}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Processos */}
       <Card className="border shadow-sm">
         <CardHeader>
@@ -184,6 +256,8 @@ export default function ClientePerfil() {
                     <InfoRow label="Danos Materiais" value={formatCurrency(proc.danosMateriais)} />
                     <InfoRow label="Restituição" value={formatCurrency(proc.restituicao)} />
                     <InfoRow label="Condenação" value={formatCurrency(proc.valorCondenacao)} />
+                    <InfoRow label="Natureza" value={proc.natureza} />
+                    <InfoRow label="Classe Processual" value={proc.classeProcessual} />
                   </div>
 
                   {proc.pdfUrl && (
@@ -203,6 +277,7 @@ export default function ClientePerfil() {
                           {est.fundamentacaoLegal && <div><span className="text-xs text-muted-foreground">Fundamentação Legal:</span><p className="text-sm">{est.fundamentacaoLegal}</p></div>}
                           {est.jurisprudenciaCitada && <div><span className="text-xs text-muted-foreground">Jurisprudência:</span><p className="text-sm">{est.jurisprudenciaCitada}</p></div>}
                           {est.pontosFortes && <div><span className="text-xs text-muted-foreground">Pontos Fortes:</span><p className="text-sm">{est.pontosFortes}</p></div>}
+                          {est.riscosIdentificados && <div><span className="text-xs text-muted-foreground">Riscos:</span><p className="text-sm">{est.riscosIdentificados}</p></div>}
                         </div>
                       ))}
                     </div>
@@ -215,8 +290,8 @@ export default function ClientePerfil() {
                       <div className="space-y-1">
                         {proc.partes.map((p) => (
                           <div key={p.id} className="flex justify-between text-sm">
-                            <span>{p.nome}</span>
-                            <Badge variant="outline" className="text-xs">{p.tipo}</Badge>
+                            <span>{p.nome} {p.cpfCnpj ? `(${p.cpfCnpj})` : ""}</span>
+                            <Badge variant="outline" className="text-xs">{p.tipo} — {p.categoria || ""}</Badge>
                           </div>
                         ))}
                       </div>

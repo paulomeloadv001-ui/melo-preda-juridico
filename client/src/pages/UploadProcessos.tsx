@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, X } from "lucide-react";
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, X, FolderOpen, ExternalLink, ArrowRight } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
+import { useLocation } from "wouter";
 
 type FileItem = {
   file: File;
@@ -20,6 +21,7 @@ export default function UploadProcessos() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadMutation = trpc.processar.uploadPdf.useMutation();
   const utils = trpc.useUtils();
+  const [, setLocation] = useLocation();
 
   const handleFileSelect = useCallback((selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
@@ -45,17 +47,14 @@ export default function UploadProcessos() {
       const fileItem = pendingFiles[i];
       const fileIndex = files.findIndex(f => f === fileItem);
 
-      // Update status to uploading
       setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "uploading" } : f));
 
       try {
-        // Convert to base64
         const buffer = await fileItem.file.arrayBuffer();
         const base64 = btoa(
           new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
         );
 
-        // Update status to extracting
         setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "extracting" } : f));
 
         const result = await uploadMutation.mutateAsync({
@@ -81,6 +80,7 @@ export default function UploadProcessos() {
   const doneFiles = files.filter(f => f.status === "done").length;
   const errorFiles = files.filter(f => f.status === "error").length;
   const progress = totalFiles > 0 ? Math.round((doneFiles / totalFiles) * 100) : 0;
+  const completedResults = files.filter(f => f.status === "done" && f.result).map(f => f.result);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -133,14 +133,14 @@ export default function UploadProcessos() {
             <div className="space-y-2">
               {files.map((item, index) => (
                 <div key={index} className="flex items-center justify-between border rounded-lg p-3">
-                  <div className="flex items-center gap-3">
-                    {item.status === "pending" && <FileText className="h-4 w-4 text-muted-foreground" />}
-                    {item.status === "uploading" && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
-                    {item.status === "extracting" && <Loader2 className="h-4 w-4 animate-spin text-[oklch(0.75_0.12_85)]" />}
-                    {item.status === "done" && <CheckCircle2 className="h-4 w-4 text-green-600" />}
-                    {item.status === "error" && <AlertCircle className="h-4 w-4 text-red-500" />}
-                    <div>
-                      <p className="text-sm font-medium">{item.file.name}</p>
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {item.status === "pending" && <FileText className="h-4 w-4 text-muted-foreground shrink-0" />}
+                    {item.status === "uploading" && <Loader2 className="h-4 w-4 animate-spin text-blue-500 shrink-0" />}
+                    {item.status === "extracting" && <Loader2 className="h-4 w-4 animate-spin text-[oklch(0.75_0.12_85)] shrink-0" />}
+                    {item.status === "done" && <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />}
+                    {item.status === "error" && <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{item.file.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {(item.file.size / 1024 / 1024).toFixed(1)} MB
                         {item.status === "uploading" && " — Enviando..."}
@@ -150,16 +150,18 @@ export default function UploadProcessos() {
                       </p>
                     </div>
                   </div>
-                  {item.status === "pending" && (
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); removeFile(index); }}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {item.status === "done" && item.result && (
-                    <Badge variant="outline" className="text-xs">
-                      {item.result.numeroCnj}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {item.status === "pending" && (
+                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); removeFile(index); }}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {item.status === "done" && item.result && (
+                      <Button variant="ghost" size="sm" onClick={() => setLocation(`/cliente/${item.result.clienteId}`)}>
+                        Ver Perfil <ArrowRight className="h-3 w-3 ml-1" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -179,6 +181,54 @@ export default function UploadProcessos() {
               <Button variant="outline" onClick={() => setFiles([])} disabled={isProcessing}>
                 Limpar Fila
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Resultados - Pastas Geradas */}
+      {completedResults.length > 0 && (
+        <Card className="border-2 border-green-200 shadow-sm bg-green-50/50">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2 text-green-800">
+              <FolderOpen className="h-4 w-4" /> Pastas de Clientes Geradas ({completedResults.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {completedResults.map((result, idx) => (
+                <div key={idx} className="border border-green-200 rounded-lg p-4 bg-white space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-sm">{result.clienteNome}</h4>
+                      <p className="text-xs text-muted-foreground font-mono">CPF: {result.cpf} | Processo: {result.numeroCnj}</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setLocation(`/cliente/${result.clienteId}`)}>
+                      Ver Perfil <ArrowRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  </div>
+
+                  {result.pastaCliente && (
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                        <FolderOpen className="h-3 w-3" /> {result.pastaCliente}/
+                      </p>
+                      {result.arquivosPasta && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
+                          {Object.entries(result.arquivosPasta).map(([name, url]) => (
+                            <a key={name} href={url as string} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-1.5 text-xs text-[oklch(0.55_0.12_85)] hover:underline p-1.5 rounded hover:bg-white transition-colors">
+                              <FileText className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{name}</span>
+                              <ExternalLink className="h-2.5 w-2.5 shrink-0 ml-auto" />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
