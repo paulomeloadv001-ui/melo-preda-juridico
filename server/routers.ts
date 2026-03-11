@@ -7,7 +7,8 @@ import { getDb } from "./db";
 import {
   clientes, processos, dadosFinanceiros, emprestimosConsignados,
   estrategias, partesProcessuais, movimentacoes, documentos,
-  conhecimentos, cumprimentosSentenca, analiseGeral, relatorios, jobs
+  conhecimentos, cumprimentosSentenca, analiseGeral, relatorios, jobs,
+  accessRequests, userProfiles, users
 } from "../drizzle/schema";
 import { eq, like, desc, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -680,11 +681,36 @@ ${textoExtraido}`;
             clienteId = inserted.id;
           }
         } else {
-          const [inserted] = await db.insert(clientes).values({
-            cpfCnpj: `PEND_${Date.now().toString(36)}`,
-            nomeCompleto: nome,
-          }).$returningId();
-          clienteId = inserted.id;
+          // CPF não extraído - buscar por nome similar para evitar duplicação
+          const nomeLimpo = nome.replace(/PROCESSO|COMPLETO|AUTOS|PRINCIPAIS|CUMPRIMENTO|PROVISORIO|PROVISÓRIO|SENTENÇA|SENTENCA|COMPETO|DE|DO|DA/gi, '').trim();
+          const palavrasNome = nomeLimpo.split(/\s+/).filter((p: string) => p.length > 2);
+          let clienteExistente = null;
+          
+          if (palavrasNome.length > 0) {
+            // Buscar clientes existentes e comparar nomes
+            const todosClientes = await db.select().from(clientes);
+            for (const c of todosClientes) {
+              const nomeClienteLimpo = c.nomeCompleto.replace(/PROCESSO|COMPLETO|AUTOS|PRINCIPAIS|CUMPRIMENTO|PROVISORIO|PROVISÓRIO|SENTENÇA|SENTENCA|COMPETO|DE|DO|DA/gi, '').trim().toUpperCase();
+              const nomeUploadLimpo = nomeLimpo.toUpperCase();
+              // Verificar se alguma palavra significativa do nome está presente
+              const matches = palavrasNome.filter((p: string) => nomeClienteLimpo.includes(p.toUpperCase()));
+              if (matches.length >= 1 && matches.length >= palavrasNome.length * 0.5) {
+                clienteExistente = c;
+                break;
+              }
+            }
+          }
+          
+          if (clienteExistente) {
+            clienteId = clienteExistente.id;
+            console.log(`[Upload] Cliente encontrado por nome similar: ${clienteExistente.nomeCompleto} (ID: ${clienteId})`);
+          } else {
+            const [inserted] = await db.insert(clientes).values({
+              cpfCnpj: `PEND_${Date.now().toString(36)}`,
+              nomeCompleto: nome,
+            }).$returningId();
+            clienteId = inserted.id;
+          }
         }
 
         // 4. Upload PDF to client folder in S3
@@ -1944,6 +1970,200 @@ ${textoExtraido}`;
       return { removidos: result[0]?.affectedRows || 0 };
     }),
   }),
+
+  // ==================== GESTÃO DE ACESSOS ====================
+  acessos: router({
+    // Solicitar acesso (público - qualquer pessoa pode solicitar)
+    solicitar: publicProcedure
+      .input(z.object({
+        nomeCompleto: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
+        cpf: z.string().min(11, "CPF inválido").max(14),
+        email: z.string().email("Email inválido"),
+        celular: z.string().min(10, "Celular inválido").max(15),
+        motivo: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Banco de dados indisponível");
+
+        // Verificar se já existe solicitação com este CPF
+        const existente = await db.select().from(accessRequests).where(eq(accessRequests.cpf, input.cpf)).limit(1);
+        if (existente.length > 0) {
+          const status = existente[0].status;
+          if (status === 'pendente') throw new Error("Já existe uma solicitação pendente com este CPF. Aguarde a aprovação.");
+          if (status === 'aprovado') throw new Error("Este CPF já possui acesso aprovado.");
+          // Se rejeitado, permite nova solicitação
+          if (status === 'rejeitado') {
+            await db.update(accessRequests).set({
+              nomeCompleto: input.nomeCompleto,
+              email: input.email,
+              celular: input.celular,
+              motivo: input.motivo || null,
+              status: 'pendente',
+              aprovadoPor: null,
+              aprovadoEm: null,
+              observacoesAdmin: null,
+            }).where(eq(accessRequests.id, existente[0].id));
+            return { success: true, message: "Solicitação reenviada com sucesso. Aguarde a aprovação do administrador." };
+          }
+        }
+
+        await db.insert(accessRequests).values({
+          nomeCompleto: input.nomeCompleto,
+          cpf: input.cpf,
+          email: input.email,
+          celular: input.celular,
+          motivo: input.motivo || null,
+        });
+
+        return { success: true, message: "Solicitação enviada com sucesso. Aguarde a aprovação do administrador." };
+      }),
+
+    // Listar solicitações (admin)
+    listar: protectedProcedure
+      .input(z.object({
+        status: z.enum(["pendente", "aprovado", "rejeitado", "todos"]).optional().default("todos"),
+      }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const filtro = input?.status || "todos";
+        if (filtro === "todos") {
+          return await db.select().from(accessRequests).orderBy(desc(accessRequests.createdAt));
+        }
+        return await db.select().from(accessRequests)
+          .where(eq(accessRequests.status, filtro as "pendente" | "aprovado" | "rejeitado"))
+          .orderBy(desc(accessRequests.createdAt));
+      }),
+
+    // Contar pendentes (admin - para badge)
+    contarPendentes: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { count: 0 };
+      const result = await db.select({ count: sql<number>`COUNT(*)` }).from(accessRequests).where(eq(accessRequests.status, 'pendente'));
+      return { count: result[0]?.count || 0 };
+    }),
+
+    // Aprovar solicitação (admin)
+    aprovar: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        observacoes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Banco de dados indisponível");
+
+        const [solicitacao] = await db.select().from(accessRequests).where(eq(accessRequests.id, input.id)).limit(1);
+        if (!solicitacao) throw new Error("Solicitação não encontrada");
+        if (solicitacao.status !== 'pendente') throw new Error("Esta solicitação já foi processada");
+
+        await db.update(accessRequests).set({
+          status: 'aprovado',
+          aprovadoPor: ctx.user.id,
+          aprovadoEm: new Date(),
+          observacoesAdmin: input.observacoes || null,
+        }).where(eq(accessRequests.id, input.id));
+
+        return { success: true, message: `Acesso aprovado para ${solicitacao.nomeCompleto}` };
+      }),
+
+    // Rejeitar solicitação (admin)
+    rejeitar: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        observacoes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Banco de dados indisponível");
+
+        const [solicitacao] = await db.select().from(accessRequests).where(eq(accessRequests.id, input.id)).limit(1);
+        if (!solicitacao) throw new Error("Solicitação não encontrada");
+
+        await db.update(accessRequests).set({
+          status: 'rejeitado',
+          aprovadoPor: ctx.user.id,
+          aprovadoEm: new Date(),
+          observacoesAdmin: input.observacoes || `Acesso negado por ${ctx.user.name}`,
+        }).where(eq(accessRequests.id, input.id));
+
+        return { success: true, message: `Solicitação de ${solicitacao.nomeCompleto} rejeitada` };
+      }),
+
+    // Excluir solicitação (admin)
+    excluir: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Banco de dados indisponível");
+        await db.delete(accessRequests).where(eq(accessRequests.id, input.id));
+        return { success: true };
+      }),
+
+    // Listar usuários do sistema (admin)
+    listarUsuarios: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      const allUsers = await db.select().from(users).orderBy(desc(users.lastSignedIn));
+      const profiles = await db.select().from(userProfiles);
+      return allUsers.map(u => {
+        const profile = profiles.find(p => p.userId === u.id);
+        return {
+          ...u,
+          cpf: profile?.cpf || null,
+          celular: profile?.celular || null,
+          cargo: profile?.cargo || null,
+          oab: profile?.oab || null,
+          ativo: profile?.ativo ?? 1,
+        };
+      });
+    }),
+
+    // Atualizar perfil de usuário (admin)
+    atualizarPerfil: protectedProcedure
+      .input(z.object({
+        userId: z.number(),
+        cpf: z.string().optional(),
+        celular: z.string().optional(),
+        cargo: z.string().optional(),
+        oab: z.string().optional(),
+        role: z.enum(["user", "admin"]).optional(),
+        ativo: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Banco de dados indisponível");
+
+        // Atualizar role na tabela users se fornecido
+        if (input.role) {
+          await db.update(users).set({ role: input.role }).where(eq(users.id, input.userId));
+        }
+
+        // Atualizar ou criar perfil
+        const [existing] = await db.select().from(userProfiles).where(eq(userProfiles.userId, input.userId)).limit(1);
+        if (existing) {
+          await db.update(userProfiles).set({
+            cpf: input.cpf ?? existing.cpf,
+            celular: input.celular ?? existing.celular,
+            cargo: input.cargo ?? existing.cargo,
+            oab: input.oab ?? existing.oab,
+            ativo: input.ativo ?? existing.ativo,
+          }).where(eq(userProfiles.id, existing.id));
+        } else {
+          await db.insert(userProfiles).values({
+            userId: input.userId,
+            cpf: input.cpf || null,
+            celular: input.celular || null,
+            cargo: input.cargo || null,
+            oab: input.oab || null,
+            ativo: input.ativo ?? 1,
+          });
+        }
+
+        return { success: true };
+      }),
+  }),
 });
 
 // ==================== PROCESSADOR DE FILA DE JOBS ====================
@@ -2030,11 +2250,51 @@ async function processarJobImportacaoPdf(jobId: number, inputData: any) {
     const clienteNome = dados.nomeCliente || inputData.fileName.replace(/\.pdf$/i, '');
     const clienteCpf = dados.cpf?.replace(/[^0-9]/g, '') || `PEND_${Date.now().toString(36)}`;
 
-    // Verificar se cliente já existe
+    // Verificar se cliente já existe por CPF
     const [existente] = await db.select().from(clientes).where(eq(clientes.cpfCnpj, clienteCpf));
     let clienteId: number;
     if (existente) {
       clienteId = existente.id;
+    } else if (clienteCpf.startsWith('PEND_')) {
+      // CPF não extraído - buscar por nome similar para evitar duplicação
+      const nomeLimpo = clienteNome.replace(/PROCESSO|COMPLETO|AUTOS|PRINCIPAIS|CUMPRIMENTO|PROVISORIO|PROVISÓRIO|SENTENÇA|SENTENCA|COMPETO|DE|DO|DA/gi, '').trim();
+      const palavrasNome = nomeLimpo.split(/\s+/).filter((p: string) => p.length > 2);
+      let clienteExistentePorNome: any = null;
+      if (palavrasNome.length > 0) {
+        const todosClientes = await db.select().from(clientes);
+        for (const c of todosClientes) {
+          const nomeClienteLimpo = c.nomeCompleto.replace(/PROCESSO|COMPLETO|AUTOS|PRINCIPAIS|CUMPRIMENTO|PROVISORIO|PROVISÓRIO|SENTENÇA|SENTENCA|COMPETO|DE|DO|DA/gi, '').trim().toUpperCase();
+          const matches = palavrasNome.filter((p: string) => nomeClienteLimpo.includes(p.toUpperCase()));
+          if (matches.length >= 1 && matches.length >= palavrasNome.length * 0.5) {
+            clienteExistentePorNome = c;
+            break;
+          }
+        }
+      }
+      if (clienteExistentePorNome) {
+        clienteId = clienteExistentePorNome.id;
+        console.log(`[Job] Cliente encontrado por nome similar: ${clienteExistentePorNome.nomeCompleto} (ID: ${clienteId})`);
+      } else {
+        const [ins] = await db.insert(clientes).values({
+          cpfCnpj: clienteCpf,
+          nomeCompleto: clienteNome,
+          rg: dados.rg || null,
+          profissao: dados.profissao || null,
+          cargo: dados.cargo || null,
+          orgaoEmpregador: dados.orgaoEmpregador || null,
+          vinculoFuncional: dados.vinculoFuncional || null,
+          endereco: dados.endereco || null,
+          cidade: dados.cidade || null,
+          estado: dados.estado || null,
+          cep: dados.cep || null,
+          telefone: dados.telefone || null,
+          email: dados.email || null,
+          dataNascimento: dados.dataNascimento || null,
+          estadoCivil: dados.estadoCivil || null,
+          nacionalidade: dados.nacionalidade || null,
+        });
+        clienteId = ins.insertId;
+      }
     } else {
       const [ins] = await db.insert(clientes).values({
         cpfCnpj: clienteCpf,

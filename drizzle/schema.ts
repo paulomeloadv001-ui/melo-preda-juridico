@@ -302,3 +302,39 @@ export const jobs = mysqlTable("jobs", {
 
 export type Job = typeof jobs.$inferSelect;
 export type InsertJob = typeof jobs.$inferInsert;
+
+// ==================== SOLICITAÇÕES DE ACESSO ====================
+export const accessRequests = mysqlTable("access_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  nomeCompleto: varchar("nomeCompleto", { length: 255 }).notNull(),
+  cpf: varchar("cpf", { length: 20 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  celular: varchar("celular", { length: 20 }).notNull(),
+  motivo: text("motivo"),
+  status: mysqlEnum("status", ["pendente", "aprovado", "rejeitado"]).default("pendente").notNull(),
+  aprovadoPor: int("aprovadoPor"),
+  aprovadoEm: timestamp("aprovadoEm"),
+  observacoesAdmin: text("observacoesAdmin"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AccessRequest = typeof accessRequests.$inferSelect;
+export type InsertAccessRequest = typeof accessRequests.$inferInsert;
+
+// ==================== PERFIS DE USUÁRIO ESTENDIDO ====================
+export const userProfiles = mysqlTable("user_profiles", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  cpf: varchar("cpf", { length: 20 }),
+  celular: varchar("celular", { length: 20 }),
+  cargo: varchar("cargo", { length: 100 }),
+  oab: varchar("oab", { length: 30 }),
+  permissoes: text("permissoes"), // JSON string com permissões específicas
+  ativo: int("ativo").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserProfile = typeof userProfiles.$inferSelect;
+export type InsertUserProfile = typeof userProfiles.$inferInsert;

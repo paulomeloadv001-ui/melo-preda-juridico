@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, Users, Upload, Download, BookOpen, LogOut, PanelLeft, Scale, Shield, FileBarChart, ListChecks } from "lucide-react";
+import { LayoutDashboard, Users, Upload, Download, BookOpen, LogOut, PanelLeft, Scale, Shield, FileBarChart, ListChecks, ShieldCheck } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -36,6 +36,7 @@ const menuItems = [
   { icon: FileBarChart, label: "Relatórios", path: "/relatorios" },
   { icon: Shield, label: "Correção / Deduplicação", path: "/correcao" },
   { icon: ListChecks, label: "Fila de Trabalhos", path: "/jobs" },
+  { icon: ShieldCheck, label: "Gestão de Acessos", path: "/acessos" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

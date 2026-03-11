@@ -109,3 +109,11 @@
 - [x] Exibição dos dados financeiros extraídos após upload do contracheque
 - [x] Atualização automática de relatórios após upload de contracheque
 - [x] Fluxo sequencial completo: Upload Contracheque → Extração → Dados Financeiros → Margem → Relatório
+- [x] BUG: Sônia aparece como 2 clientes separados após upload de processo principal + cumprimento de sentença
+- [x] Merge dos registros duplicados da Sônia no banco (90001 + 90002 → 90001 com 2 processos vinculados)
+- [x] Corrigir lógica de detecção de cliente existente no upload para evitar duplicações futuras (busca por nome similar)
+- [x] Criar tabela access_requests e user_profiles no banco para gestão de acessos
+- [x] Implementar backend de gestão de acessos (cadastro nome/CPF/email/celular, solicitação, aprovação admin)
+- [x] Criar página de solicitação de acesso (formulário público - /solicitar-acesso)
+- [x] Criar painel de aprovação de acessos para o administrador (/acessos)
+- [x] Notificar admin quando nova solicitação de acesso chegar (badge de pendentes + polling 10s)

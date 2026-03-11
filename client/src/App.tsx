@@ -14,24 +14,34 @@ import Conhecimentos from "./pages/Conhecimentos";
 import Correcao from "./pages/Correcao";
 import Relatorios from "./pages/Relatorios";
 import Jobs from "./pages/Jobs";
+import GestaoAcessos, { SolicitarAcesso } from "./pages/GestaoAcessos";
 
 function Router() {
   return (
-    <DashboardLayout>
-      <Switch>
-        <Route path="/" component={Dashboard} />
-        <Route path="/clientes" component={ClientesList} />
-        <Route path="/cliente/:id" component={ClientePerfil} />
-        <Route path="/upload" component={UploadProcessos} />
-        <Route path="/exportacao" component={Exportacao} />
-        <Route path="/conhecimentos" component={Conhecimentos} />
-        <Route path="/relatorios" component={Relatorios} />
-        <Route path="/correcao" component={Correcao} />
-        <Route path="/jobs" component={Jobs} />
-        <Route path="/404" component={NotFound} />
-        <Route component={NotFound} />
-      </Switch>
-    </DashboardLayout>
+    <Switch>
+      {/* Rota pública - Formulário de Solicitação de Acesso */}
+      <Route path="/solicitar-acesso" component={SolicitarAcesso} />
+
+      {/* Rotas protegidas dentro do DashboardLayout */}
+      <Route>
+        <DashboardLayout>
+          <Switch>
+            <Route path="/" component={Dashboard} />
+            <Route path="/clientes" component={ClientesList} />
+            <Route path="/cliente/:id" component={ClientePerfil} />
+            <Route path="/upload" component={UploadProcessos} />
+            <Route path="/exportacao" component={Exportacao} />
+            <Route path="/conhecimentos" component={Conhecimentos} />
+            <Route path="/relatorios" component={Relatorios} />
+            <Route path="/correcao" component={Correcao} />
+            <Route path="/jobs" component={Jobs} />
+            <Route path="/acessos" component={GestaoAcessos} />
+            <Route path="/404" component={NotFound} />
+            <Route component={NotFound} />
+          </Switch>
+        </DashboardLayout>
+      </Route>
+    </Switch>
   );
 }
 

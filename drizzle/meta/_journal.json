@@ -57,6 +57,13 @@
       "when": 1773230451513,
       "tag": "0007_acoustic_firebrand",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1773234723978,
+      "tag": "0008_fixed_iron_lad",
+      "breakpoints": true
     }
   ]
 }
