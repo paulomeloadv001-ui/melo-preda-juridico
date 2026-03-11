@@ -23,7 +23,7 @@
 - [x] Dentro da pasta: PDF original, ficha_cliente.json, processos.json, financeiro.json, conhecimentos.json
 - [x] Banco de conhecimento individual por cliente (teses, jurisprudência, estratégias)
 - [x] Script reutilizável de geração de pasta do cliente (buildClientFolder)
-- [ ] Skill processo-extractor completa com script de pasta
-- [ ] Skill cliente-database completa
-- [ ] Skill analise-processual completa
+- [x] Skill processo-extractor completa com script de pasta
+- [x] Skill cliente-database completa
+- [x] Skill analise-processual completa
 - [x] Atualizar plataforma web para exibir e exportar pasta do cliente
