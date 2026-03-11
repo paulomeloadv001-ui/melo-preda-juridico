@@ -1,0 +1,16 @@
+{
+  "query": "SELECT REPLACE(REPLACE(REPLACE(cpfCnpj, '.', ''), '-', ''), '/', '') as cpf_norm, GROUP_CONCAT(id) as ids, GROUP_CONCAT(nomeCompleto SEPARATOR ' | ') as nomes, COUNT(*) as qtd FROM clientes GROUP BY cpf_norm HAVING qtd > 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT REPLACE(REPLACE(REPLACE(cpfCnpj, '.', ''), '-', ''), '/', '') as cpf_norm, GROUP_CONCAT(id) as ids, GROUP_CONCAT(nomeCompleto SEPARATOR ' | ') as nomes, COUNT(*) as qtd FROM clientes GROUP BY cpf_norm HAVING qtd > 1;",
+  "rows": [
+    {
+      "cpf_norm": "39154017149",
+      "ids": "2,3,10",
+      "nomes": "ARIEL ANSELMO DE OLIVEIRA | ARIEL ANSELMO DE OLIVEIRA | ARIEL ANSELMO DE OLIVEIRA",
+      "qtd": "3"
+    }
+  ],
+  "messages": [],
+  "stdout": "cpf_norm\tids\tnomes\tqtd\n39154017149\t2,3,10\tARIEL ANSELMO DE OLIVEIRA | ARIEL ANSELMO DE OLIVEIRA | ARIEL ANSELMO DE OLIVEIRA\t3\n",
+  "stderr": "",
+  "execution_time_ms": 60
+}

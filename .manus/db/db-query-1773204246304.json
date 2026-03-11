@@ -1,0 +1,98 @@
+{
+  "query": "SELECT c.id, c.nomeCompleto, c.cpfCnpj, c.tipoPessoa, GROUP_CONCAT(p.numeroCnj SEPARATOR ' | ') as processos, COUNT(p.id) as qtd_processos FROM clientes c LEFT JOIN processos p ON p.clienteId = c.id GROUP BY c.id ORDER BY c.id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT c.id, c.nomeCompleto, c.cpfCnpj, c.tipoPessoa, GROUP_CONCAT(p.numeroCnj SEPARATOR ' | ') as processos, COUNT(p.id) as qtd_processos FROM clientes c LEFT JOIN processos p ON p.clienteId = c.id GROUP BY c.id ORDER BY c.id;",
+  "rows": [
+    {
+      "id": "1",
+      "nomeCompleto": "VANDERSON OLIVEIRA DINIZ LIMA",
+      "cpfCnpj": "040.565.811-77",
+      "tipoPessoa": "PF",
+      "processos": "5409032-24.2025.8.09.0179",
+      "qtd_processos": "1"
+    },
+    {
+      "id": "2",
+      "nomeCompleto": "ARIEL ANSELMO DE OLIVEIRA",
+      "cpfCnpj": "39154017149",
+      "tipoPessoa": "PF",
+      "processos": "5890301-69.2024.8.09.0174",
+      "qtd_processos": "1"
+    },
+    {
+      "id": "3",
+      "nomeCompleto": "ARIEL ANSELMO DE OLIVEIRA",
+      "cpfCnpj": "391540171-49",
+      "tipoPessoa": "PF",
+      "processos": "5806457-90.2025.8.09.0174",
+      "qtd_processos": "1"
+    },
+    {
+      "id": "4",
+      "nomeCompleto": "O.J.S COMÉRCIO E SERVIÇOS LTDA",
+      "cpfCnpj": "37.355.845/0001-00",
+      "tipoPessoa": "PJ",
+      "processos": "5660467-45.2025.8.09.0117",
+      "qtd_processos": "1"
+    },
+    {
+      "id": "5",
+      "nomeCompleto": "ANA TEONILA FAGUNDES DA CUNHA",
+      "cpfCnpj": "03237672149",
+      "tipoPessoa": "PF",
+      "processos": "5726214-43.2025.8.09.0051",
+      "qtd_processos": "1"
+    },
+    {
+      "id": "6",
+      "nomeCompleto": "MAEVE PRODUTOS HOSPITALARES LTDA",
+      "cpfCnpj": "09.034.672/0001-92",
+      "tipoPessoa": "PJ",
+      "processos": "5111379-59.2024.8.09.0011",
+      "qtd_processos": "1"
+    },
+    {
+      "id": "7",
+      "nomeCompleto": "STELA CARDOSO DA SILVA SANTOS",
+      "cpfCnpj": "53000625100",
+      "tipoPessoa": "PF",
+      "processos": "5180612-25.2024.8.09.0018",
+      "qtd_processos": "1"
+    },
+    {
+      "id": "8",
+      "nomeCompleto": "BANCO BRADESCO S/A",
+      "cpfCnpj": "60746948000112",
+      "tipoPessoa": "PJ",
+      "processos": "5017749-86.2025.8.09.0051",
+      "qtd_processos": "1"
+    },
+    {
+      "id": "9",
+      "nomeCompleto": "IRENE MARIA DOS SANTOS",
+      "cpfCnpj": "06726666187",
+      "tipoPessoa": "PF",
+      "processos": "5363744-49.2025.8.09.0051",
+      "qtd_processos": "1"
+    },
+    {
+      "id": "10",
+      "nomeCompleto": "ARIEL ANSELMO DE OLIVEIRA",
+      "cpfCnpj": "391.540.171-49",
+      "tipoPessoa": "PF",
+      "processos": "NULL",
+      "qtd_processos": "0"
+    },
+    {
+      "id": "11",
+      "nomeCompleto": "NATALICIO LUIZ DA COSTA",
+      "cpfCnpj": "24357677149",
+      "tipoPessoa": "PF",
+      "processos": "5347120-22.2025.8.09.0051",
+      "qtd_processos": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tnomeCompleto\tcpfCnpj\ttipoPessoa\tprocessos\tqtd_processos\n1\tVANDERSON OLIVEIRA DINIZ LIMA\t040.565.811-77\tPF\t5409032-24.2025.8.09.0179\t1\n2\tARIEL ANSELMO DE OLIVEIRA\t39154017149\tPF\t5890301-69.2024.8.09.0174\t1\n3\tARIEL ANSELMO DE OLIVEIRA\t391540171-49\tPF\t5806457-90.2025.8.09.0174\t1\n4\tO.J.S COMÉRCIO E SERVIÇOS LTDA\t37.355.845/0001-00\tPJ\t5660467-45.2025.8.09.0117\t1\n5\tANA TEONILA FAGUNDES DA CUNHA\t03237672149\tPF\t5726214-43.2025.8.09.0051\t1\n6\tMAEVE PRODUTOS HOSPITALARES LTDA\t09.034.672/0001-92\tPJ\t5111379-59.2024.8.09.0011\t1\n7\tSTELA CARDOSO DA SILVA SANTOS\t53000625100\tPF\t5180612-25.2024.8.09.0018\t1\n8\tBANCO BRADESCO S/A\t60746948000112\tPJ\t5017749-86.2025.8.09.0051\t1\n9\tIRENE MARIA DOS SANTOS\t06726666187\tPF\t5363744-49.2025.8.09.0051\t1\n10\tARIEL ANSELMO DE OLIVEIRA\t391.540.171-49\tPF\tNULL\t0\n11\tNATALICIO LUIZ DA COSTA\t24357677149\tPF\t5347120-22.2025.8.09.0051\t1\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

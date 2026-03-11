@@ -170,9 +170,15 @@ export default function Exportacao() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Exportação em Massa</h1>
-        <p className="text-muted-foreground mt-1">Exporte dados do banco para integração com outros sistemas e projetos</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Exportação em Massa</h1>
+          <p className="text-muted-foreground mt-1">Exporte dados do banco para integração com outros sistemas e projetos</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => { window.location.reload(); }}>
+          <RefreshCw className="h-4 w-4 mr-1" />
+          Atualizar
+        </Button>
       </div>
 
       {/* Geração de Pastas em Massa */}

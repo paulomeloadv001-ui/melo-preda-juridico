@@ -269,6 +269,62 @@ export const appRouter = router({
         };
       }),
 
+    // Excluir cliente e todos os dados vinculados
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        // Buscar processos do cliente
+        const procs = await db.select().from(processos).where(eq(processos.clienteId, input.id));
+        for (const p of procs) {
+          await db.delete(estrategias).where(eq(estrategias.processoId, p.id));
+          await db.delete(partesProcessuais).where(eq(partesProcessuais.processoId, p.id));
+          await db.delete(movimentacoes).where(eq(movimentacoes.processoId, p.id));
+          await db.delete(cumprimentosSentenca).where(eq(cumprimentosSentenca.processoId, p.id));
+          await db.delete(conhecimentos).where(eq(conhecimentos.processoOrigemId, p.id));
+          await db.delete(documentos).where(eq(documentos.processoId, p.id));
+        }
+        await db.delete(processos).where(eq(processos.clienteId, input.id));
+        await db.delete(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, input.id));
+        await db.delete(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, input.id));
+        await db.delete(documentos).where(eq(documentos.clienteId, input.id));
+        await db.delete(clientes).where(eq(clientes.id, input.id));
+        return { success: true, deletedId: input.id };
+      }),
+
+    // Atualizar dados do cliente
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        nomeCompleto: z.string().optional(),
+        cpfCnpj: z.string().optional(),
+        rg: z.string().optional(),
+        profissao: z.string().optional(),
+        cargo: z.string().optional(),
+        orgaoEmpregador: z.string().optional(),
+        endereco: z.string().optional(),
+        cidade: z.string().optional(),
+        estado: z.string().optional(),
+        cep: z.string().optional(),
+        telefone: z.string().optional(),
+        email: z.string().optional(),
+        observacoes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const { id, ...fields } = input;
+        const updateData: Record<string, any> = {};
+        for (const [key, val] of Object.entries(fields)) {
+          if (val !== undefined) updateData[key] = val;
+        }
+        if (Object.keys(updateData).length > 0) {
+          await db.update(clientes).set(updateData).where(eq(clientes.id, id));
+        }
+        return { success: true };
+      }),
+
     stats: protectedProcedure.query(async () => {
       const db = await getDb();
       if (!db) return { totalClientes: 0, totalProcessos: 0, processosAtivos: 0, valorTotalCausas: 0 };
@@ -283,6 +339,53 @@ export const appRouter = router({
         valorTotalCausas: parseFloat(String(valorTotal?.total ?? "0")),
       };
     }),
+  }),
+
+  // ==================== PROCESSOS (CRUD) ====================
+  processosRouter: router({
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        await db.delete(estrategias).where(eq(estrategias.processoId, input.id));
+        await db.delete(partesProcessuais).where(eq(partesProcessuais.processoId, input.id));
+        await db.delete(movimentacoes).where(eq(movimentacoes.processoId, input.id));
+        await db.delete(cumprimentosSentenca).where(eq(cumprimentosSentenca.processoId, input.id));
+        await db.delete(conhecimentos).where(eq(conhecimentos.processoOrigemId, input.id));
+        await db.delete(documentos).where(eq(documentos.processoId, input.id));
+        await db.delete(processos).where(eq(processos.id, input.id));
+        return { success: true, deletedId: input.id };
+      }),
+  }),
+
+  // ==================== CONHECIMENTOS (CRUD) ====================
+  conhecimentosRouter: router({
+    list: protectedProcedure
+      .input(z.object({ search: z.string().optional(), categoria: z.string().optional() }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        if (input?.search) {
+          return db.select().from(conhecimentos)
+            .where(sql`${conhecimentos.titulo} LIKE ${`%${input.search}%`} OR ${conhecimentos.conteudo} LIKE ${`%${input.search}%`}`)
+            .orderBy(desc(conhecimentos.createdAt));
+        }
+        if (input?.categoria) {
+          return db.select().from(conhecimentos)
+            .where(sql`${conhecimentos.categoria} = ${input.categoria}`)
+            .orderBy(desc(conhecimentos.createdAt));
+        }
+        return db.select().from(conhecimentos).orderBy(desc(conhecimentos.createdAt));
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        await db.delete(conhecimentos).where(eq(conhecimentos.id, input.id));
+        return { success: true };
+      }),
   }),
 
   // ==================== UPLOAD E PROCESSAMENTO ====================
@@ -674,6 +777,220 @@ ${textoExtraido}`;
         }
         return { folder, files };
       }),
+  }),
+
+  // ==================== CORREÇÃO E DEDUPLICAÇÃO ====================
+  correcao: router({
+    // Diagnóstico: lista duplicidades por CPF normalizado
+    diagnostico: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { duplicados: [], semCpf: [], processosOrfaos: [] };
+
+      // 1. Clientes com CPF duplicado (normalizado)
+      const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+      const cpfMap = new Map<string, typeof allClientes>();
+      for (const cli of allClientes) {
+        const cpfNorm = cli.cpfCnpj.replace(/[.\-\/]/g, "");
+        if (!cpfMap.has(cpfNorm)) cpfMap.set(cpfNorm, []);
+        cpfMap.get(cpfNorm)!.push(cli);
+      }
+      const duplicados = Array.from(cpfMap.entries())
+        .filter(([_, clis]) => clis.length > 1)
+        .map(([cpfNorm, clis]) => ({
+          cpfNormalizado: cpfNorm,
+          clientes: clis.map(c => ({ id: c.id, nome: c.nomeCompleto, cpfOriginal: c.cpfCnpj })),
+        }));
+
+      // 2. Clientes sem CPF válido
+      const semCpf = allClientes.filter(c =>
+        c.cpfCnpj.startsWith("PENDENTE") || c.cpfCnpj.startsWith("SEM_CPF") || c.cpfCnpj.length < 8
+      ).map(c => ({ id: c.id, nome: c.nomeCompleto, cpfAtual: c.cpfCnpj }));
+
+      // 3. Processos duplicados por CNJ
+      const allProcs = await db.select().from(processos).orderBy(processos.numeroCnj);
+      const cnjMap = new Map<string, typeof allProcs>();
+      for (const p of allProcs) {
+        const cnj = p.numeroCnj.replace(/\s/g, "");
+        if (!cnjMap.has(cnj)) cnjMap.set(cnj, []);
+        cnjMap.get(cnj)!.push(p);
+      }
+      const processosOrfaos = Array.from(cnjMap.entries())
+        .filter(([_, procs]) => procs.length > 1)
+        .map(([cnj, procs]) => ({
+          numeroCnj: cnj,
+          processos: procs.map(p => ({ id: p.id, clienteId: p.clienteId, tipoAcao: p.tipoAcao, fase: p.faseAtual })),
+        }));
+
+      return { duplicados, semCpf, processosOrfaos };
+    }),
+
+    // Normalizar todos os CPFs (remover pontos, traços, barras)
+    normalizarCpfs: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      const allClientes = await db.select().from(clientes);
+      let corrigidos = 0;
+      for (const cli of allClientes) {
+        const cpfNorm = cli.cpfCnpj.replace(/[.\-\/]/g, "");
+        if (cpfNorm !== cli.cpfCnpj && !cli.cpfCnpj.startsWith("PENDENTE") && !cli.cpfCnpj.startsWith("SEM_CPF")) {
+          // Verificar se já existe outro com esse CPF normalizado
+          const existing = await db.select().from(clientes)
+            .where(eq(clientes.cpfCnpj, cpfNorm)).limit(1);
+          if (existing.length === 0) {
+            await db.update(clientes).set({ cpfCnpj: cpfNorm }).where(eq(clientes.id, cli.id));
+            corrigidos++;
+          }
+        }
+      }
+      return { corrigidos, mensagem: `${corrigidos} CPFs normalizados` };
+    }),
+
+    // Merge de clientes duplicados: mantém o mais antigo (menor ID), move processos e dados
+    mergeClientes: protectedProcedure
+      .input(z.object({ manterClienteId: z.number(), removerClienteId: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        const { manterClienteId, removerClienteId } = input;
+        if (manterClienteId === removerClienteId) throw new Error("IDs iguais");
+
+        // Verificar se ambos existem
+        const [manter] = await db.select().from(clientes).where(eq(clientes.id, manterClienteId)).limit(1);
+        const [remover] = await db.select().from(clientes).where(eq(clientes.id, removerClienteId)).limit(1);
+        if (!manter || !remover) throw new Error("Cliente não encontrado");
+
+        // Mover processos do removido para o mantido
+        await db.update(processos).set({ clienteId: manterClienteId }).where(eq(processos.clienteId, removerClienteId));
+        // Mover dados financeiros
+        await db.update(dadosFinanceiros).set({ clienteId: manterClienteId }).where(eq(dadosFinanceiros.clienteId, removerClienteId));
+        // Mover empréstimos
+        await db.update(emprestimosConsignados).set({ clienteId: manterClienteId }).where(eq(emprestimosConsignados.clienteId, removerClienteId));
+        // Mover documentos
+        await db.update(documentos).set({ clienteId: manterClienteId }).where(eq(documentos.clienteId, removerClienteId));
+
+        // Atualizar dados do mantido com dados do removido (preencher campos vazios)
+        const updateFields: Record<string, any> = {};
+        const textFields = ["rg", "profissao", "cargo", "orgaoEmpregador", "vinculoFuncional", "endereco", "cidade", "estado", "cep", "telefone", "email", "dataNascimento", "estadoCivil", "nacionalidade"] as const;
+        for (const field of textFields) {
+          if (!manter[field] && remover[field]) {
+            updateFields[field] = remover[field];
+          }
+        }
+        if (Object.keys(updateFields).length > 0) {
+          await db.update(clientes).set(updateFields).where(eq(clientes.id, manterClienteId));
+        }
+
+        // Deletar o cliente duplicado
+        await db.delete(clientes).where(eq(clientes.id, removerClienteId));
+
+        return {
+          success: true,
+          mantido: { id: manter.id, nome: manter.nomeCompleto, cpf: manter.cpfCnpj },
+          removido: { id: remover.id, nome: remover.nomeCompleto, cpf: remover.cpfCnpj },
+          camposAtualizados: Object.keys(updateFields),
+        };
+      }),
+
+    // Auto-merge: detecta e faz merge automático de todos os duplicados por CPF
+    autoMerge: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const allClientes = await db.select().from(clientes).orderBy(clientes.id);
+      const cpfMap = new Map<string, typeof allClientes>();
+      for (const cli of allClientes) {
+        const cpfNorm = cli.cpfCnpj.replace(/[.\-\/]/g, "");
+        if (cpfNorm.startsWith("PENDENTE") || cpfNorm.startsWith("SEM_CPF")) continue;
+        if (!cpfMap.has(cpfNorm)) cpfMap.set(cpfNorm, []);
+        cpfMap.get(cpfNorm)!.push(cli);
+      }
+
+      const merges: { mantido: string; removidos: string[] }[] = [];
+      for (const [cpfNorm, clis] of Array.from(cpfMap.entries())) {
+        if (clis.length <= 1) continue;
+        // Manter o de menor ID (mais antigo)
+        const manterId = clis[0].id;
+        for (let i = 1; i < clis.length; i++) {
+          const removerId = clis[i].id;
+          // Mover tudo
+          await db.update(processos).set({ clienteId: manterId }).where(eq(processos.clienteId, removerId));
+          await db.update(dadosFinanceiros).set({ clienteId: manterId }).where(eq(dadosFinanceiros.clienteId, removerId));
+          await db.update(emprestimosConsignados).set({ clienteId: manterId }).where(eq(emprestimosConsignados.clienteId, removerId));
+          await db.update(documentos).set({ clienteId: manterId }).where(eq(documentos.clienteId, removerId));
+          // Preencher campos vazios
+          const [manter] = await db.select().from(clientes).where(eq(clientes.id, manterId)).limit(1);
+          const [remover] = await db.select().from(clientes).where(eq(clientes.id, removerId)).limit(1);
+          if (manter && remover) {
+            const updateFields: Record<string, any> = {};
+            const textFields = ["rg", "profissao", "cargo", "orgaoEmpregador", "vinculoFuncional", "endereco", "cidade", "estado", "cep", "telefone", "email", "dataNascimento", "estadoCivil", "nacionalidade"] as const;
+            for (const field of textFields) {
+              if (!manter[field] && remover[field]) updateFields[field] = remover[field];
+            }
+            if (Object.keys(updateFields).length > 0) {
+              await db.update(clientes).set(updateFields).where(eq(clientes.id, manterId));
+            }
+          }
+          await db.delete(clientes).where(eq(clientes.id, removerId));
+        }
+        // Normalizar CPF do mantido
+        await db.update(clientes).set({ cpfCnpj: cpfNorm }).where(eq(clientes.id, manterId));
+        merges.push({ mantido: `${clis[0].nomeCompleto} (ID ${manterId})`, removidos: clis.slice(1).map((c: any) => `${c.nomeCompleto} (ID ${c.id})`) });
+      }
+
+      return { totalMerges: merges.length, merges };
+    }),
+
+    // Atualizar CPF de um cliente (para corrigir PENDENTE/SEM_CPF)
+    atualizarCpf: protectedProcedure
+      .input(z.object({ clienteId: z.number(), novoCpf: z.string().min(8) }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        const cpfNorm = input.novoCpf.replace(/[.\-\/]/g, "");
+        // Verificar se já existe outro cliente com esse CPF
+        const existing = await db.select().from(clientes)
+          .where(sql`REPLACE(REPLACE(REPLACE(${clientes.cpfCnpj}, '.', ''), '-', ''), '/', '') = ${cpfNorm} AND ${clientes.id} != ${input.clienteId}`)
+          .limit(1);
+        if (existing.length > 0) {
+          throw new Error(`CPF já pertence ao cliente: ${existing[0].nomeCompleto} (ID ${existing[0].id}). Use merge para unificar.`);
+        }
+        await db.update(clientes).set({ cpfCnpj: cpfNorm }).where(eq(clientes.id, input.clienteId));
+        return { success: true, clienteId: input.clienteId, cpfAtualizado: cpfNorm };
+      }),
+
+    // Deduplicar processos por número CNJ (mantém o mais recente)
+    deduplicarProcessos: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      const allProcs = await db.select().from(processos).orderBy(desc(processos.updatedAt));
+      const cnjMap = new Map<string, typeof allProcs>();
+      for (const p of allProcs) {
+        const cnj = p.numeroCnj.replace(/\s/g, "");
+        if (cnj.startsWith("SEM_NUMERO")) continue;
+        if (!cnjMap.has(cnj)) cnjMap.set(cnj, []);
+        cnjMap.get(cnj)!.push(p);
+      }
+
+      let removidos = 0;
+      for (const [cnj, procs] of Array.from(cnjMap.entries())) {
+        if (procs.length <= 1) continue;
+        // Manter o primeiro (mais recente por updatedAt)
+        for (let i = 1; i < procs.length; i++) {
+          // Mover estratégias, partes, movimentações, cumprimentos, documentos, conhecimentos
+          await db.update(estrategias).set({ processoId: procs[0].id }).where(eq(estrategias.processoId, procs[i].id));
+          await db.update(partesProcessuais).set({ processoId: procs[0].id }).where(eq(partesProcessuais.processoId, procs[i].id));
+          await db.update(movimentacoes).set({ processoId: procs[0].id }).where(eq(movimentacoes.processoId, procs[i].id));
+          await db.update(cumprimentosSentenca).set({ processoId: procs[0].id }).where(eq(cumprimentosSentenca.processoId, procs[i].id));
+          await db.update(documentos).set({ processoId: procs[0].id }).where(eq(documentos.processoId, procs[i].id));
+          await db.update(conhecimentos).set({ processoOrigemId: procs[0].id }).where(eq(conhecimentos.processoOrigemId, procs[i].id));
+          await db.delete(processos).where(eq(processos.id, procs[i].id));
+          removidos++;
+        }
+      }
+
+      return { processosRemovidos: removidos };
+    }),
   }),
 
   // ==================== EXPORTAÇÃO ====================

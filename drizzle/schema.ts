@@ -29,7 +29,7 @@ export const clientes = mysqlTable("clientes", {
   vinculoFuncional: varchar("vinculoFuncional", { length: 100 }),
   endereco: text("endereco"),
   cidade: varchar("cidade", { length: 100 }),
-  estado: varchar("estado", { length: 2 }),
+  estado: varchar("estado", { length: 100 }),
   cep: varchar("cep", { length: 10 }),
   telefone: varchar("telefone", { length: 20 }),
   email: varchar("email", { length: 320 }),

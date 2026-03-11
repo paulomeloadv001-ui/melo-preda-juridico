@@ -11,6 +11,7 @@ import ClientePerfil from "./pages/ClientePerfil";
 import UploadProcessos from "./pages/UploadProcessos";
 import Exportacao from "./pages/Exportacao";
 import Conhecimentos from "./pages/Conhecimentos";
+import Correcao from "./pages/Correcao";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function Router() {
         <Route path="/upload" component={UploadProcessos} />
         <Route path="/exportacao" component={Exportacao} />
         <Route path="/conhecimentos" component={Conhecimentos} />
+        <Route path="/correcao" component={Correcao} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

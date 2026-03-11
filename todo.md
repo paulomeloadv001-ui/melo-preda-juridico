@@ -27,3 +27,18 @@
 - [x] Skill cliente-database completa
 - [x] Skill analise-processual completa
 - [x] Atualizar plataforma web para exibir e exportar pasta do cliente
+- [x] Rota de normalização de CPF (remover pontos, traços, barras)
+- [x] Rota de deduplicação de clientes por CPF normalizado (merge duplicados)
+- [x] Rota de deduplicação de processos por número CNJ
+- [x] Rota de merge de clientes duplicados (unificar processos sob mesmo CPF)
+- [x] Rota de identificação e correção de clientes sem CPF
+- [x] Painel de correção na interface para visualizar e corrigir duplicidades
+- [x] Lógica: 1 CPF = 1 cliente com N processos vinculados (sem duplicar cliente)
+- [ ] Completar importação dos 7 PDFs restantes
+- [x] Botão Atualizar em cada página, aba e item
+- [x] Botão Excluir cliente, processo e item individual (com confirmação)
+- [x] Botão Importar em cada página relevante
+- [x] Botão Exportar individual em cada item (JSON, CSV)
+- [x] Rota de exclusão de cliente no backend
+- [x] Rota de exclusão de processo no backend
+- [x] Registrar rota /correcao no App.tsx e sidebar

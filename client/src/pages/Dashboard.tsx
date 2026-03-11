@@ -1,16 +1,19 @@
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, FileText, Scale, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, FileText, Scale, DollarSign, RefreshCw, Upload, Download, Shield } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLocation } from "wouter";
 
 export default function Dashboard() {
-  const { data: stats, isLoading } = trpc.clientes.stats.useQuery();
+  const stats = trpc.clientes.stats.useQuery();
+  const [, setLocation] = useLocation();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
   };
 
-  if (isLoading) {
+  if (stats.isLoading) {
     return (
       <div className="space-y-6">
         <div>
@@ -27,19 +30,27 @@ export default function Dashboard() {
   }
 
   const cards = [
-    { title: "Total de Clientes", value: stats?.totalClientes ?? 0, icon: Users, color: "text-[oklch(0.75_0.12_85)]" },
-    { title: "Total de Processos", value: stats?.totalProcessos ?? 0, icon: FileText, color: "text-[oklch(0.55_0.12_85)]" },
-    { title: "Processos Ativos", value: stats?.processosAtivos ?? 0, icon: Scale, color: "text-[oklch(0.55_0.15_145)]" },
-    { title: "Valor Total em Causas", value: formatCurrency(stats?.valorTotalCausas ?? 0), icon: DollarSign, color: "text-[oklch(0.75_0.12_85)]" },
+    { title: "Total de Clientes", value: stats.data?.totalClientes ?? 0, icon: Users, color: "text-[oklch(0.75_0.12_85)]" },
+    { title: "Total de Processos", value: stats.data?.totalProcessos ?? 0, icon: FileText, color: "text-[oklch(0.55_0.12_85)]" },
+    { title: "Processos Ativos", value: stats.data?.processosAtivos ?? 0, icon: Scale, color: "text-[oklch(0.55_0.15_145)]" },
+    { title: "Valor Total em Causas", value: formatCurrency(stats.data?.valorTotalCausas ?? 0), icon: DollarSign, color: "text-[oklch(0.75_0.12_85)]" },
   ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Painel Geral</h1>
-        <p className="text-muted-foreground mt-1">Visão geral do escritório Melo &amp; Preda Advogados</p>
+      {/* Header com botão Atualizar */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Painel Geral</h1>
+          <p className="text-muted-foreground mt-1">Visão geral do escritório Melo &amp; Preda Advogados</p>
+        </div>
+        <Button variant="outline" onClick={() => stats.refetch()} disabled={stats.isFetching}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${stats.isFetching ? "animate-spin" : ""}`} />
+          Atualizar
+        </Button>
       </div>
 
+      {/* Cards de estatísticas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((card, i) => (
           <Card key={i} className="border shadow-sm hover:shadow-md transition-shadow">
@@ -54,18 +65,34 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* Ações Rápidas */}
       <Card className="border shadow-sm">
         <CardHeader>
-          <CardTitle className="text-lg">Bem-vindo ao Sistema Jurídico Integrado</CardTitle>
+          <CardTitle className="text-lg">Ações Rápidas</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <p>Utilize o menu lateral para navegar entre as funcionalidades:</p>
-          <ul className="space-y-2 ml-4">
-            <li className="flex items-center gap-2"><FileText className="h-4 w-4 text-[oklch(0.75_0.12_85)]" /> <strong className="text-foreground">Upload de Processos</strong> — Envie PDFs e extraia dados automaticamente via IA</li>
-            <li className="flex items-center gap-2"><Users className="h-4 w-4 text-[oklch(0.75_0.12_85)]" /> <strong className="text-foreground">Clientes</strong> — Banco de dados completo por CPF</li>
-            <li className="flex items-center gap-2"><Scale className="h-4 w-4 text-[oklch(0.75_0.12_85)]" /> <strong className="text-foreground">Banco de Conhecimentos</strong> — Teses, jurisprudências e estratégias</li>
-            <li className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-[oklch(0.75_0.12_85)]" /> <strong className="text-foreground">Exportação em Massa</strong> — Exporte dados para integração externa</li>
-          </ul>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => setLocation("/upload")}>
+              <Upload className="h-6 w-6 text-[oklch(0.75_0.12_85)]" />
+              <span className="text-sm font-medium">Importar Processos</span>
+              <span className="text-xs text-muted-foreground">Upload de PDFs</span>
+            </Button>
+            <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => setLocation("/clientes")}>
+              <Users className="h-6 w-6 text-[oklch(0.75_0.12_85)]" />
+              <span className="text-sm font-medium">Ver Clientes</span>
+              <span className="text-xs text-muted-foreground">Banco de dados por CPF</span>
+            </Button>
+            <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => setLocation("/exportacao")}>
+              <Download className="h-6 w-6 text-[oklch(0.75_0.12_85)]" />
+              <span className="text-sm font-medium">Exportar Dados</span>
+              <span className="text-xs text-muted-foreground">JSON, CSV, Excel</span>
+            </Button>
+            <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => setLocation("/correcao")}>
+              <Shield className="h-6 w-6 text-[oklch(0.75_0.12_85)]" />
+              <span className="text-sm font-medium">Correção</span>
+              <span className="text-xs text-muted-foreground">Deduplicação e limpeza</span>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

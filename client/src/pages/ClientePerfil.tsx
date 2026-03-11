@@ -4,7 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, FileText, DollarSign, Scale, Download, ExternalLink, FolderOpen, BookOpen, Lightbulb, RefreshCw, Database } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
+} from "@/components/ui/alert-dialog";
+import { ArrowLeft, FileText, DollarSign, Scale, Download, ExternalLink, FolderOpen, BookOpen, Lightbulb, RefreshCw, Database, Trash2, Upload } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 
@@ -27,7 +31,15 @@ export default function ClientePerfil() {
   const params = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const clienteId = parseInt(params.id || "0");
-  const { data: profile, isLoading, refetch } = trpc.clientes.getFullProfile.useQuery({ id: clienteId });
+  const { data: profile, isLoading, isFetching, refetch } = trpc.clientes.getFullProfile.useQuery({ id: clienteId });
+  const deleteCliente = trpc.clientes.delete.useMutation({
+    onSuccess: () => { toast.success("Cliente excluído"); setLocation("/clientes"); },
+    onError: (e) => toast.error(e.message),
+  });
+  const deleteProcesso = trpc.processosRouter.delete.useMutation({
+    onSuccess: () => { toast.success("Processo excluído"); refetch(); },
+    onError: (e) => toast.error(e.message),
+  });
   const { data: pastaFiles, refetch: refetchPasta } = trpc.pasta.getFiles.useQuery({ clienteId });
   const generatePasta = trpc.pasta.generate.useMutation({
     onSuccess: () => {
@@ -82,14 +94,42 @@ export default function ClientePerfil() {
             <p className="text-muted-foreground text-sm font-mono">{cliente.cpfCnpj}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${isFetching ? "animate-spin" : ""}`} />
+            Atualizar
+          </Button>
           <Button onClick={() => generatePasta.mutate({ clienteId })} variant="outline" size="sm" disabled={generatePasta.isPending}>
-            {generatePasta.isPending ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <FolderOpen className="h-4 w-4 mr-2" />}
+            {generatePasta.isPending ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <FolderOpen className="h-4 w-4 mr-1" />}
             Gerar Pasta
           </Button>
           <Button onClick={handleExportJson} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" /> Exportar JSON
+            <Download className="h-4 w-4 mr-1" /> Exportar JSON
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setLocation("/upload")}>
+            <Upload className="h-4 w-4 mr-1" /> Importar Processo
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                <Trash2 className="h-4 w-4 mr-1" /> Excluir Cliente
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Isso excluirá permanentemente {profile?.cliente.nomeCompleto} e todos os processos, dados financeiros e documentos vinculados.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction className="bg-destructive text-destructive-foreground" onClick={() => deleteCliente.mutate({ id: clienteId })}>
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
@@ -233,11 +273,32 @@ export default function ClientePerfil() {
                       <h4 className="font-semibold text-sm">{proc.tipoAcao || "Processo"}</h4>
                       <p className="text-xs font-mono text-muted-foreground mt-0.5">{proc.numeroCnj}</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
                       <Badge variant={proc.statusProcesso === "Ativo" ? "default" : "secondary"}>
                         {proc.statusProcesso}
                       </Badge>
                       <Badge variant="outline">{proc.faseAtual}</Badge>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir processo?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Isso excluirá o processo {proc.numeroCnj} e todos os dados vinculados (estratégias, partes, movimentações).
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction className="bg-destructive text-destructive-foreground" onClick={() => deleteProcesso.mutate({ id: proc.id })}>
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
 

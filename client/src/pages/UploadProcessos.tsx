@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, X, FolderOpen, ExternalLink, ArrowRight } from "lucide-react";
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, X, FolderOpen, ExternalLink, ArrowRight, RefreshCw } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -89,9 +89,17 @@ export default function UploadProcessos() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Upload de Processos</h1>
-        <p className="text-muted-foreground mt-1">Envie PDFs de processos judiciais para extração automática de dados via IA</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Upload de Processos</h1>
+          <p className="text-muted-foreground mt-1">Envie PDFs de processos judiciais para extração automática de dados via IA</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => { setFiles([]); utils.clientes.list.invalidate(); utils.clientes.stats.invalidate(); }}>
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Drop Zone */}

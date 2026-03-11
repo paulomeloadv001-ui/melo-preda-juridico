@@ -1,0 +1,28 @@
+{
+  "query": "SELECT REPLACE(REPLACE(REPLACE(cpfCnpj, '.', ''), '-', ''), '/', '') as cpf_norm, id, nomeCompleto, cpfCnpj FROM clientes WHERE REPLACE(REPLACE(REPLACE(cpfCnpj, '.', ''), '-', ''), '/', '') IN (SELECT REPLACE(REPLACE(REPLACE(cpfCnpj, '.', ''), '-', ''), '/', '') FROM clientes GROUP BY REPLACE(REPLACE(REPLACE(cpfCnpj, '.', ''), '-', ''), '/', '') HAVING COUNT(*) > 1) ORDER BY cpf_norm;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT REPLACE(REPLACE(REPLACE(cpfCnpj, '.', ''), '-', ''), '/', '') as cpf_norm, id, nomeCompleto, cpfCnpj FROM clientes WHERE REPLACE(REPLACE(REPLACE(cpfCnpj, '.', ''), '-', ''), '/', '') IN (SELECT REPLACE(REPLACE(REPLACE(cpfCnpj, '.', ''), '-', ''), '/', '') FROM clientes GROUP BY REPLACE(REPLACE(REPLACE(cpfCnpj, '.', ''), '-', ''), '/', '') HAVING COUNT(*) > 1) ORDER BY cpf_norm;",
+  "rows": [
+    {
+      "cpf_norm": "39154017149",
+      "id": "2",
+      "nomeCompleto": "ARIEL ANSELMO DE OLIVEIRA",
+      "cpfCnpj": "39154017149"
+    },
+    {
+      "cpf_norm": "39154017149",
+      "id": "3",
+      "nomeCompleto": "ARIEL ANSELMO DE OLIVEIRA",
+      "cpfCnpj": "391540171-49"
+    },
+    {
+      "cpf_norm": "39154017149",
+      "id": "10",
+      "nomeCompleto": "ARIEL ANSELMO DE OLIVEIRA",
+      "cpfCnpj": "391.540.171-49"
+    }
+  ],
+  "messages": [],
+  "stdout": "cpf_norm\tid\tnomeCompleto\tcpfCnpj\n39154017149\t2\tARIEL ANSELMO DE OLIVEIRA\t39154017149\n39154017149\t3\tARIEL ANSELMO DE OLIVEIRA\t391540171-49\n39154017149\t10\tARIEL ANSELMO DE OLIVEIRA\t391.540.171-49\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

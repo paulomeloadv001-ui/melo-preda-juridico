@@ -1,0 +1,9 @@
+{
+  "query": "SELECT id, nomeCompleto, cpfCnpj FROM clientes WHERE cpfCnpj LIKE 'PENDENTE%' OR cpfCnpj LIKE 'SEM_CPF%' ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, nomeCompleto, cpfCnpj FROM clientes WHERE cpfCnpj LIKE 'PENDENTE%' OR cpfCnpj LIKE 'SEM_CPF%' ORDER BY id;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 60
+}
