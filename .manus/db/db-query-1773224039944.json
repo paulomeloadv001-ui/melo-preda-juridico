@@ -1,0 +1,50 @@
+{
+  "query": "SELECT 'clientes' as tabela, COUNT(*) as total FROM clientes UNION ALL SELECT 'processos', COUNT(*) FROM processos UNION ALL SELECT 'dados_financeiros', COUNT(*) FROM dados_financeiros UNION ALL SELECT 'emprestimos_consignados', COUNT(*) FROM emprestimos_consignados UNION ALL SELECT 'partes_processuais', COUNT(*) FROM partes_processuais UNION ALL SELECT 'movimentacoes', COUNT(*) FROM movimentacoes UNION ALL SELECT 'documentos', COUNT(*) FROM documentos UNION ALL SELECT 'conhecimentos', COUNT(*) FROM conhecimentos UNION ALL SELECT 'relatorios', COUNT(*) FROM relatorios UNION ALL SELECT 'users', COUNT(*) FROM users;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT 'clientes' as tabela, COUNT(*) as total FROM clientes UNION ALL SELECT 'processos', COUNT(*) FROM processos UNION ALL SELECT 'dados_financeiros', COUNT(*) FROM dados_financeiros UNION ALL SELECT 'emprestimos_consignados', COUNT(*) FROM emprestimos_consignados UNION ALL SELECT 'partes_processuais', COUNT(*) FROM partes_processuais UNION ALL SELECT 'movimentacoes', COUNT(*) FROM movimentacoes UNION ALL SELECT 'documentos', COUNT(*) FROM documentos UNION ALL SELECT 'conhecimentos', COUNT(*) FROM conhecimentos UNION ALL SELECT 'relatorios', COUNT(*) FROM relatorios UNION ALL SELECT 'users', COUNT(*) FROM users;",
+  "rows": [
+    {
+      "tabela": "processos",
+      "total": "16"
+    },
+    {
+      "tabela": "emprestimos_consignados",
+      "total": "64"
+    },
+    {
+      "tabela": "dados_financeiros",
+      "total": "21"
+    },
+    {
+      "tabela": "partes_processuais",
+      "total": "20"
+    },
+    {
+      "tabela": "clientes",
+      "total": "13"
+    },
+    {
+      "tabela": "movimentacoes",
+      "total": "0"
+    },
+    {
+      "tabela": "users",
+      "total": "2"
+    },
+    {
+      "tabela": "documentos",
+      "total": "21"
+    },
+    {
+      "tabela": "conhecimentos",
+      "total": "42"
+    },
+    {
+      "tabela": "relatorios",
+      "total": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "tabela\ttotal\nprocessos\t16\nemprestimos_consignados\t64\ndados_financeiros\t21\npartes_processuais\t20\nclientes\t13\nmovimentacoes\t0\nusers\t2\ndocumentos\t21\nconhecimentos\t42\nrelatorios\t0\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

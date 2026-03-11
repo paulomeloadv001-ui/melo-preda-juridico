@@ -73,3 +73,14 @@
 - [x] Adicionar link Relatórios na sidebar do DashboardLayout
 - [x] Integrar geração automática de relatório ao fluxo de importação de PDFs (Upload → Extração → Banco → Atualizar Relatório)
 - [x] Relatório de Dados Cadastrais sempre reflete dados em tempo real do banco
+- [x] Revisão ponta a ponta: Painel Geral
+- [x] Revisão ponta a ponta: Upload de Processos
+- [x] Revisão ponta a ponta: Clientes (listagem + perfil)
+- [x] Revisão ponta a ponta: Conhecimentos
+- [x] Revisão ponta a ponta: Exportação em Massa
+- [x] Revisão ponta a ponta: Relatórios
+- [x] Revisão ponta a ponta: Correção/Deduplicação
+- [x] Verificar sincronização do fluxo sequencial completo
+- [x] Corrigir bugs encontrados na revisão (nenhum bug crítico encontrado)
+- [x] Executar todos os testes unitários (20/20 passando)
+- [x] Backup e checkpoint final
