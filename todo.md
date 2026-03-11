@@ -58,7 +58,7 @@
 - [x] Preencher dados financeiros detalhados de cada cliente (21 registros)
 - [x] Preencher empréstimos consignados de cada cliente (64 registros)
 - [x] Preencher estratégias processuais detalhadas de cada processo (15 registros)
-- [ ] Preencher movimentações processuais de cada processo (pendente - 0 registros)
+- [x] Preencher movimentações processuais de cada processo (45 registros - análise profunda dos PDFs)
 - [x] Preencher partes processuais de cada processo (20 registros)
 - [x] Preencher banco de conhecimentos com teses e jurisprudência de cada processo (42 registros)
 - [x] Criar tabela relatorios no banco de dados
@@ -82,6 +82,30 @@
 - [x] Revisão ponta a ponta: Correção/Deduplicação
 - [x] Verificar sincronização do fluxo sequencial completo
 - [x] Corrigir bugs encontrados na revisão (nenhum bug crítico encontrado)
-- [x] Executar todos os testes unitários (20/20 passando)
+- [x] Executar todos os testes unitários (27/27 passando)
 - [x] Backup e checkpoint final
 - [x] BUG: Erro de inserção de clientes no upload - "Failed query: insert into clientes" - CORRIGIDO: cpfCnpj varchar(20) -> varchar(50) + formato curto PEND_
+- [x] Estudar a fundo texto de cada processo para identificar movimentações reais (autos principais, recursos por dependência, petições)
+- [x] Preencher movimentações processuais com dados fidedignos extraídos dos PDFs (45 movimentações em 15 processos)
+- [x] Melhorar tratamento de erros no upload para mensagens amigáveis ao usuário
+- [ ] Testar upload de novo PDF para validar fluxo completo corrigido
+- [ ] Revisar e corrigir problemas visuais/UX encontrados na navegação
+- [ ] Garantir fluxo sequencial perfeito: Upload → Extração → Banco → Relatório → Pasta Cliente
+- [x] Implementar campo de vinculação de processos dependentes (processoOrigemId) no schema
+- [x] Importar PDF autos principais Leonardo Correa
+- [x] Importar PDF cumprimento provisório de sentença Leonardo Correa (vinculado ao principal)
+- [ ] Exibir vinculação entre processos no frontend (principal ↔ dependente)
+- [x] Pasta do cliente Leonardo com dois processos interligados
+- [ ] Criar tabela jobs no banco para fila de processamento
+- [ ] Implementar sistema de fila de jobs no backend (processamento assíncrono)
+- [ ] Upload em lote com fila de processamento (múltiplos PDFs em sequência)
+- [ ] Progresso em tempo real no frontend (polling de status dos jobs)
+- [ ] Painel de Status de Jobs na sidebar para monitorar trabalhos
+- [ ] Vinculação automática de processos dependentes durante importação
+- [ ] Atualização automática de relatórios após cada importação concluída
+- [x] Criar rota backend uploadContracheque com extração financeira detalhada via IA
+- [x] Cálculo automático de margem disponível, excedente e aptidão para empréstimo (integrado na rota uploadContracheque)
+- [x] Interface frontend de upload de contracheque (aba dedicada na página Upload)
+- [x] Exibição dos dados financeiros extraídos após upload do contracheque
+- [x] Atualização automática de relatórios após upload de contracheque
+- [x] Fluxo sequencial completo: Upload Contracheque → Extração → Dados Financeiros → Margem → Relatório

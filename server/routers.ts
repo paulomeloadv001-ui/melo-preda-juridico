@@ -527,6 +527,9 @@ REGRAS IMPORTANTES:
 - Identifique a natureza da ação (cível, trabalhista, consumerista, etc.)
 - Classifique se o processo está ativo ou inativo
 - Extraia TODOS os empréstimos consignados mencionados
+- IMPORTANTE: Identifique se o processo é DEPENDENTE de outro (ex: cumprimento de sentença, recurso, embargos protocolados por dependência)
+- Se houver menção a "por dependência ao processo nº" ou "autos principais", extraia o número CNJ do processo principal
+- Em processos de cumprimento de sentença, o CLIENTE é o autor dos autos principais, não o advogado exequente
 
 Retorne um JSON com esta estrutura exata:
 {
@@ -564,7 +567,9 @@ Retorne um JSON com esta estrutura exata:
     "segredoJustica": false,
     "poloAtivo": "string",
     "poloPassivo": "string (nomes separados por ;)",
-    "advogadoAutor": "string ou null"
+    "advogadoAutor": "string ou null",
+    "processoOrigemCnj": "string ou null (número CNJ do processo principal, se este for dependente/cumprimento/recurso)",
+    "tipoVinculo": "string ou null (Cumprimento Provisório|Cumprimento Definitivo|Recurso|Embargos|Agravo|null se for autos principais)"
   },
   "financeiro": {
     "remuneracaoBruta": "number ou null",
@@ -606,6 +611,14 @@ Retorne um JSON com esta estrutura exata:
       "nome": "string",
       "cpfCnpj": "string ou null",
       "categoria": "Banco|Empresa|Pessoa Fisica|Orgao Publico"
+    }
+  ],
+  "movimentacoes": [
+    {
+      "data": "DD/MM/YYYY ou null",
+      "evento": "tipo do evento processual (Petição Inicial, Sentença, Recurso, Despacho, etc.)",
+      "descricao": "descrição detalhada do evento",
+      "numero_evento": "número do evento PROJUDI se mencionado, ou null"
     }
   ]
 }
@@ -733,6 +746,26 @@ ${textoExtraido}`;
           processoId = insertedProc.id;
         }
 
+        // 5.5. Vincular processo dependente ao principal (se aplicável)
+        const origemCnj = dadosExtraidos.processo?.processoOrigemCnj;
+        const tipoVinculo = dadosExtraidos.processo?.tipoVinculo;
+        if (origemCnj && tipoVinculo) {
+          const [procOrigem] = await db.select().from(processos).where(eq(processos.numeroCnj, origemCnj)).limit(1);
+          if (procOrigem) {
+            await db.update(processos).set({
+              processoOrigemId: procOrigem.id,
+              tipoVinculo: tipoVinculo,
+            }).where(eq(processos.id, processoId));
+            console.log(`[Vinculação] Processo ${numCnj} vinculado ao principal ${origemCnj} (${tipoVinculo})`);
+          } else {
+            // Processo principal ainda não importado - salvar CNJ para vincular depois
+            await db.update(processos).set({
+              tipoVinculo: `${tipoVinculo} (pendente: ${origemCnj})`,
+            }).where(eq(processos.id, processoId));
+            console.log(`[Vinculação] Processo principal ${origemCnj} não encontrado. Vinculação pendente.`);
+          }
+        }
+
         // 6. Insert financial data
         if (dadosExtraidos.financeiro) {
           const fin = dadosExtraidos.financeiro;
@@ -783,6 +816,19 @@ ${textoExtraido}`;
               cpfCnpj: parte.cpfCnpj,
               tipo: "Reu",
               categoria: parte.categoria,
+            });
+          }
+        }
+
+        // 9.5. Insert movimentacoes extraídas pela IA
+        if (dadosExtraidos.movimentacoes?.length) {
+          for (const mov of dadosExtraidos.movimentacoes) {
+            const numEvento = mov.numero_evento ? `[Ev.${mov.numero_evento}] ` : '';
+            await db.insert(movimentacoes).values({
+              processoId,
+              data: mov.data || null,
+              evento: (mov.evento || 'Movimentação').substring(0, 500),
+              descricao: (numEvento + (mov.descricao || '')).substring(0, 5000),
             });
           }
         }
@@ -855,6 +901,302 @@ ${textoExtraido}`;
           relatorioAtualizado: true,
         };
       }),
+
+    // ==================== UPLOAD DE CONTRACHEQUE ====================
+    uploadContracheque: protectedProcedure
+      .input(z.object({
+        fileName: z.string(),
+        fileBase64: z.string(),
+        fileSize: z.number(),
+        clienteId: z.number().optional(), // Se já souber o cliente
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        // 1. Extract text from PDF contracheque
+        const buffer = Buffer.from(input.fileBase64, "base64");
+        const pdfParse = (await import("pdf-parse")) as any;
+        let textoExtraido = "";
+        try {
+          const pdfData = await pdfParse(buffer);
+          textoExtraido = pdfData.text.substring(0, 50000);
+        } catch (e) {
+          textoExtraido = "Erro na extração de texto do PDF";
+        }
+
+        // 2. Use AI to extract financial data from contracheque
+        const extractionPrompt = `Você é um assistente especializado em análise de contracheques e demonstrativos de pagamento de servidores públicos brasileiros.
+Analise o texto extraído de um contracheque/demonstrativo de pagamento e extraia TODOS os dados financeiros detalhados.
+
+REGRAS IMPORTANTES:
+- Identifique o NOME COMPLETO e CPF do servidor/beneficiário
+- Extraia TODOS os valores de remuneração (bruta, líquida, descontos)
+- Identifique CADA empréstimo consignado individualmente (banco, rubrica, contrato, parcela, total de parcelas)
+- Calcule a margem consignável (35% do líquido para servidores de GO - Lei Estadual 16.898/2010)
+- Some TODOS os descontos de empréstimos consignados para obter o total de consignações
+- Calcule a margem disponível = margem consignável - total de consignações
+- Se margem disponível < 0, a margem está excedida
+- Valores monetários devem ser números sem formatação (ex: 4871.50)
+- Identifique o órgão empregador, cargo, vínculo funcional
+- Identifique o mês/ano de referência do contracheque
+
+Retorne um JSON com esta estrutura exata:
+{
+  "servidor": {
+    "nomeCompleto": "string",
+    "cpf": "string ou null",
+    "rg": "string ou null",
+    "cargo": "string ou null",
+    "orgaoEmpregador": "string ou null",
+    "vinculoFuncional": "string ou null (Efetivo, Comissionado, Aposentado, Pensionista)",
+    "lotacao": "string ou null",
+    "matricula": "string ou null"
+  },
+  "referencia": {
+    "mesAno": "string (MM/YYYY)",
+    "dataCredito": "string ou null (DD/MM/YYYY)"
+  },
+  "remuneracao": {
+    "remuneracaoBruta": "number",
+    "descontoIrrf": "number ou null",
+    "descontoPrevidencia": "number ou null",
+    "outrosDescontos": "number ou null",
+    "totalDescontos": "number",
+    "remuneracaoLiquida": "number"
+  },
+  "margemConsignavel": {
+    "percentual": 35,
+    "valorMargem": "number (35% do líquido)",
+    "totalConsignacoes": "number (soma de todas as parcelas de empréstimos)",
+    "margemDisponivel": "number (valorMargem - totalConsignacoes)",
+    "margemExcedida": "boolean",
+    "valorExcedente": "number ou 0"
+  },
+  "emprestimosConsignados": [
+    {
+      "banco": "string (nome da instituição financeira)",
+      "rubrica": "string ou null (código da rubrica no contracheque)",
+      "contrato": "string ou null",
+      "valorParcela": "number",
+      "totalParcelas": "number ou null",
+      "parcelasRestantes": "number ou null",
+      "valorTotal": "number ou null",
+      "taxaJuros": "number ou null"
+    }
+  ],
+  "outrasRubricas": [
+    {
+      "codigo": "string",
+      "descricao": "string",
+      "tipo": "Provento ou Desconto",
+      "valor": "number"
+    }
+  ]
+}
+
+TEXTO DO CONTRACHEQUE:
+${textoExtraido}`;
+
+        let dadosExtraidos: any = {};
+        try {
+          const result = await invokeLLM({
+            messages: [
+              { role: "system", content: "Você é um extrator de dados financeiros de contracheques. Responda APENAS com JSON válido, sem markdown." },
+              { role: "user", content: extractionPrompt }
+            ],
+            responseFormat: { type: "json_object" },
+          });
+          const content = result.choices[0]?.message?.content;
+          const textContent = typeof content === "string" ? content : Array.isArray(content) ? content.map((c: any) => c.type === "text" ? c.text : "").join("") : "";
+          dadosExtraidos = JSON.parse(textContent);
+        } catch (e) {
+          console.error("AI extraction error (contracheque):", e);
+          throw new Error("Falha na extração de dados do contracheque via IA");
+        }
+
+        // 3. Find or create client
+        let clienteId = input.clienteId || 0;
+        const cpf = dadosExtraidos.servidor?.cpf;
+        const nome = dadosExtraidos.servidor?.nomeCompleto || input.fileName.replace(".pdf", "");
+
+        if (clienteId) {
+          // Update existing client with new data from contracheque
+          const serv = dadosExtraidos.servidor || {};
+          const updateData: Record<string, any> = {};
+          if (serv.cargo) updateData.cargo = serv.cargo;
+          if (serv.orgaoEmpregador) updateData.orgaoEmpregador = serv.orgaoEmpregador;
+          if (serv.vinculoFuncional) updateData.vinculoFuncional = serv.vinculoFuncional;
+          if (serv.rg) updateData.rg = serv.rg;
+          if (Object.keys(updateData).length > 0) {
+            await db.update(clientes).set(updateData).where(eq(clientes.id, clienteId));
+          }
+        } else if (cpf) {
+          const existing = await db.select().from(clientes).where(eq(clientes.cpfCnpj, cpf)).limit(1);
+          if (existing.length > 0) {
+            clienteId = existing[0].id;
+            // Update client data
+            const serv = dadosExtraidos.servidor || {};
+            const updateData: Record<string, any> = {};
+            if (serv.cargo) updateData.cargo = serv.cargo;
+            if (serv.orgaoEmpregador) updateData.orgaoEmpregador = serv.orgaoEmpregador;
+            if (serv.vinculoFuncional) updateData.vinculoFuncional = serv.vinculoFuncional;
+            if (serv.rg) updateData.rg = serv.rg;
+            if (Object.keys(updateData).length > 0) {
+              await db.update(clientes).set(updateData).where(eq(clientes.id, clienteId));
+            }
+          } else {
+            // Create new client from contracheque
+            const serv = dadosExtraidos.servidor || {};
+            const [inserted] = await db.insert(clientes).values({
+              cpfCnpj: cpf,
+              nomeCompleto: nome,
+              tipoPessoa: "PF",
+              rg: serv.rg,
+              cargo: serv.cargo,
+              orgaoEmpregador: serv.orgaoEmpregador,
+              vinculoFuncional: serv.vinculoFuncional,
+              profissao: serv.cargo || "Servidor Público",
+            }).$returningId();
+            clienteId = inserted.id;
+          }
+        } else {
+          throw new Error("Não foi possível identificar o CPF do servidor no contracheque");
+        }
+
+        // 4. Upload contracheque PDF to S3
+        const clienteCpf = cpf || `PEND_${Date.now().toString(36)}`;
+        const folder = clientFolderKey(nome, clienteCpf);
+        const ref = dadosExtraidos.referencia?.mesAno?.replace("/", "_") || "sem_ref";
+        const pdfKey = `${folder}/contracheques/${ref}_${input.fileName}`;
+        const { key, url } = await storagePut(pdfKey, buffer, "application/pdf");
+
+        // 5. Insert document record
+        await db.insert(documentos).values({
+          clienteId,
+          tipo: "Contracheque",
+          nomeArquivo: input.fileName,
+          storageKey: key,
+          storageUrl: url,
+          tamanho: input.fileSize,
+          mimeType: "application/pdf",
+        });
+
+        // 6. Insert/Update financial data with full calculations
+        const rem = dadosExtraidos.remuneracao || {};
+        const marg = dadosExtraidos.margemConsignavel || {};
+        const remuneracaoBruta = rem.remuneracaoBruta || 0;
+        const remuneracaoLiquida = rem.remuneracaoLiquida || 0;
+        const descontoIrrf = rem.descontoIrrf || 0;
+        const descontoPrevidencia = rem.descontoPrevidencia || 0;
+        const outrosDescontos = rem.outrosDescontos || 0;
+        const margemPerc = marg.percentual || 35;
+        const margemValor = marg.valorMargem || (remuneracaoLiquida * 0.35);
+        const totalConsignacoes = marg.totalConsignacoes || 0;
+        const margemDisponivel = marg.margemDisponivel ?? (margemValor - totalConsignacoes);
+        const margemExcedida = margemDisponivel < 0 ? 1 : 0;
+        const valorExcedente = margemExcedida ? Math.abs(margemDisponivel) : 0;
+        const aptoEmprestimo = margemDisponivel > 0 ? 1 : 0;
+        const scoreRisco = margemExcedida ? "Alto" : (margemDisponivel < margemValor * 0.1 ? "Medio" : "Baixo");
+
+        // Check if financial data already exists for this client
+        const existingFin = await db.select().from(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, clienteId)).limit(1);
+        if (existingFin.length > 0) {
+          await db.update(dadosFinanceiros).set({
+            remuneracaoBruta: String(remuneracaoBruta),
+            remuneracaoLiquida: String(remuneracaoLiquida),
+            descontoIrrf: String(descontoIrrf),
+            descontoPrevidencia: String(descontoPrevidencia),
+            outrosDescontos: String(outrosDescontos),
+            margemConsignavelPerc: String(margemPerc),
+            margemConsignavelValor: String(margemValor),
+            totalConsignacoes: String(totalConsignacoes),
+            margemDisponivel: String(margemDisponivel),
+            margemExcedida,
+            valorExcedente: String(valorExcedente),
+            aptoEmprestimo,
+            scoreRisco: scoreRisco as "Baixo" | "Medio" | "Alto",
+            fonteRenda: dadosExtraidos.servidor?.orgaoEmpregador || "Servidor Público",
+            dataReferencia: dadosExtraidos.referencia?.mesAno || null,
+          }).where(eq(dadosFinanceiros.clienteId, clienteId));
+        } else {
+          await db.insert(dadosFinanceiros).values({
+            clienteId,
+            remuneracaoBruta: String(remuneracaoBruta),
+            remuneracaoLiquida: String(remuneracaoLiquida),
+            descontoIrrf: String(descontoIrrf),
+            descontoPrevidencia: String(descontoPrevidencia),
+            outrosDescontos: String(outrosDescontos),
+            margemConsignavelPerc: String(margemPerc),
+            margemConsignavelValor: String(margemValor),
+            totalConsignacoes: String(totalConsignacoes),
+            margemDisponivel: String(margemDisponivel),
+            margemExcedida,
+            valorExcedente: String(valorExcedente),
+            aptoEmprestimo,
+            scoreRisco: scoreRisco as "Baixo" | "Medio" | "Alto",
+            fonteRenda: dadosExtraidos.servidor?.orgaoEmpregador || "Servidor Público",
+            dataReferencia: dadosExtraidos.referencia?.mesAno || null,
+          });
+        }
+
+        // 7. Insert/Update emprestimos consignados (replace all for this client)
+        if (dadosExtraidos.emprestimosConsignados?.length) {
+          // Delete old emprestimos for this client to avoid duplication
+          await db.delete(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, clienteId));
+          for (const emp of dadosExtraidos.emprestimosConsignados) {
+            await db.insert(emprestimosConsignados).values({
+              clienteId,
+              banco: emp.banco,
+              rubrica: emp.rubrica,
+              contrato: emp.contrato,
+              valorParcela: emp.valorParcela ? String(emp.valorParcela) : null,
+              valorTotal: emp.valorTotal ? String(emp.valorTotal) : null,
+              totalParcelas: emp.totalParcelas,
+              parcelasRestantes: emp.parcelasRestantes,
+              taxaJuros: emp.taxaJuros ? String(emp.taxaJuros) : null,
+              status: "Ativo",
+            });
+          }
+        }
+
+        // 8. Build/update client folder
+        const pastaCliente = await buildClientFolder(clienteId, nome, clienteCpf);
+
+        // 9. Update relatório cadastral
+        try {
+          await autoUpdateRelatorioCadastral(db);
+          console.log(`[Contracheque] Relatório cadastral atualizado após upload de contracheque de ${nome}`);
+        } catch (relErr) {
+          console.error("[Contracheque] Erro ao atualizar relatório:", relErr);
+        }
+
+        return {
+          success: true,
+          clienteId,
+          clienteNome: nome,
+          cpf: cpf || "PENDENTE",
+          referencia: dadosExtraidos.referencia?.mesAno || "N/A",
+          resumoFinanceiro: {
+            remuneracaoBruta,
+            remuneracaoLiquida,
+            totalDescontos: rem.totalDescontos || (descontoIrrf + descontoPrevidencia + outrosDescontos),
+            margemConsignavel: margemValor,
+            totalConsignacoes,
+            margemDisponivel,
+            margemExcedida: margemExcedida === 1,
+            valorExcedente,
+            aptoEmprestimo: aptoEmprestimo === 1,
+            scoreRisco,
+            totalEmprestimos: dadosExtraidos.emprestimosConsignados?.length || 0,
+          },
+          emprestimos: dadosExtraidos.emprestimosConsignados || [],
+          pastaCliente: pastaCliente?.folder || folder,
+          arquivosPasta: pastaCliente?.files || null,
+          dadosExtraidos,
+          relatorioAtualizado: true,
+        };
+       }),
   }),
 
   // ==================== PASTA DO CLIENTE ====================

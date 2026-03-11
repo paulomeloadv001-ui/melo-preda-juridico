@@ -123,6 +123,8 @@ export const processos = mysqlTable("processos", {
   tutelaTipo: varchar("tutelaTipo", { length: 100 }),
   tutelaStatus: varchar("tutelaStatus", { length: 100 }),
   tutelaDescricao: text("tutelaDescricao"),
+  processoOrigemId: int("processoOrigemId"),  // ID do processo principal (para processos dependentes)
+  tipoVinculo: varchar("tipoVinculo", { length: 100 }),  // Ex: "Cumprimento Provisório", "Recurso", "Embargos", etc.
   pdfStorageKey: varchar("pdfStorageKey", { length: 500 }),
   pdfUrl: text("pdfUrl"),
   textoExtraido: text("textoExtraido"),
@@ -269,3 +271,34 @@ export const relatorios = mysqlTable("relatorios", {
 
 export type Relatorio = typeof relatorios.$inferSelect;
 export type InsertRelatorio = typeof relatorios.$inferInsert;
+
+// ==================== FILA DE TRABALHOS (JOBS) ====================
+export const jobs = mysqlTable("jobs", {
+  id: int("id").autoincrement().primaryKey(),
+  tipo: varchar("tipo", { length: 100 }).notNull(), // 'importacao_pdf', 'geracao_relatorio', 'exportacao', 'atualizacao_dados'
+  status: varchar("status", { length: 50 }).default("pendente").notNull(), // 'pendente', 'processando', 'concluido', 'erro', 'cancelado'
+  prioridade: int("prioridade").default(0), // 0=normal, 1=alta, 2=urgente
+  titulo: varchar("titulo", { length: 500 }).notNull(),
+  descricao: text("descricao"),
+  // Dados de entrada para o job
+  inputData: json("inputData"), // { pdfUrl, clienteId, etc. }
+  // Resultado do processamento
+  outputData: json("outputData"), // { clienteId, processoId, errors, etc. }
+  progresso: int("progresso").default(0), // 0-100
+  mensagemProgresso: text("mensagemProgresso"),
+  // Referências
+  clienteId: int("clienteId"),
+  processoId: int("processoId"),
+  // Controle de execução
+  tentativas: int("tentativas").default(0),
+  maxTentativas: int("maxTentativas").default(3),
+  erroDetalhes: text("erroDetalhes"),
+  // Timestamps
+  iniciadoEm: timestamp("iniciadoEm"),
+  concluidoEm: timestamp("concluidoEm"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Job = typeof jobs.$inferSelect;
+export type InsertJob = typeof jobs.$inferInsert;

@@ -349,10 +349,30 @@ export default function ClientePerfil() {
                     <div className="mt-3 border-t pt-3">
                       <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Partes Processuais</h5>
                       <div className="space-y-1">
-                        {proc.partes.map((p) => (
+                        {proc.partes.map((p: any) => (
                           <div key={p.id} className="flex justify-between text-sm">
                             <span>{p.nome} {p.cpfCnpj ? `(${p.cpfCnpj})` : ""}</span>
                             <Badge variant="outline" className="text-xs">{p.tipo} — {p.categoria || ""}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Movimentações Processuais */}
+                  {proc.movimentacoes?.length > 0 && (
+                    <div className="mt-3 border-t pt-3">
+                      <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Movimentações Processuais ({proc.movimentacoes.length})</h5>
+                      <div className="space-y-2">
+                        {proc.movimentacoes.map((mov: any) => (
+                          <div key={mov.id} className="flex items-start gap-3 text-sm border-l-2 border-[oklch(0.75_0.12_85)/30] pl-3 py-1">
+                            <div className="shrink-0 w-20 text-xs text-muted-foreground font-mono">
+                              {mov.data || "—"}
+                            </div>
+                            <div className="min-w-0">
+                              <span className="font-medium text-xs">{mov.evento}</span>
+                              {mov.descricao && <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{mov.descricao}</p>}
+                            </div>
                           </div>
                         ))}
                       </div>
