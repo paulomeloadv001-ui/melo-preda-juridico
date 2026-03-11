@@ -1,0 +1,21 @@
+# Project TODO
+
+- [x] Schema do banco de dados completo (clientes, processos, partes, financeiro, estratégias, documentos, conhecimentos)
+- [x] Migração SQL do banco de dados
+- [x] API backend completa (CRUD clientes, processos, upload PDF, extração IA)
+- [x] Upload de PDF com armazenamento em S3
+- [x] Motor de extração de dados via IA (texto do PDF → dados estruturados)
+- [x] Detecção de duplicidade por CPF (nunca duplicar cliente)
+- [x] Página de listagem de clientes com busca e filtros
+- [x] Página de perfil do cliente com todos os dados vinculados
+- [x] Fluxo sequencial de upload → extração → revisão → salvar
+- [x] Visualização do PDF original na interface
+- [x] Exportação individual por cliente em JSON
+- [x] Exportação individual por cliente em CSV/Excel
+- [x] Exportação em massa de todo o banco de dados
+- [x] Dashboard com estatísticas gerais
+- [x] Banco de conhecimentos jurídicos (estratégias, jurisprudência, teses)
+- [x] Testes unitários (7 testes passando)
+- [x] Design profissional com identidade Melo & Preda
+- [x] Aba de exportação em massa para fluxo rápido e integração urgente
+- [x] Exportação completa do banco de dados em JSON, CSV, Excel para integração externa
