@@ -15,6 +15,13 @@
       "when": 1773200968892,
       "tag": "0001_pink_wither",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1773205733496,
+      "tag": "0002_flashy_darkstar",
+      "breakpoints": true
     }
   ]
 }

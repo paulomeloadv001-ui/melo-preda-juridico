@@ -1,0 +1,8 @@
+{
+  "query": "UPDATE clientes SET cpfCnpj = REPLACE(REPLACE(REPLACE(cpfCnpj, '.', ''), '-', ''), '/', '') WHERE cpfCnpj LIKE '%.%' OR cpfCnpj LIKE '%-%' OR cpfCnpj LIKE '%/%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute UPDATE clientes SET cpfCnpj = REPLACE(REPLACE(REPLACE(cpfCnpj, '.', ''), '-', ''), '/', '') WHERE cpfCnpj LIKE '%.%' OR cpfCnpj LIKE '%-%' OR cpfCnpj LIKE '%/%';",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1062 (23000) at line 1: Duplicate entry '?' for key 'clientes.clientes_cpfCnpj_unique'"
+  ]
+}

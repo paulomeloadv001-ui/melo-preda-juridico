@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE processos SET clienteId = 2 WHERE clienteId IN (3, 10);\nUPDATE dados_financeiros SET clienteId = 2 WHERE clienteId IN (3, 10);\nUPDATE documentos SET clienteId = 2 WHERE clienteId IN (3, 10);\nUPDATE emprestimos_consignados SET clienteId = 2 WHERE clienteId IN (3, 10);\nDELETE FROM clientes WHERE id IN (3, 10);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute UPDATE processos SET clienteId = 2 WHERE clienteId IN (3, 10);\nUPDATE dados_financeiros SET clienteId = 2 WHERE clienteId IN (3, 10);\nUPDATE documentos SET clienteId = 2 WHERE clienteId IN (3, 10);\nUPDATE emprestimos_consignados SET clienteId = 2 WHERE clienteId IN (3, 10);\nDELETE FROM clientes WHERE id IN (3, 10);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 112
+}

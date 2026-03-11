@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE clientes SET cpfCnpj = REPLACE(REPLACE(REPLACE(cpfCnpj, '.', ''), '-', ''), '/', '') WHERE cpfCnpj LIKE '%.%' OR cpfCnpj LIKE '%-%' OR cpfCnpj LIKE '%/%';\nINSERT INTO clientes (cpfCnpj, nomeCompleto, tipoPessoa) VALUES ('PENDENTE_VER', 'VERANEIDE SOARES CAMPOS LUCY', 'PF');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute UPDATE clientes SET cpfCnpj = REPLACE(REPLACE(REPLACE(cpfCnpj, '.', ''), '-', ''), '/', '') WHERE cpfCnpj LIKE '%.%' OR cpfCnpj LIKE '%-%' OR cpfCnpj LIKE '%/%';\nINSERT INTO clientes (cpfCnpj, nomeCompleto, tipoPessoa) VALUES ('PENDENTE_VER', 'VERANEIDE SOARES CAMPOS LUCY', 'PF');",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 86
+}

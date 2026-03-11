@@ -1,0 +1,190 @@
+{
+  "query": "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'processos' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT COLUMN_NAME, DATA_TYPE, COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'processos' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "clienteId",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "numeroCnj",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "tribunal",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "comarca",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "vara",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "tipoAcao",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "natureza",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "classeProcessual",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "assunto",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "faseAtual",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "Conhecimento"
+    },
+    {
+      "COLUMN_NAME": "statusProcesso",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "Ativo"
+    },
+    {
+      "COLUMN_NAME": "valorCausa",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "dataDistribuicao",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "dataSentenca",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "juiz",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "prioridade",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "segredoJustica",
+      "DATA_TYPE": "int",
+      "COLUMN_DEFAULT": "0"
+    },
+    {
+      "COLUMN_NAME": "poloAtivo",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "poloPassivo",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "advogadoAutor",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "resumoSentenca",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "valorCondenacao",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "danosMorais",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "danosMateriais",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "restituicao",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "honorariosPerc",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "honorariosValor",
+      "DATA_TYPE": "decimal",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "tutelaTipo",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "tutelaStatus",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "tutelaDescricao",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "pdfStorageKey",
+      "DATA_TYPE": "varchar",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "pdfUrl",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "textoExtraido",
+      "DATA_TYPE": "text",
+      "COLUMN_DEFAULT": "NULL"
+    },
+    {
+      "COLUMN_NAME": "createdAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP"
+    },
+    {
+      "COLUMN_NAME": "updatedAt",
+      "DATA_TYPE": "timestamp",
+      "COLUMN_DEFAULT": "CURRENT_TIMESTAMP"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\tDATA_TYPE\tCOLUMN_DEFAULT\nid\tint\tNULL\nclienteId\tint\tNULL\nnumeroCnj\tvarchar\tNULL\ntribunal\tvarchar\tNULL\ncomarca\tvarchar\tNULL\nvara\tvarchar\tNULL\ntipoAcao\tvarchar\tNULL\nnatureza\tvarchar\tNULL\nclasseProcessual\tvarchar\tNULL\nassunto\tvarchar\tNULL\nfaseAtual\tvarchar\tConhecimento\nstatusProcesso\tvarchar\tAtivo\nvalorCausa\tdecimal\tNULL\ndataDistribuicao\tvarchar\tNULL\ndataSentenca\tvarchar\tNULL\njuiz\tvarchar\tNULL\nprioridade\tvarchar\tNULL\nsegredoJustica\tint\t0\npoloAtivo\tvarchar\tNULL\npoloPassivo\ttext\tNULL\nadvogadoAutor\tvarchar\tNULL\nresumoSentenca\ttext\tNULL\nvalorCondenacao\tdecimal\tNULL\ndanosMorais\tdecimal\tNULL\ndanosMateriais\tdecimal\tNULL\nrestituicao\tdecimal\tNULL\nhonorariosPerc\tdecimal\tNULL\nhonorariosValor\tdecimal\tNULL\ntutelaTipo\tvarchar\tNULL\ntutelaStatus\tvarchar\tNULL\ntutelaDescricao\ttext\tNULL\npdfStorageKey\tvarchar\tNULL\npdfUrl\ttext\tNULL\ntextoExtraido\ttext\tNULL\ncreatedAt\ttimestamp\tCURRENT_TIMESTAMP\nupdatedAt\ttimestamp\tCURRENT_TIMESTAMP\n",
+  "stderr": "",
+  "execution_time_ms": 50
+}

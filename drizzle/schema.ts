@@ -102,14 +102,8 @@ export const processos = mysqlTable("processos", {
   natureza: varchar("natureza", { length: 255 }),
   classeProcessual: varchar("classeProcessual", { length: 255 }),
   assunto: varchar("assunto", { length: 500 }),
-  faseAtual: mysqlEnum("faseAtual", [
-    "Conhecimento", "Cumprimento Provisorio", "Cumprimento Definitivo",
-    "Execucao", "Recurso", "Arquivado", "Suspenso"
-  ]).default("Conhecimento"),
-  statusProcesso: mysqlEnum("statusProcesso", [
-    "Ativo", "Sentenca Procedente", "Sentenca Improcedente",
-    "Parcialmente Procedente", "Acordo", "Arquivado", "Recurso Pendente"
-  ]).default("Ativo"),
+  faseAtual: varchar("faseAtual", { length: 100 }).default("Conhecimento"),
+  statusProcesso: varchar("statusProcesso", { length: 100 }).default("Ativo"),
   valorCausa: decimal("valorCausa", { precision: 15, scale: 2 }),
   dataDistribuicao: varchar("dataDistribuicao", { length: 10 }),
   dataSentenca: varchar("dataSentenca", { length: 10 }),

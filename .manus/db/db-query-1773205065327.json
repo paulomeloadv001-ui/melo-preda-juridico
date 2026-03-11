@@ -1,0 +1,65 @@
+{
+  "query": "SELECT id, nomeCompleto, cpfCnpj FROM clientes ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, nomeCompleto, cpfCnpj FROM clientes ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "nomeCompleto": "VANDERSON OLIVEIRA DINIZ LIMA",
+      "cpfCnpj": "040.565.811-77"
+    },
+    {
+      "id": "2",
+      "nomeCompleto": "ARIEL ANSELMO DE OLIVEIRA",
+      "cpfCnpj": "39154017149"
+    },
+    {
+      "id": "3",
+      "nomeCompleto": "ARIEL ANSELMO DE OLIVEIRA",
+      "cpfCnpj": "391540171-49"
+    },
+    {
+      "id": "4",
+      "nomeCompleto": "O.J.S COMÉRCIO E SERVIÇOS LTDA",
+      "cpfCnpj": "37.355.845/0001-00"
+    },
+    {
+      "id": "5",
+      "nomeCompleto": "ANA TEONILA FAGUNDES DA CUNHA",
+      "cpfCnpj": "03237672149"
+    },
+    {
+      "id": "6",
+      "nomeCompleto": "MAEVE PRODUTOS HOSPITALARES LTDA",
+      "cpfCnpj": "09.034.672/0001-92"
+    },
+    {
+      "id": "7",
+      "nomeCompleto": "STELA CARDOSO DA SILVA SANTOS",
+      "cpfCnpj": "53000625100"
+    },
+    {
+      "id": "8",
+      "nomeCompleto": "BANCO BRADESCO S/A",
+      "cpfCnpj": "60746948000112"
+    },
+    {
+      "id": "9",
+      "nomeCompleto": "IRENE MARIA DOS SANTOS",
+      "cpfCnpj": "06726666187"
+    },
+    {
+      "id": "10",
+      "nomeCompleto": "ARIEL ANSELMO DE OLIVEIRA",
+      "cpfCnpj": "391.540.171-49"
+    },
+    {
+      "id": "11",
+      "nomeCompleto": "NATALICIO LUIZ DA COSTA",
+      "cpfCnpj": "24357677149"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tnomeCompleto\tcpfCnpj\n1\tVANDERSON OLIVEIRA DINIZ LIMA\t040.565.811-77\n2\tARIEL ANSELMO DE OLIVEIRA\t39154017149\n3\tARIEL ANSELMO DE OLIVEIRA\t391540171-49\n4\tO.J.S COMÉRCIO E SERVIÇOS LTDA\t37.355.845/0001-00\n5\tANA TEONILA FAGUNDES DA CUNHA\t03237672149\n6\tMAEVE PRODUTOS HOSPITALARES LTDA\t09.034.672/0001-92\n7\tSTELA CARDOSO DA SILVA SANTOS\t53000625100\n8\tBANCO BRADESCO S/A\t60746948000112\n9\tIRENE MARIA DOS SANTOS\t06726666187\n10\tARIEL ANSELMO DE OLIVEIRA\t391.540.171-49\n11\tNATALICIO LUIZ DA COSTA\t24357677149\n",
+  "stderr": "",
+  "execution_time_ms": 60
+}

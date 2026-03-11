@@ -34,7 +34,13 @@
 - [x] Rota de identificação e correção de clientes sem CPF
 - [x] Painel de correção na interface para visualizar e corrigir duplicidades
 - [x] Lógica: 1 CPF = 1 cliente com N processos vinculados (sem duplicar cliente)
-- [ ] Completar importação dos 7 PDFs restantes
+- [x] Completar importação dos PDFs restantes (16 processos no banco)
+- [x] Exportação completa para Google Drive (BANCO_DE_DADOS_CLIENTES)
+- [x] 13 pastas individuais de clientes no Google Drive com ficha_cliente.json, processos.json, conhecimentos.json
+- [x] BANCO_COMPLETO.json e RESUMO_CLIENTES.csv no Google Drive
+- [x] Schema faseAtual e statusProcesso convertidos de enum para varchar (flexível)
+- [x] CPFs normalizados (apenas números, sem pontos/traços)
+- [x] Duplicidades de Ariel Anselmo corrigidas (3 registros → 1 com 2 processos)
 - [x] Botão Atualizar em cada página, aba e item
 - [x] Botão Excluir cliente, processo e item individual (com confirmação)
 - [x] Botão Importar em cada página relevante
