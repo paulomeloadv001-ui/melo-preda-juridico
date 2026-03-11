@@ -1,0 +1,22 @@
+CREATE TABLE `jobs` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`tipo` varchar(100) NOT NULL,
+	`status` varchar(50) NOT NULL DEFAULT 'pendente',
+	`prioridade` int DEFAULT 0,
+	`titulo` varchar(500) NOT NULL,
+	`descricao` text,
+	`inputData` json,
+	`outputData` json,
+	`progresso` int DEFAULT 0,
+	`mensagemProgresso` text,
+	`clienteId` int,
+	`processoId` int,
+	`tentativas` int DEFAULT 0,
+	`maxTentativas` int DEFAULT 3,
+	`erroDetalhes` text,
+	`iniciadoEm` timestamp,
+	`concluidoEm` timestamp,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `jobs_id` PRIMARY KEY(`id`)
+);

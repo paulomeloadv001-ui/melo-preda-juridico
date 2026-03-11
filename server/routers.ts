@@ -7,7 +7,7 @@ import { getDb } from "./db";
 import {
   clientes, processos, dadosFinanceiros, emprestimosConsignados,
   estrategias, partesProcessuais, movimentacoes, documentos,
-  conhecimentos, cumprimentosSentenca, analiseGeral, relatorios
+  conhecimentos, cumprimentosSentenca, analiseGeral, relatorios, jobs
 } from "../drizzle/schema";
 import { eq, like, desc, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -1825,6 +1825,454 @@ ${textoExtraido}`;
       ];
     }),
   }),
+
+  // ==================== FILA DE TRABALHOS (JOBS) ====================
+  jobs: router({
+    // Listar todos os jobs com filtros
+    list: protectedProcedure
+      .input(z.object({
+        status: z.string().optional(),
+        tipo: z.string().optional(),
+        limit: z.number().default(50),
+      }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const filters = input || { status: undefined, tipo: undefined, limit: 50 };
+        const allJobs = await db.select().from(jobs).orderBy(desc(jobs.createdAt)).limit(filters.limit || 50);
+        let filtered = allJobs;
+        if (filters.status) filtered = filtered.filter((j: any) => j.status === filters.status);
+        if (filters.tipo) filtered = filtered.filter((j: any) => j.tipo === filters.tipo);
+        return filtered;
+      }),
+
+    // Obter job por ID
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const [job] = await db.select().from(jobs).where(eq(jobs.id, input.id));
+        return job || null;
+      }),
+
+    // Estatísticas dos jobs
+    stats: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { total: 0, pendentes: 0, processando: 0, concluidos: 0, erros: 0 };
+      const allJobs = await db.select().from(jobs);
+      return {
+        total: allJobs.length,
+        pendentes: allJobs.filter(j => j.status === 'pendente').length,
+        processando: allJobs.filter(j => j.status === 'processando').length,
+        concluidos: allJobs.filter(j => j.status === 'concluido').length,
+        erros: allJobs.filter(j => j.status === 'erro').length,
+      };
+    }),
+
+    // Criar job de importação em lote
+    criarImportacaoLote: protectedProcedure
+      .input(z.object({
+        arquivos: z.array(z.object({
+          fileName: z.string(),
+          fileBase64: z.string(),
+          fileSize: z.number(),
+          tipoDocumento: z.enum(['processo', 'contracheque']).default('processo'),
+        })),
+        prioridade: z.number().default(0),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        const jobIds: number[] = [];
+
+        for (const arquivo of input.arquivos) {
+          const [result] = await db.insert(jobs).values({
+            tipo: arquivo.tipoDocumento === 'contracheque' ? 'importacao_contracheque' : 'importacao_pdf',
+            status: 'pendente',
+            prioridade: input.prioridade,
+            titulo: `Importar: ${arquivo.fileName}`,
+            descricao: `Upload e processamento de ${arquivo.fileName} (${(arquivo.fileSize / 1024).toFixed(1)} KB)`,
+            inputData: JSON.stringify({
+              fileName: arquivo.fileName,
+              fileBase64: arquivo.fileBase64,
+              fileSize: arquivo.fileSize,
+              tipoDocumento: arquivo.tipoDocumento,
+            }),
+            progresso: 0,
+          });
+          jobIds.push(result.insertId);
+        }
+
+        // Processar jobs em background (sem await para retornar imediatamente)
+        processarFilaJobs(jobIds).catch(err => console.error('[Jobs] Erro na fila:', err));
+
+        return { jobIds, total: jobIds.length, message: `${jobIds.length} arquivo(s) na fila de processamento` };
+      }),
+
+    // Cancelar job
+    cancelar: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        await db.update(jobs).set({ status: 'cancelado', concluidoEm: new Date() }).where(eq(jobs.id, input.id));
+        return { success: true };
+      }),
+
+    // Reprocessar job com erro
+    reprocessar: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        await db.update(jobs).set({
+          status: 'pendente',
+          progresso: 0,
+          mensagemProgresso: 'Reprocessando...',
+          erroDetalhes: null,
+        }).where(eq(jobs.id, input.id));
+        processarFilaJobs([input.id]).catch(err => console.error('[Jobs] Erro reprocessar:', err));
+        return { success: true };
+      }),
+
+    // Limpar jobs concluídos
+    limparConcluidos: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) return { removidos: 0 };
+      const result = await db.delete(jobs).where(eq(jobs.status, 'concluido'));
+      return { removidos: result[0]?.affectedRows || 0 };
+    }),
+  }),
 });
+
+// ==================== PROCESSADOR DE FILA DE JOBS ====================
+async function processarFilaJobs(jobIds: number[]) {
+  const db = await getDb();
+  if (!db) return;
+
+  for (const jobId of jobIds) {
+    try {
+      // Buscar job
+      const [job] = await db.select().from(jobs).where(eq(jobs.id, jobId));
+      if (!job || job.status === 'cancelado') continue;
+
+      // Marcar como processando
+      await db.update(jobs).set({
+        status: 'processando',
+        iniciadoEm: new Date(),
+        progresso: 5,
+        mensagemProgresso: 'Iniciando processamento...',
+        tentativas: (job.tentativas || 0) + 1,
+      }).where(eq(jobs.id, jobId));
+
+      const inputData = typeof job.inputData === 'string' ? JSON.parse(job.inputData) : job.inputData;
+
+      if (job.tipo === 'importacao_pdf') {
+        await processarJobImportacaoPdf(jobId, inputData);
+      } else if (job.tipo === 'importacao_contracheque') {
+        await processarJobImportacaoContracheque(jobId, inputData);
+      }
+
+    } catch (error: any) {
+      console.error(`[Jobs] Erro no job ${jobId}:`, error);
+      await db.update(jobs).set({
+        status: 'erro',
+        erroDetalhes: error?.message || 'Erro desconhecido',
+        concluidoEm: new Date(),
+        progresso: 0,
+        mensagemProgresso: 'Falha no processamento',
+      }).where(eq(jobs.id, jobId));
+    }
+  }
+}
+
+async function processarJobImportacaoPdf(jobId: number, inputData: any) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const updateProgress = async (progresso: number, msg: string) => {
+    await db.update(jobs).set({ progresso, mensagemProgresso: msg }).where(eq(jobs.id, jobId));
+  };
+
+  try {
+    await updateProgress(10, 'Extraindo texto do PDF...');
+    const pdfBuffer = Buffer.from(inputData.fileBase64, 'base64');
+    let textoExtraido = '';
+    try {
+      const pdfParse = (await import('pdf-parse') as any).default || (await import('pdf-parse'));
+      const pdfData = await pdfParse(pdfBuffer);
+      textoExtraido = pdfData.text || '';
+    } catch { textoExtraido = ''; }
+
+    if (!textoExtraido.trim()) {
+      await db.update(jobs).set({
+        status: 'erro',
+        erroDetalhes: 'Não foi possível extrair texto do PDF. Verifique se o arquivo é um PDF válido.',
+        concluidoEm: new Date(),
+        progresso: 0,
+      }).where(eq(jobs.id, jobId));
+      return;
+    }
+
+    await updateProgress(30, 'Analisando dados com IA...');
+    const textoTruncado = textoExtraido.substring(0, 15000);
+    const llmResponse = await invokeLLM({
+      messages: [
+        { role: 'system', content: `Você é um assistente jurídico especializado em extrair dados de processos judiciais brasileiros. Extraia os dados em JSON com os campos: nomeCliente, cpf, rg, profissao, cargo, orgaoEmpregador, vinculoFuncional, endereco, cidade, estado, cep, telefone, email, dataNascimento, estadoCivil, nacionalidade, numeroCnj, tribunal, comarca, vara, tipoAcao, natureza, classeProcessual, assunto, faseAtual, statusProcesso, valorCausa, dataDistribuicao, dataSentenca, juiz, poloAtivo, poloPassivo, advogadoAutor, resumoSentenca, valorCondenacao, danosMorais, danosMateriais, restituicao, honorariosPerc, honorariosValor, tutelaTipo, tutelaStatus, tutelaDescricao, remuneracaoBruta, remuneracaoLiquida, totalConsignacoes, margemConsignavel, fonteRenda, tesePrincipal, fundamentacaoLegal, jurisprudenciaCitada, pontosFortes, riscosIdentificados, partesAtivas (array), partesPassivas (array), movimentacoes (array de {data, evento, descricao}), tipoVinculo (se for processo dependente), processoOrigemCnj (CNJ do processo principal se for dependente). Retorne APENAS o JSON.` },
+        { role: 'user', content: textoTruncado },
+      ],
+    });
+
+    let dados: any = {};
+    try { dados = JSON.parse(llmResponse.choices[0]?.message?.content as string || '{}'); } catch { dados = {}; }
+
+    await updateProgress(50, 'Salvando cliente...');
+    const clienteNome = dados.nomeCliente || inputData.fileName.replace(/\.pdf$/i, '');
+    const clienteCpf = dados.cpf?.replace(/[^0-9]/g, '') || `PEND_${Date.now().toString(36)}`;
+
+    // Verificar se cliente já existe
+    const [existente] = await db.select().from(clientes).where(eq(clientes.cpfCnpj, clienteCpf));
+    let clienteId: number;
+    if (existente) {
+      clienteId = existente.id;
+    } else {
+      const [ins] = await db.insert(clientes).values({
+        cpfCnpj: clienteCpf,
+        nomeCompleto: clienteNome,
+        rg: dados.rg || null,
+        profissao: dados.profissao || null,
+        cargo: dados.cargo || null,
+        orgaoEmpregador: dados.orgaoEmpregador || null,
+        vinculoFuncional: dados.vinculoFuncional || null,
+        endereco: dados.endereco || null,
+        cidade: dados.cidade || null,
+        estado: dados.estado || null,
+        cep: dados.cep || null,
+        telefone: dados.telefone || null,
+        email: dados.email || null,
+        dataNascimento: dados.dataNascimento || null,
+        estadoCivil: dados.estadoCivil || null,
+        nacionalidade: dados.nacionalidade || null,
+      });
+      clienteId = ins.insertId;
+    }
+
+    await updateProgress(60, 'Salvando processo...');
+    const numCnj = dados.numeroCnj || `CNJ_${Date.now().toString(36)}`;
+    // Verificar vinculação
+    let processoOrigemId: number | null = null;
+    if (dados.processoOrigemCnj) {
+      const [origem] = await db.select().from(processos).where(eq(processos.numeroCnj, dados.processoOrigemCnj));
+      if (origem) processoOrigemId = origem.id;
+    }
+
+    // Upload PDF para S3
+    const folderKey = clientFolderKey(clienteNome, clienteCpf);
+    const pdfKey = `${folderKey}/${inputData.fileName}`;
+    const { url: pdfUrl } = await storagePut(pdfKey, pdfBuffer, 'application/pdf');
+
+    const [procIns] = await db.insert(processos).values({
+      clienteId,
+      numeroCnj: numCnj,
+      tribunal: dados.tribunal || null,
+      comarca: dados.comarca || null,
+      vara: dados.vara || null,
+      tipoAcao: dados.tipoAcao || null,
+      natureza: dados.natureza || null,
+      classeProcessual: dados.classeProcessual || null,
+      assunto: dados.assunto || null,
+      faseAtual: dados.faseAtual || 'Conhecimento',
+      statusProcesso: dados.statusProcesso || 'Ativo',
+      valorCausa: dados.valorCausa || null,
+      dataDistribuicao: dados.dataDistribuicao || null,
+      dataSentenca: dados.dataSentenca || null,
+      juiz: dados.juiz || null,
+      poloAtivo: dados.poloAtivo || null,
+      poloPassivo: dados.poloPassivo || null,
+      advogadoAutor: dados.advogadoAutor || null,
+      resumoSentenca: dados.resumoSentenca || null,
+      valorCondenacao: dados.valorCondenacao || null,
+      danosMorais: dados.danosMorais || null,
+      danosMateriais: dados.danosMateriais || null,
+      restituicao: dados.restituicao || null,
+      honorariosPerc: dados.honorariosPerc || null,
+      honorariosValor: dados.honorariosValor || null,
+      tutelaTipo: dados.tutelaTipo || null,
+      tutelaStatus: dados.tutelaStatus || null,
+      tutelaDescricao: dados.tutelaDescricao || null,
+      processoOrigemId,
+      tipoVinculo: dados.tipoVinculo || null,
+      pdfStorageKey: pdfKey,
+      pdfUrl,
+      textoExtraido: textoExtraido.substring(0, 60000),
+    });
+    const processoId = procIns.insertId;
+
+    await updateProgress(70, 'Salvando partes e movimentações...');
+    // Movimentações
+    if (Array.isArray(dados.movimentacoes)) {
+      for (const mov of dados.movimentacoes) {
+        await db.insert(movimentacoes).values({
+          processoId,
+          data: mov.data || null,
+          evento: mov.evento || null,
+          descricao: mov.descricao || null,
+        });
+      }
+    }
+
+    await updateProgress(80, 'Salvando dados financeiros e estratégias...');
+    // Dados financeiros
+    if (dados.remuneracaoBruta || dados.remuneracaoLiquida) {
+      const remBruta = parseFloat(dados.remuneracaoBruta) || 0;
+      const remLiq = parseFloat(dados.remuneracaoLiquida) || 0;
+      const totalCons = parseFloat(dados.totalConsignacoes) || 0;
+      const margem35 = remBruta * 0.35;
+      await db.insert(dadosFinanceiros).values({
+        clienteId,
+        remuneracaoBruta: String(remBruta),
+        remuneracaoLiquida: String(remLiq),
+        totalConsignacoes: String(totalCons),
+        margemConsignavelPerc: '35.00',
+        margemConsignavelValor: String(margem35.toFixed(2)),
+        margemDisponivel: String((margem35 - totalCons).toFixed(2)),
+        margemExcedida: totalCons > margem35 ? 1 : 0,
+        valorExcedente: totalCons > margem35 ? String((totalCons - margem35).toFixed(2)) : '0.00',
+        aptoEmprestimo: totalCons <= margem35 ? 1 : 0,
+        fonteRenda: dados.fonteRenda || null,
+      });
+    }
+
+    // Estratégia
+    if (dados.tesePrincipal) {
+      await db.insert(estrategias).values({
+        processoId,
+        tesePrincipal: dados.tesePrincipal || null,
+        fundamentacaoLegal: dados.fundamentacaoLegal || null,
+        jurisprudenciaCitada: dados.jurisprudenciaCitada || null,
+        pontosFortes: dados.pontosFortes || null,
+        riscosIdentificados: dados.riscosIdentificados || null,
+      });
+    }
+
+    await updateProgress(90, 'Atualizando relatórios...');
+    // Atualizar relatório cadastral
+    try { await autoUpdateRelatorioCadastral(db); } catch (e) { console.error('[Jobs] Erro atualizar relatório:', e); }
+
+    await updateProgress(100, 'Concluído!');
+    await db.update(jobs).set({
+      status: 'concluido',
+      concluidoEm: new Date(),
+      clienteId,
+      processoId,
+      outputData: JSON.stringify({ clienteId, processoId, clienteNome, numeroCnj: numCnj }),
+    }).where(eq(jobs.id, jobId));
+
+  } catch (error: any) {
+    throw error;
+  }
+}
+
+async function processarJobImportacaoContracheque(jobId: number, inputData: any) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const updateProgress = async (progresso: number, msg: string) => {
+    await db.update(jobs).set({ progresso, mensagemProgresso: msg }).where(eq(jobs.id, jobId));
+  };
+
+  try {
+    await updateProgress(10, 'Extraindo texto do contracheque...');
+    const pdfBuffer = Buffer.from(inputData.fileBase64, 'base64');
+    let textoExtraido = '';
+    try {
+      const pdfParse = (await import('pdf-parse') as any).default || (await import('pdf-parse'));
+      const pdfData = await pdfParse(pdfBuffer);
+      textoExtraido = pdfData.text || '';
+    } catch { textoExtraido = ''; }
+
+    await updateProgress(30, 'Analisando dados financeiros com IA...');
+    const llmResponse = await invokeLLM({
+      messages: [
+        { role: 'system', content: `Extraia dados financeiros do contracheque em JSON: nomeServidor, cpf, cargo, orgao, remuneracaoBruta, remuneracaoLiquida, descontoIrrf, descontoPrevidencia, outrosDescontos, emprestimos (array de {banco, rubrica, contrato, valorParcela, totalParcelas, parcelasRestantes, taxaJuros}), mesReferencia. Retorne APENAS JSON.` },
+        { role: 'user', content: textoExtraido.substring(0, 10000) },
+      ],
+    });
+
+    let dados: any = {};
+    try { dados = JSON.parse(llmResponse.choices[0]?.message?.content as string || '{}'); } catch { dados = {}; }
+
+    await updateProgress(50, 'Salvando dados financeiros...');
+    const clienteNome = dados.nomeServidor || inputData.fileName.replace(/\.pdf$/i, '');
+    const clienteCpf = dados.cpf?.replace(/[^0-9]/g, '') || `PEND_${Date.now().toString(36)}`;
+
+    const [existente] = await db.select().from(clientes).where(eq(clientes.cpfCnpj, clienteCpf));
+    let clienteId: number;
+    if (existente) {
+      clienteId = existente.id;
+    } else {
+      const [ins] = await db.insert(clientes).values({
+        cpfCnpj: clienteCpf,
+        nomeCompleto: clienteNome,
+        cargo: dados.cargo || null,
+        orgaoEmpregador: dados.orgao || null,
+      });
+      clienteId = ins.insertId;
+    }
+
+    await updateProgress(70, 'Calculando margem consignável...');
+    const remBruta = parseFloat(dados.remuneracaoBruta) || 0;
+    const remLiq = parseFloat(dados.remuneracaoLiquida) || 0;
+    const totalEmp = Array.isArray(dados.emprestimos) ? dados.emprestimos.reduce((s: number, e: any) => s + (parseFloat(e.valorParcela) || 0), 0) : 0;
+    const margem35 = remBruta * 0.35;
+
+    await db.insert(dadosFinanceiros).values({
+      clienteId,
+      remuneracaoBruta: String(remBruta),
+      remuneracaoLiquida: String(remLiq),
+      descontoIrrf: String(parseFloat(dados.descontoIrrf) || 0),
+      descontoPrevidencia: String(parseFloat(dados.descontoPrevidencia) || 0),
+      outrosDescontos: String(parseFloat(dados.outrosDescontos) || 0),
+      totalConsignacoes: String(totalEmp),
+      margemConsignavelPerc: '35.00',
+      margemConsignavelValor: String(margem35.toFixed(2)),
+      margemDisponivel: String((margem35 - totalEmp).toFixed(2)),
+      margemExcedida: totalEmp > margem35 ? 1 : 0,
+      valorExcedente: totalEmp > margem35 ? String((totalEmp - margem35).toFixed(2)) : '0.00',
+      aptoEmprestimo: totalEmp <= margem35 ? 1 : 0,
+      fonteRenda: dados.orgao || null,
+      dataReferencia: dados.mesReferencia || null,
+    });
+
+    await updateProgress(80, 'Salvando empréstimos...');
+    if (Array.isArray(dados.emprestimos)) {
+      for (const emp of dados.emprestimos) {
+        await db.insert(emprestimosConsignados).values({
+          clienteId,
+          banco: emp.banco || null,
+          rubrica: emp.rubrica || null,
+          contrato: emp.contrato || null,
+          valorParcela: String(parseFloat(emp.valorParcela) || 0),
+          totalParcelas: emp.totalParcelas || null,
+          parcelasRestantes: emp.parcelasRestantes || null,
+          taxaJuros: emp.taxaJuros ? String(emp.taxaJuros) : null,
+        });
+      }
+    }
+
+    await updateProgress(90, 'Atualizando relatórios...');
+    try { await autoUpdateRelatorioCadastral(db); } catch (e) { console.error('[Jobs] Erro relatório:', e); }
+
+    await updateProgress(100, 'Concluído!');
+    await db.update(jobs).set({
+      status: 'concluido',
+      concluidoEm: new Date(),
+      clienteId,
+      outputData: JSON.stringify({ clienteId, clienteNome, resumoFinanceiro: { remuneracaoBruta: remBruta, margem35, totalEmprestimos: totalEmp } }),
+    }).where(eq(jobs.id, jobId));
+
+  } catch (error: any) {
+    throw error;
+  }
+}
 
 export type AppRouter = typeof appRouter;

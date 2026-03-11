@@ -50,6 +50,13 @@
       "when": 1773227475297,
       "tag": "0006_swift_winter_soldier",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1773230451513,
+      "tag": "0007_acoustic_firebrand",
+      "breakpoints": true
     }
   ]
 }

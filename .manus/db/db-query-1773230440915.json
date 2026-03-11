@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `jobs` (\n  `id` int AUTO_INCREMENT PRIMARY KEY,\n  `tipo` varchar(100) NOT NULL,\n  `status` varchar(50) NOT NULL DEFAULT 'pendente',\n  `prioridade` int DEFAULT 0,\n  `titulo` varchar(500) NOT NULL,\n  `descricao` text,\n  `inputData` json,\n  `outputData` json,\n  `progresso` int DEFAULT 0,\n  `mensagemProgresso` text,\n  `clienteId` int,\n  `processoId` int,\n  `tentativas` int DEFAULT 0,\n  `maxTentativas` int DEFAULT 3,\n  `erroDetalhes` text,\n  `iniciadoEm` timestamp NULL,\n  `concluidoEm` timestamp NULL,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute CREATE TABLE `jobs` (\n  `id` int AUTO_INCREMENT PRIMARY KEY,\n  `tipo` varchar(100) NOT NULL,\n  `status` varchar(50) NOT NULL DEFAULT 'pendente',\n  `prioridade` int DEFAULT 0,\n  `titulo` varchar(500) NOT NULL,\n  `descricao` text,\n  `inputData` json,\n  `outputData` json,\n  `progresso` int DEFAULT 0,\n  `mensagemProgresso` text,\n  `clienteId` int,\n  `processoId` int,\n  `tentativas` int DEFAULT 0,\n  `maxTentativas` int DEFAULT 3,\n  `erroDetalhes` text,\n  `iniciadoEm` timestamp NULL,\n  `concluidoEm` timestamp NULL,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 257
+}

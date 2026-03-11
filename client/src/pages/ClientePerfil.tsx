@@ -8,7 +8,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, FileText, DollarSign, Scale, Download, ExternalLink, FolderOpen, BookOpen, Lightbulb, RefreshCw, Database, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, FileText, DollarSign, Scale, Download, ExternalLink, FolderOpen, BookOpen, Lightbulb, RefreshCw, Database, Trash2, Upload, Link2, GitBranch } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
 
@@ -270,8 +270,40 @@ export default function ClientePerfil() {
                 <div key={proc.id} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <h4 className="font-semibold text-sm">{proc.tipoAcao || "Processo"}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-sm">{proc.tipoAcao || "Processo"}</h4>
+                        {(proc as any).tipoVinculo && (
+                          <Badge variant="outline" className="text-xs gap-1 border-blue-300 text-blue-700 dark:text-blue-400">
+                            <GitBranch className="h-3 w-3" />
+                            {(proc as any).tipoVinculo}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs font-mono text-muted-foreground mt-0.5">{proc.numeroCnj}</p>
+                      {/* Vinculação com processo principal */}
+                      {(proc as any).processoOrigemId && (() => {
+                        const origem = processos?.find((p: any) => p.id === (proc as any).processoOrigemId);
+                        return origem ? (
+                          <div className="flex items-center gap-1.5 mt-1 text-xs text-blue-600 dark:text-blue-400">
+                            <Link2 className="h-3 w-3" />
+                            <span>Vinculado ao processo principal: <span className="font-mono font-medium">{origem.numeroCnj}</span></span>
+                          </div>
+                        ) : null;
+                      })()}
+                      {/* Processos dependentes deste */}
+                      {(() => {
+                        const dependentes = processos?.filter((p: any) => (p as any).processoOrigemId === proc.id) || [];
+                        return dependentes.length > 0 ? (
+                          <div className="mt-1 space-y-0.5">
+                            {dependentes.map((dep: any) => (
+                              <div key={dep.id} className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                                <GitBranch className="h-3 w-3" />
+                                <span>Processo dependente: <span className="font-mono font-medium">{dep.numeroCnj}</span> ({dep.tipoVinculo || dep.tipoAcao})</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
                     <div className="flex gap-2 items-center">
                       <Badge variant={proc.statusProcesso === "Ativo" ? "default" : "secondary"}>

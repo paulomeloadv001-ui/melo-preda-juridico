@@ -124,7 +124,7 @@ function ProcessoUpload() {
         <CardContent className="flex flex-col items-center justify-center py-10">
           <Upload className="h-10 w-10 text-muted-foreground/50 mb-3" />
           <h3 className="font-semibold text-base">Arraste PDFs de processos aqui ou clique para selecionar</h3>
-          <p className="text-muted-foreground text-sm mt-1">Aceita m\u00faltiplos arquivos PDF simultaneamente</p>
+          <p className="text-muted-foreground text-sm mt-1">Aceita múltiplos arquivos PDF simultaneamente</p>
           <input
             ref={fileInputRef}
             type="file"
