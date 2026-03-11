@@ -1,0 +1,1 @@
+ALTER TABLE `clientes` MODIFY COLUMN `cpfCnpj` varchar(50) NOT NULL;

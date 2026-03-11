@@ -668,20 +668,20 @@ ${textoExtraido}`;
           }
         } else {
           const [inserted] = await db.insert(clientes).values({
-            cpfCnpj: `PENDENTE_${Date.now()}`,
+            cpfCnpj: `PEND_${Date.now().toString(36)}`,
             nomeCompleto: nome,
           }).$returningId();
           clienteId = inserted.id;
         }
 
         // 4. Upload PDF to client folder in S3
-        const clienteCpf = cpf || `PENDENTE_${Date.now()}`;
+        const clienteCpf = cpf || `PEND_${Date.now().toString(36)}`;
         const folder = clientFolderKey(nome, clienteCpf);
         const pdfKey = `${folder}/processos_pdf/${input.fileName}`;
         const { key, url } = await storagePut(pdfKey, buffer, "application/pdf");
 
         // 5. Insert processo (dedup by numeroCnj)
-        const numCnj = dadosExtraidos.processo?.numeroCnj || `SEM_NUMERO_${Date.now()}`;
+        const numCnj = dadosExtraidos.processo?.numeroCnj || `SEM_${Date.now().toString(36)}`;
         const existingProc = await db.select().from(processos).where(eq(processos.numeroCnj, numCnj)).limit(1);
         let processoId: number;
 

@@ -84,3 +84,4 @@
 - [x] Corrigir bugs encontrados na revisão (nenhum bug crítico encontrado)
 - [x] Executar todos os testes unitários (20/20 passando)
 - [x] Backup e checkpoint final
+- [x] BUG: Erro de inserção de clientes no upload - "Failed query: insert into clientes" - CORRIGIDO: cpfCnpj varchar(20) -> varchar(50) + formato curto PEND_

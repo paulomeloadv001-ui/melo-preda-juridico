@@ -19,7 +19,7 @@ export type InsertUser = typeof users.$inferInsert;
 // ==================== CLIENTES (CPF como identificador único) ====================
 export const clientes = mysqlTable("clientes", {
   id: int("id").autoincrement().primaryKey(),
-  cpfCnpj: varchar("cpfCnpj", { length: 20 }).notNull().unique(),
+  cpfCnpj: varchar("cpfCnpj", { length: 50 }).notNull().unique(),
   nomeCompleto: varchar("nomeCompleto", { length: 255 }).notNull(),
   tipoPessoa: mysqlEnum("tipoPessoa", ["PF", "PJ"]).default("PF").notNull(),
   rg: varchar("rg", { length: 30 }),
