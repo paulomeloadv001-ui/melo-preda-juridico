@@ -379,3 +379,20 @@ export const userProfiles = mysqlTable("user_profiles", {
 
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type InsertUserProfile = typeof userProfiles.$inferInsert;
+
+// ==================== HISTÓRICO DE CORREÇÕES ====================
+export const historicoCorrecoes = mysqlTable("historico_correcoes", {
+  id: int("id").autoincrement().primaryKey(),
+  tipo: varchar("tipo", { length: 100 }).notNull(), // 'normalizar_cpfs', 'auto_merge', 'deduplicar_processos', 'atualizar_cpf', 'merge_manual', 'correcao_completa'
+  acao: varchar("acao", { length: 255 }).notNull(),
+  detalhes: text("detalhes"),
+  itensAfetados: int("itensAfetados").default(0),
+  status: mysqlEnum("statusCorrecao", ["sucesso", "parcial", "erro"]).default("sucesso").notNull(),
+  executadoPor: varchar("executadoPor", { length: 255 }),
+  dadosAntes: json("dadosAntes"),
+  dadosDepois: json("dadosDepois"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type HistoricoCorrecao = typeof historicoCorrecoes.$inferSelect;
+export type InsertHistoricoCorrecao = typeof historicoCorrecoes.$inferInsert;

@@ -147,3 +147,11 @@
 - [x] Frontend: aba Financeiro nos detalhes de cada cliente (depósitos, alvarás, pagamentos, levantamentos, honorários pagos/levantados vs depositados/a levantar)
 - [x] Frontend: substituir "Valor em Causas" por "Honorários" no Painel Geral com totais consolidados
 - [x] Concluir frontend dos relatórios de Margem Consignável e Panorama Processual
+- [x] Painel de Controle de Correções: redesenhar aba Correção/Deduplicação com dashboard de status (Score de Saúde 76/100)
+- [x] Painel de Controle: cards com contadores de problemas por categoria (CPFs, duplicatas, dados faltantes)
+- [x] Painel de Controle: botões de execução de correções automáticas com feedback em tempo real
+- [x] Painel de Controle: histórico de correções aplicadas com timestamp e detalhes
+- [x] Painel de Controle: barra de progresso geral de saúde dos dados (gauge circular animado)
+- [x] Backend: aprimorar rotas de correção com retorno detalhado (itens corrigidos, erros, antes/depois)
+- [x] Backend: executar todas as correções automáticas e registrar resultados
+- [x] Corrigir todos os problemas de dados detectados pela auditoria (botão Executar Todas as Correções implementado)

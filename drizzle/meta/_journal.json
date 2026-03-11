@@ -71,6 +71,13 @@
       "when": 1773242968253,
       "tag": "0009_uneven_white_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1773247213476,
+      "tag": "0010_chemical_midnight",
+      "breakpoints": true
     }
   ]
 }

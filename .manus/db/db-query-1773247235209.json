@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `historico_correcoes` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`tipo` varchar(100) NOT NULL,\n\t`acao` varchar(255) NOT NULL,\n\t`detalhes` text,\n\t`itensAfetados` int DEFAULT 0,\n\t`statusCorrecao` enum('sucesso','parcial','erro') NOT NULL DEFAULT 'sucesso',\n\t`executadoPor` varchar(255),\n\t`dadosAntes` json,\n\t`dadosDepois` json,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `historico_correcoes_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute CREATE TABLE `historico_correcoes` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`tipo` varchar(100) NOT NULL,\n\t`acao` varchar(255) NOT NULL,\n\t`detalhes` text,\n\t`itensAfetados` int DEFAULT 0,\n\t`statusCorrecao` enum('sucesso','parcial','erro') NOT NULL DEFAULT 'sucesso',\n\t`executadoPor` varchar(255),\n\t`dadosAntes` json,\n\t`dadosDepois` json,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `historico_correcoes_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 236
+}

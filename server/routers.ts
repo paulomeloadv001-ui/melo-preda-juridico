@@ -8,7 +8,7 @@ import {
   clientes, processos, dadosFinanceiros, emprestimosConsignados,
   estrategias, partesProcessuais, movimentacoes, documentos,
   conhecimentos, cumprimentosSentenca, analiseGeral, relatorios, jobs,
-  accessRequests, userProfiles, users, movimentacoesFinanceiras
+  accessRequests, userProfiles, users, movimentacoesFinanceiras, historicoCorrecoes
 } from "../drizzle/schema";
 import { eq, like, desc, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -1399,6 +1399,15 @@ ${textoExtraido}`;
           }
         }
       }
+      // Registrar no histórico
+      await db.insert(historicoCorrecoes).values({
+        tipo: 'normalizar_cpfs',
+        acao: `Normalização de CPFs: ${corrigidos} corrigidos`,
+        detalhes: `Removidos pontos, traços e barras de ${corrigidos} CPFs de um total de ${allClientes.length} clientes.`,
+        itensAfetados: corrigidos,
+        status: corrigidos > 0 ? 'sucesso' : 'parcial',
+        executadoPor: 'Sistema',
+      });
       return { corrigidos, mensagem: `${corrigidos} CPFs normalizados` };
     }),
 
@@ -1495,6 +1504,17 @@ ${textoExtraido}`;
         merges.push({ mantido: `${clis[0].nomeCompleto} (ID ${manterId})`, removidos: clis.slice(1).map((c: any) => `${c.nomeCompleto} (ID ${c.id})`) });
       }
 
+      // Registrar no histórico
+      if (merges.length > 0) {
+        await db.insert(historicoCorrecoes).values({
+          tipo: 'auto_merge',
+          acao: `Auto-Merge: ${merges.length} grupos de duplicados unificados`,
+          detalhes: merges.map(m => `Mantido: ${m.mantido} | Removidos: ${m.removidos.join(', ')}`).join('\n'),
+          itensAfetados: merges.length,
+          status: 'sucesso',
+          executadoPor: 'Sistema',
+        });
+      }
       return { totalMerges: merges.length, merges };
     }),
 
@@ -1821,7 +1841,196 @@ ${textoExtraido}`;
         }
       }
 
+      // Registrar no histórico
+      if (removidos > 0) {
+        await db.insert(historicoCorrecoes).values({
+          tipo: 'deduplicar_processos',
+          acao: `Deduplicação de Processos: ${removidos} processos duplicados removidos`,
+          detalhes: `Removidos ${removidos} processos com CNJ duplicado, mantendo o mais recente de cada grupo.`,
+          itensAfetados: removidos,
+          status: 'sucesso',
+          executadoPor: 'Sistema',
+        });
+      }
       return { processosRemovidos: removidos };
+    }),
+
+    // Histórico de correções
+    historico: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      return await db.select().from(historicoCorrecoes).orderBy(desc(historicoCorrecoes.createdAt)).limit(50);
+    }),
+
+    // Executar todas as correções em sequência
+    executarTodasCorrecoes: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const resultados: { etapa: string; status: string; detalhes: string; itensAfetados: number }[] = [];
+
+      // 1. Normalizar CPFs
+      try {
+        const allClientes = await db.select().from(clientes);
+        let cpfsCorrigidos = 0;
+        for (const cli of allClientes) {
+          const cpfNorm = cli.cpfCnpj.replace(/[.\-\/]/g, "");
+          if (cpfNorm !== cli.cpfCnpj && !cli.cpfCnpj.startsWith("PENDENTE") && !cli.cpfCnpj.startsWith("SEM_CPF")) {
+            const existing = await db.select().from(clientes).where(eq(clientes.cpfCnpj, cpfNorm)).limit(1);
+            if (existing.length === 0) {
+              await db.update(clientes).set({ cpfCnpj: cpfNorm }).where(eq(clientes.id, cli.id));
+              cpfsCorrigidos++;
+            }
+          }
+        }
+        resultados.push({ etapa: 'Normalizar CPFs', status: 'sucesso', detalhes: `${cpfsCorrigidos} CPFs normalizados de ${allClientes.length} clientes`, itensAfetados: cpfsCorrigidos });
+      } catch (e: any) {
+        resultados.push({ etapa: 'Normalizar CPFs', status: 'erro', detalhes: e.message, itensAfetados: 0 });
+      }
+
+      // 2. Auto-Merge de duplicados
+      try {
+        const allClientes2 = await db.select().from(clientes).orderBy(clientes.id);
+        const cpfMap2 = new Map<string, typeof allClientes2>();
+        for (const cli of allClientes2) {
+          const cpfNorm = cli.cpfCnpj.replace(/[.\-\/]/g, "");
+          if (cpfNorm.startsWith("PENDENTE") || cpfNorm.startsWith("SEM_CPF")) continue;
+          if (!cpfMap2.has(cpfNorm)) cpfMap2.set(cpfNorm, []);
+          cpfMap2.get(cpfNorm)!.push(cli);
+        }
+        let totalMerges = 0;
+        for (const [cpfNorm, clis] of Array.from(cpfMap2.entries())) {
+          if (clis.length <= 1) continue;
+          const manterId = clis[0].id;
+          for (let i = 1; i < clis.length; i++) {
+            const removerId = clis[i].id;
+            await db.update(processos).set({ clienteId: manterId }).where(eq(processos.clienteId, removerId));
+            await db.update(dadosFinanceiros).set({ clienteId: manterId }).where(eq(dadosFinanceiros.clienteId, removerId));
+            await db.update(emprestimosConsignados).set({ clienteId: manterId }).where(eq(emprestimosConsignados.clienteId, removerId));
+            await db.update(documentos).set({ clienteId: manterId }).where(eq(documentos.clienteId, removerId));
+            await db.update(movimentacoesFinanceiras).set({ clienteId: manterId }).where(eq(movimentacoesFinanceiras.clienteId, removerId));
+            await db.delete(clientes).where(eq(clientes.id, removerId));
+            totalMerges++;
+          }
+          await db.update(clientes).set({ cpfCnpj: cpfNorm }).where(eq(clientes.id, manterId));
+        }
+        resultados.push({ etapa: 'Auto-Merge Duplicados', status: 'sucesso', detalhes: `${totalMerges} clientes duplicados unificados`, itensAfetados: totalMerges });
+      } catch (e: any) {
+        resultados.push({ etapa: 'Auto-Merge Duplicados', status: 'erro', detalhes: e.message, itensAfetados: 0 });
+      }
+
+      // 3. Deduplicar Processos
+      try {
+        const allProcs = await db.select().from(processos).orderBy(desc(processos.updatedAt));
+        const cnjMap = new Map<string, typeof allProcs>();
+        for (const p of allProcs) {
+          const cnj = p.numeroCnj.replace(/\s/g, "");
+          if (cnj.startsWith("SEM_NUMERO") || cnj.startsWith("SEM_")) continue;
+          if (!cnjMap.has(cnj)) cnjMap.set(cnj, []);
+          cnjMap.get(cnj)!.push(p);
+        }
+        let procsRemovidos = 0;
+        for (const [cnj, procs] of Array.from(cnjMap.entries())) {
+          if (procs.length <= 1) continue;
+          for (let i = 1; i < procs.length; i++) {
+            await db.update(estrategias).set({ processoId: procs[0].id }).where(eq(estrategias.processoId, procs[i].id));
+            await db.update(partesProcessuais).set({ processoId: procs[0].id }).where(eq(partesProcessuais.processoId, procs[i].id));
+            await db.update(movimentacoes).set({ processoId: procs[0].id }).where(eq(movimentacoes.processoId, procs[i].id));
+            await db.update(cumprimentosSentenca).set({ processoId: procs[0].id }).where(eq(cumprimentosSentenca.processoId, procs[i].id));
+            await db.update(documentos).set({ processoId: procs[0].id }).where(eq(documentos.processoId, procs[i].id));
+            await db.update(conhecimentos).set({ processoOrigemId: procs[0].id }).where(eq(conhecimentos.processoOrigemId, procs[i].id));
+            await db.update(movimentacoesFinanceiras).set({ processoId: procs[0].id }).where(eq(movimentacoesFinanceiras.processoId, procs[i].id));
+            await db.delete(processos).where(eq(processos.id, procs[i].id));
+            procsRemovidos++;
+          }
+        }
+        resultados.push({ etapa: 'Deduplicar Processos', status: 'sucesso', detalhes: `${procsRemovidos} processos duplicados removidos`, itensAfetados: procsRemovidos });
+      } catch (e: any) {
+        resultados.push({ etapa: 'Deduplicar Processos', status: 'erro', detalhes: e.message, itensAfetados: 0 });
+      }
+
+      // Registrar no histórico
+      const totalAfetados = resultados.reduce((s, r) => s + r.itensAfetados, 0);
+      const statusGeral = resultados.every(r => r.status === 'sucesso') ? 'sucesso' : resultados.some(r => r.status === 'erro') ? 'parcial' : 'sucesso';
+      await db.insert(historicoCorrecoes).values({
+        tipo: 'correcao_completa',
+        acao: `Correção Completa: ${resultados.length} etapas executadas`,
+        detalhes: resultados.map(r => `${r.etapa}: ${r.status} - ${r.detalhes}`).join('\n'),
+        itensAfetados: totalAfetados,
+        status: statusGeral,
+        executadoPor: 'Sistema',
+        dadosDepois: resultados,
+      });
+
+      return { resultados, totalAfetados, statusGeral };
+    }),
+
+    // Score de saúde dos dados (0-100)
+    scoreSaude: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { score: 0, detalhes: {} };
+
+      const allClientes = await db.select().from(clientes);
+      const allProcs = await db.select().from(processos);
+      const allFin = await db.select({ clienteId: dadosFinanceiros.clienteId }).from(dadosFinanceiros);
+      const allMovs = await db.select({ processoId: movimentacoes.processoId }).from(movimentacoes);
+      const allEstr = await db.select({ processoId: estrategias.processoId }).from(estrategias);
+      const allDocs = await db.select({ processoId: documentos.processoId }).from(documentos).where(sql`${documentos.processoId} IS NOT NULL`);
+
+      const totalClientes = allClientes.length;
+      const totalProcs = allProcs.length;
+
+      // Calcular métricas
+      const cpfsValidos = allClientes.filter(c => !c.cpfCnpj.startsWith('PEND') && !c.cpfCnpj.startsWith('SEM_') && c.cpfCnpj.length >= 8).length;
+      const cpfsDuplicados = (() => {
+        const cpfMap = new Map<string, number>();
+        for (const c of allClientes) {
+          const cpf = c.cpfCnpj.replace(/[.\-\/]/g, '');
+          if (cpf.startsWith('PEND') || cpf.startsWith('SEM')) continue;
+          cpfMap.set(cpf, (cpfMap.get(cpf) || 0) + 1);
+        }
+        return Array.from(cpfMap.values()).filter(v => v > 1).length;
+      })();
+      const clientesComContato = allClientes.filter(c => c.telefone || c.email).length;
+      const clientesComEndereco = allClientes.filter(c => c.endereco).length;
+      const clientesComFinanceiro = new Set(allFin.map(f => f.clienteId)).size;
+      const procsComMovs = new Set(allMovs.map(m => m.processoId)).size;
+      const procsComEstr = new Set(allEstr.map(e => e.processoId)).size;
+      const procsComDocs = new Set(allDocs.map(d => d.processoId)).size;
+      const cnjsValidos = allProcs.filter(p => !p.numeroCnj.startsWith('SEM_')).length;
+      const procsComValor = allProcs.filter(p => p.valorCausa && Number(p.valorCausa) > 0).length;
+
+      // Pesos: CPFs (20), Duplicados (15), Contato (10), Endereço (5), Financeiro (10), Movimentações (10), Estratégias (10), Documentos (10), CNJs (5), Valor (5)
+      const scores = {
+        cpfsValidos: totalClientes > 0 ? (cpfsValidos / totalClientes) * 20 : 20,
+        semDuplicados: cpfsDuplicados === 0 ? 15 : Math.max(0, 15 - cpfsDuplicados * 5),
+        contato: totalClientes > 0 ? (clientesComContato / totalClientes) * 10 : 10,
+        endereco: totalClientes > 0 ? (clientesComEndereco / totalClientes) * 5 : 5,
+        financeiro: totalClientes > 0 ? (clientesComFinanceiro / totalClientes) * 10 : 10,
+        movimentacoes: totalProcs > 0 ? (procsComMovs / totalProcs) * 10 : 10,
+        estrategias: totalProcs > 0 ? (procsComEstr / totalProcs) * 10 : 10,
+        documentos: totalProcs > 0 ? (procsComDocs / totalProcs) * 10 : 10,
+        cnjsValidos: totalProcs > 0 ? (cnjsValidos / totalProcs) * 5 : 5,
+        valorCausa: totalProcs > 0 ? (procsComValor / totalProcs) * 5 : 5,
+      };
+
+      const score = Math.round(Object.values(scores).reduce((a, b) => a + b, 0));
+
+      return {
+        score,
+        detalhes: {
+          cpfsValidos: { valor: cpfsValidos, total: totalClientes, peso: 20, score: Math.round(scores.cpfsValidos) },
+          semDuplicados: { valor: cpfsDuplicados === 0 ? 'Nenhum' : `${cpfsDuplicados} grupos`, total: '-', peso: 15, score: Math.round(scores.semDuplicados) },
+          contato: { valor: clientesComContato, total: totalClientes, peso: 10, score: Math.round(scores.contato) },
+          endereco: { valor: clientesComEndereco, total: totalClientes, peso: 5, score: Math.round(scores.endereco) },
+          financeiro: { valor: clientesComFinanceiro, total: totalClientes, peso: 10, score: Math.round(scores.financeiro) },
+          movimentacoes: { valor: procsComMovs, total: totalProcs, peso: 10, score: Math.round(scores.movimentacoes) },
+          estrategias: { valor: procsComEstr, total: totalProcs, peso: 10, score: Math.round(scores.estrategias) },
+          documentos: { valor: procsComDocs, total: totalProcs, peso: 10, score: Math.round(scores.documentos) },
+          cnjsValidos: { valor: cnjsValidos, total: totalProcs, peso: 5, score: Math.round(scores.cnjsValidos) },
+          valorCausa: { valor: procsComValor, total: totalProcs, peso: 5, score: Math.round(scores.valorCausa) },
+        },
+      };
     }),
   }),
 
