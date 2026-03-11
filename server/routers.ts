@@ -1439,6 +1439,281 @@ ${textoExtraido}`;
         return { success: true, clienteId: input.clienteId, cpfAtualizado: cpfNorm };
       }),
 
+    // Auditoria completa da plataforma - detecta todos os tipos de erros
+    auditoriaCompleta: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { erros: [], resumo: { total: 0, criticos: 0, alertas: 0, info: 0 } };
+
+      const erros: Array<{
+        id: string;
+        categoria: string;
+        severidade: 'critico' | 'alerta' | 'info';
+        titulo: string;
+        descricao: string;
+        entidade: string;
+        entidadeId: number | null;
+        acao: string;
+        corrigivel: boolean;
+      }> = [];
+
+      // 1. CLIENTES - CPFs pendentes/inválidos
+      const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+      for (const cli of allClientes) {
+        if (cli.cpfCnpj.startsWith('PEND') || cli.cpfCnpj.startsWith('SEM_CPF')) {
+          erros.push({
+            id: `cpf_pendente_${cli.id}`,
+            categoria: 'Dados Cadastrais',
+            severidade: 'critico',
+            titulo: `CPF pendente: ${cli.nomeCompleto}`,
+            descricao: `O cliente ${cli.nomeCompleto} não possui CPF válido cadastrado (atual: ${cli.cpfCnpj}). Isso impede a geração de relatórios e petições.`,
+            entidade: 'cliente',
+            entidadeId: cli.id,
+            acao: 'Corrigir CPF na seção de Correção ou no perfil do cliente',
+            corrigivel: true,
+          });
+        }
+        // Campos essenciais vazios
+        if (!cli.endereco) {
+          erros.push({
+            id: `endereco_vazio_${cli.id}`,
+            categoria: 'Dados Cadastrais',
+            severidade: 'alerta',
+            titulo: `Endereço ausente: ${cli.nomeCompleto}`,
+            descricao: `O cliente ${cli.nomeCompleto} não possui endereço cadastrado. Necessário para petições e notificações.`,
+            entidade: 'cliente',
+            entidadeId: cli.id,
+            acao: 'Editar perfil do cliente e adicionar endereço',
+            corrigivel: false,
+          });
+        }
+        if (!cli.telefone && !cli.email) {
+          erros.push({
+            id: `contato_vazio_${cli.id}`,
+            categoria: 'Dados Cadastrais',
+            severidade: 'alerta',
+            titulo: `Sem contato: ${cli.nomeCompleto}`,
+            descricao: `O cliente ${cli.nomeCompleto} não possui telefone nem email cadastrado.`,
+            entidade: 'cliente',
+            entidadeId: cli.id,
+            acao: 'Editar perfil do cliente e adicionar contato',
+            corrigivel: false,
+          });
+        }
+        if (!cli.profissao && !cli.cargo) {
+          erros.push({
+            id: `profissao_vazia_${cli.id}`,
+            categoria: 'Dados Cadastrais',
+            severidade: 'info',
+            titulo: `Profissão/cargo ausente: ${cli.nomeCompleto}`,
+            descricao: `O cliente ${cli.nomeCompleto} não possui profissão ou cargo cadastrado.`,
+            entidade: 'cliente',
+            entidadeId: cli.id,
+            acao: 'Editar perfil do cliente',
+            corrigivel: false,
+          });
+        }
+      }
+
+      // 2. CLIENTES DUPLICADOS por CPF
+      const cpfMap = new Map<string, typeof allClientes>();
+      for (const cli of allClientes) {
+        const cpfNorm = cli.cpfCnpj.replace(/[.\-\/]/g, '');
+        if (cpfNorm.startsWith('PEND') || cpfNorm.startsWith('SEM')) continue;
+        if (!cpfMap.has(cpfNorm)) cpfMap.set(cpfNorm, []);
+        cpfMap.get(cpfNorm)!.push(cli);
+      }
+      for (const [cpf, clis] of Array.from(cpfMap.entries())) {
+        if (clis.length > 1) {
+          erros.push({
+            id: `duplicado_cpf_${cpf}`,
+            categoria: 'Duplicidades',
+            severidade: 'critico',
+            titulo: `CPF duplicado: ${cpf}`,
+            descricao: `${clis.length} clientes compartilham o mesmo CPF: ${clis.map(c => c.nomeCompleto).join(', ')}. Usar Auto-Merge para unificar.`,
+            entidade: 'cliente',
+            entidadeId: clis[0].id,
+            acao: 'Executar Auto-Merge ou Merge Manual',
+            corrigivel: true,
+          });
+        }
+      }
+
+      // 3. PROCESSOS - CNJs inválidos
+      const allProcs = await db.select().from(processos);
+      for (const p of allProcs) {
+        if (p.numeroCnj.startsWith('SEM_') || p.numeroCnj.startsWith('SEM_NUMERO')) {
+          const cli = allClientes.find(c => c.id === p.clienteId);
+          erros.push({
+            id: `cnj_invalido_${p.id}`,
+            categoria: 'Processos',
+            severidade: 'critico',
+            titulo: `CNJ inválido: ${p.tipoAcao || 'Processo'} (${cli?.nomeCompleto || 'Cliente desconhecido'})`,
+            descricao: `O processo ID ${p.id} não possui número CNJ válido (atual: ${p.numeroCnj}). Reprocessar o PDF ou corrigir manualmente.`,
+            entidade: 'processo',
+            entidadeId: p.id,
+            acao: 'Reprocessar PDF do processo ou editar CNJ manualmente',
+            corrigivel: false,
+          });
+        }
+      }
+
+      // 4. PROCESSOS SEM MOVIMENTAÇÕES
+      const allMovs = await db.select({ processoId: movimentacoes.processoId }).from(movimentacoes);
+      const procsComMovs = new Set(allMovs.map(m => m.processoId));
+      for (const p of allProcs) {
+        if (!procsComMovs.has(p.id)) {
+          const cli = allClientes.find(c => c.id === p.clienteId);
+          erros.push({
+            id: `sem_movimentacao_${p.id}`,
+            categoria: 'Processos',
+            severidade: 'alerta',
+            titulo: `Sem movimentações: ${p.tipoAcao || 'Processo'} (${cli?.nomeCompleto || '?'})`,
+            descricao: `O processo ${p.numeroCnj} não possui movimentações registradas. Isso pode indicar falha na extração do PDF.`,
+            entidade: 'processo',
+            entidadeId: p.id,
+            acao: 'Reprocessar PDF ou adicionar movimentações manualmente',
+            corrigivel: false,
+          });
+        }
+      }
+
+      // 5. PROCESSOS SEM ESTRATÉGIA
+      const allEstr = await db.select({ processoId: estrategias.processoId }).from(estrategias);
+      const procsComEstr = new Set(allEstr.map(e => e.processoId));
+      for (const p of allProcs) {
+        if (!procsComEstr.has(p.id)) {
+          const cli = allClientes.find(c => c.id === p.clienteId);
+          erros.push({
+            id: `sem_estrategia_${p.id}`,
+            categoria: 'Processos',
+            severidade: 'info',
+            titulo: `Sem estratégia: ${p.tipoAcao || 'Processo'} (${cli?.nomeCompleto || '?'})`,
+            descricao: `O processo ${p.numeroCnj} não possui estratégia processual definida.`,
+            entidade: 'processo',
+            entidadeId: p.id,
+            acao: 'Reprocessar PDF para extrair estratégia',
+            corrigivel: false,
+          });
+        }
+      }
+
+      // 6. DADOS FINANCEIROS - Clientes sem dados financeiros
+      const allFin = await db.select({ clienteId: dadosFinanceiros.clienteId }).from(dadosFinanceiros);
+      const clisComFin = new Set(allFin.map(f => f.clienteId));
+      for (const cli of allClientes) {
+        if (!clisComFin.has(cli.id)) {
+          erros.push({
+            id: `sem_financeiro_${cli.id}`,
+            categoria: 'Dados Financeiros',
+            severidade: 'alerta',
+            titulo: `Sem dados financeiros: ${cli.nomeCompleto}`,
+            descricao: `O cliente ${cli.nomeCompleto} não possui dados financeiros cadastrados. Faça upload do contracheque para preencher.`,
+            entidade: 'cliente',
+            entidadeId: cli.id,
+            acao: 'Upload de contracheque na aba Upload > Contracheque',
+            corrigivel: false,
+          });
+        }
+      }
+
+      // 7. DADOS FINANCEIROS - Margem excedida
+      const allFinFull = await db.select().from(dadosFinanceiros);
+      for (const fin of allFinFull) {
+        if (fin.margemExcedida) {
+          const cli = allClientes.find(c => c.id === fin.clienteId);
+          erros.push({
+            id: `margem_excedida_${fin.id}`,
+            categoria: 'Dados Financeiros',
+            severidade: 'critico',
+            titulo: `Margem excedida: ${cli?.nomeCompleto || 'Cliente'}`,
+            descricao: `O cliente ${cli?.nomeCompleto} possui margem consignável excedida (valor excedente: R$ ${fin.valorExcedente || '?'}). Isso configura irregularidade nos descontos.`,
+            entidade: 'cliente',
+            entidadeId: fin.clienteId,
+            acao: 'Verificar empréstimos consignados e tomar providências jurídicas',
+            corrigivel: false,
+          });
+        }
+      }
+
+      // 8. PROCESSOS DUPLICADOS por CNJ
+      const cnjMap = new Map<string, typeof allProcs>();
+      for (const p of allProcs) {
+        const cnj = p.numeroCnj.replace(/\s/g, '');
+        if (cnj.startsWith('SEM_')) continue;
+        if (!cnjMap.has(cnj)) cnjMap.set(cnj, []);
+        cnjMap.get(cnj)!.push(p);
+      }
+      for (const [cnj, procs] of Array.from(cnjMap.entries())) {
+        if (procs.length > 1) {
+          erros.push({
+            id: `duplicado_cnj_${cnj}`,
+            categoria: 'Duplicidades',
+            severidade: 'critico',
+            titulo: `CNJ duplicado: ${cnj}`,
+            descricao: `${procs.length} processos com o mesmo CNJ. Usar Deduplicar Processos para unificar.`,
+            entidade: 'processo',
+            entidadeId: procs[0].id,
+            acao: 'Executar Deduplicar Processos',
+            corrigivel: true,
+          });
+        }
+      }
+
+      // 9. PROCESSOS SEM DOCUMENTOS
+      const allDocs = await db.select({ processoId: documentos.processoId }).from(documentos).where(sql`${documentos.processoId} IS NOT NULL`);
+      const procsComDocs = new Set(allDocs.map(d => d.processoId));
+      for (const p of allProcs) {
+        if (!procsComDocs.has(p.id)) {
+          const cli = allClientes.find(c => c.id === p.clienteId);
+          erros.push({
+            id: `sem_documento_${p.id}`,
+            categoria: 'Documentos',
+            severidade: 'info',
+            titulo: `Sem documentos: ${p.tipoAcao || 'Processo'} (${cli?.nomeCompleto || '?'})`,
+            descricao: `O processo ${p.numeroCnj} não possui documentos armazenados no sistema.`,
+            entidade: 'processo',
+            entidadeId: p.id,
+            acao: 'Reprocessar PDF ou fazer upload manual do documento',
+            corrigivel: false,
+          });
+        }
+      }
+
+      // 10. PROCESSOS SEM VALOR DE CAUSA
+      for (const p of allProcs) {
+        if (!p.valorCausa || Number(p.valorCausa) === 0) {
+          const cli = allClientes.find(c => c.id === p.clienteId);
+          erros.push({
+            id: `sem_valor_causa_${p.id}`,
+            categoria: 'Processos',
+            severidade: 'info',
+            titulo: `Valor da causa zerado: ${p.tipoAcao || 'Processo'} (${cli?.nomeCompleto || '?'})`,
+            descricao: `O processo ${p.numeroCnj} não possui valor da causa definido.`,
+            entidade: 'processo',
+            entidadeId: p.id,
+            acao: 'Editar processo e informar valor da causa',
+            corrigivel: false,
+          });
+        }
+      }
+
+      // Resumo
+      const criticos = erros.filter(e => e.severidade === 'critico').length;
+      const alertas = erros.filter(e => e.severidade === 'alerta').length;
+      const info = erros.filter(e => e.severidade === 'info').length;
+
+      return {
+        erros,
+        resumo: {
+          total: erros.length,
+          criticos,
+          alertas,
+          info,
+        },
+        categorias: Array.from(new Set(erros.map(e => e.categoria))),
+      };
+    }),
+
     // Deduplicar processos por número CNJ (mantém o mais recente)
     deduplicarProcessos: protectedProcedure.mutation(async () => {
       const db = await getDb();

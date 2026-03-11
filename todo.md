@@ -117,3 +117,8 @@
 - [x] Criar página de solicitação de acesso (formulário público - /solicitar-acesso)
 - [x] Criar painel de aprovação de acessos para o administrador (/acessos)
 - [x] Notificar admin quando nova solicitação de acesso chegar (badge de pendentes + polling 10s)
+- [x] Criar rota backend auditoria completa (detecta CPFs pendentes, CNJs inválidos, dados financeiros ausentes, processos sem movimentações, duplicados, etc.)
+- [x] Implementar painel de correção no frontend com categorias de erros e ações corretivas (3 abas: Auditoria, Diagnóstico, Merge)
+- [ ] Gravar conhecimento sobre o fluxo de correção no banco de conhecimentos
+- [ ] Gerar relatório de erros encontrados e correções aplicadas
+- [x] Criar guia explicativo do fluxo de trabalho passo a passo na página inicial (Dashboard)

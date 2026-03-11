@@ -326,6 +326,138 @@ export default function Dashboard() {
 
       <Separator />
 
+      {/* Guia do Fluxo de Trabalho */}
+      <Card className="border shadow-sm border-[oklch(0.75_0.12_85)]/30">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ChevronRight className="h-5 w-5 text-[oklch(0.75_0.12_85)]" />
+            <CardTitle className="text-lg">Fluxo de Trabalho — Passo a Passo</CardTitle>
+          </div>
+          <CardDescription>
+            Siga esta sequência para processar um caso completo, desde o upload até o relatório final
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-0">
+            {/* Passo 1 - Upload */}
+            <div className="flex gap-4 cursor-pointer group" onClick={() => setLocation("/upload")}>
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 rounded-full bg-[oklch(0.75_0.12_85)] text-white flex items-center justify-center font-bold text-sm shadow-md">1</div>
+                <div className="w-0.5 h-full bg-[oklch(0.75_0.12_85)]/30 my-1" />
+              </div>
+              <div className="flex-1 pb-6 group-hover:bg-muted/30 rounded-lg p-3 -mt-1 transition-colors">
+                <div className="flex items-center gap-2 mb-1">
+                  <Upload className="h-4 w-4 text-[oklch(0.75_0.12_85)]" />
+                  <h3 className="font-semibold text-sm">Upload de Processos</h3>
+                  <Badge variant="outline" className="text-xs">Aba: Upload de Processos</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Faça upload do PDF do processo judicial (autos principais). O sistema extrai automaticamente via IA: dados do cliente (nome, CPF, endereço), número CNJ, tipo de ação, partes processuais, movimentações e teses jurídicas.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 italic">Também aceita upload de contracheque para extração de dados financeiros detalhados.</p>
+              </div>
+            </div>
+
+            {/* Passo 2 - Clientes */}
+            <div className="flex gap-4 cursor-pointer group" onClick={() => setLocation("/clientes")}>
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 rounded-full bg-[oklch(0.65_0.12_85)] text-white flex items-center justify-center font-bold text-sm shadow-md">2</div>
+                <div className="w-0.5 h-full bg-[oklch(0.75_0.12_85)]/30 my-1" />
+              </div>
+              <div className="flex-1 pb-6 group-hover:bg-muted/30 rounded-lg p-3 -mt-1 transition-colors">
+                <div className="flex items-center gap-2 mb-1">
+                  <Users className="h-4 w-4 text-[oklch(0.65_0.12_85)]" />
+                  <h3 className="font-semibold text-sm">Banco de Clientes</h3>
+                  <Badge variant="outline" className="text-xs">Aba: Clientes</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Após o upload, o cliente é cadastrado automaticamente (ou vinculado a um existente por CPF/nome). Acesse o perfil completo: dados pessoais, processos judiciais com vinculação (principal ↔ cumprimento de sentença), movimentações, partes processuais, dados financeiros e empréstimos consignados.
+                </p>
+              </div>
+            </div>
+
+            {/* Passo 3 - Conhecimentos */}
+            <div className="flex gap-4 cursor-pointer group" onClick={() => setLocation("/conhecimentos")}>
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 rounded-full bg-[oklch(0.55_0.15_145)] text-white flex items-center justify-center font-bold text-sm shadow-md">3</div>
+                <div className="w-0.5 h-full bg-[oklch(0.75_0.12_85)]/30 my-1" />
+              </div>
+              <div className="flex-1 pb-6 group-hover:bg-muted/30 rounded-lg p-3 -mt-1 transition-colors">
+                <div className="flex items-center gap-2 mb-1">
+                  <Brain className="h-4 w-4 text-[oklch(0.55_0.15_145)]" />
+                  <h3 className="font-semibold text-sm">Banco de Conhecimentos</h3>
+                  <Badge variant="outline" className="text-xs">Aba: Conhecimentos</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  A IA extrai automaticamente teses jurídicas, jurisprudências e legislações de cada processo importado. Consulte, edite e adicione novos conhecimentos. Filtros por tipo (Tese, Jurisprudência, Legislação) e busca por texto.
+                </p>
+              </div>
+            </div>
+
+            {/* Passo 4 - Correção */}
+            <div className="flex gap-4 cursor-pointer group" onClick={() => setLocation("/correcao")}>
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 rounded-full bg-[oklch(0.65_0.15_30)] text-white flex items-center justify-center font-bold text-sm shadow-md">4</div>
+                <div className="w-0.5 h-full bg-[oklch(0.75_0.12_85)]/30 my-1" />
+              </div>
+              <div className="flex-1 pb-6 group-hover:bg-muted/30 rounded-lg p-3 -mt-1 transition-colors">
+                <div className="flex items-center gap-2 mb-1">
+                  <Shield className="h-4 w-4 text-[oklch(0.65_0.15_30)]" />
+                  <h3 className="font-semibold text-sm">Correção e Auditoria</h3>
+                  <Badge variant="outline" className="text-xs">Aba: Correção / Deduplicação</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Verifique a saúde dos dados: CPFs pendentes, CNJs inválidos, processos sem movimentações, dados financeiros ausentes, clientes duplicados. A auditoria completa categoriza cada problema por severidade (crítico, alerta, informativo) com ações corretivas.
+                </p>
+              </div>
+            </div>
+
+            {/* Passo 5 - Relatórios */}
+            <div className="flex gap-4 cursor-pointer group" onClick={() => setLocation("/relatorios")}>
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 rounded-full bg-[oklch(0.55_0.12_250)] text-white flex items-center justify-center font-bold text-sm shadow-md">5</div>
+                <div className="w-0.5 h-full bg-[oklch(0.75_0.12_85)]/30 my-1" />
+              </div>
+              <div className="flex-1 pb-6 group-hover:bg-muted/30 rounded-lg p-3 -mt-1 transition-colors">
+                <div className="flex items-center gap-2 mb-1">
+                  <FileText className="h-4 w-4 text-[oklch(0.55_0.12_250)]" />
+                  <h3 className="font-semibold text-sm">Relatórios</h3>
+                  <Badge variant="outline" className="text-xs">Aba: Relatórios</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Gere relatórios de Dados Cadastrais em tempo real. Cada relatório é atualizado automaticamente após cada importação. Exporte em PDF ou JSON. Visualize por cliente com detalhes de processos, dados financeiros e empréstimos.
+                </p>
+              </div>
+            </div>
+
+            {/* Passo 6 - Exportação */}
+            <div className="flex gap-4 cursor-pointer group" onClick={() => setLocation("/exportacao")}>
+              <div className="flex flex-col items-center">
+                <div className="w-10 h-10 rounded-full bg-[oklch(0.45_0.12_250)] text-white flex items-center justify-center font-bold text-sm shadow-md">6</div>
+                <div className="w-0.5 h-full bg-transparent my-1" />
+              </div>
+              <div className="flex-1 pb-2 group-hover:bg-muted/30 rounded-lg p-3 -mt-1 transition-colors">
+                <div className="flex items-center gap-2 mb-1">
+                  <Download className="h-4 w-4 text-[oklch(0.45_0.12_250)]" />
+                  <h3 className="font-semibold text-sm">Exportação em Massa</h3>
+                  <Badge variant="outline" className="text-xs">Aba: Exportação em Massa</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Exporte todos os dados do sistema em formato JSON ou CSV para integração com outros sistemas, backup ou análise externa. Inclui clientes, processos, conhecimentos, dados financeiros e movimentações.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Dica */}
+          <div className="mt-4 p-3 rounded-lg bg-[oklch(0.75_0.12_85)]/5 border border-[oklch(0.75_0.12_85)]/20">
+            <p className="text-xs text-muted-foreground">
+              <strong>Dica:</strong> Para processos com dependência (ex: cumprimento provisório de sentença), faça upload dos autos principais primeiro e depois do processo dependente. O sistema vincula automaticamente pelo nome do cliente e número CNJ.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Ações Rápidas */}
       <Card className="border shadow-sm">
         <CardHeader>
