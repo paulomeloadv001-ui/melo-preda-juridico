@@ -187,3 +187,4 @@
 - [x] Backend: notificação automática ao concluir/errar importação em lote
 - [x] Backend: notificação automática ao adicionar movimentação financeira
 - [x] Testes unitários para sistema de notificações (30 testes - total 99 passando)
+- [x] BUG: Página /upload retorna HTML em vez de JSON (Unexpected token '<', '<!doctype'...) - CORRIGIDO: validação de tamanho 16MB no frontend + interceptor de respostas HTML no tRPC client

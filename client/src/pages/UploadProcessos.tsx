@@ -38,16 +38,23 @@ function ProcessoUpload() {
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
 
+  const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16 MB
+
   const handleFileSelect = useCallback((selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
-    const newFiles: FileItem[] = Array.from(selectedFiles)
-      .filter(f => f.type === "application/pdf")
-      .map(f => ({ file: f, status: "pending" as const }));
-    if (newFiles.length === 0) {
+    const pdfFiles = Array.from(selectedFiles).filter(f => f.type === "application/pdf");
+    if (pdfFiles.length === 0) {
       toast.error("Selecione apenas arquivos PDF");
       return;
     }
-    setFiles(prev => [...prev, ...newFiles]);
+    const oversized = pdfFiles.filter(f => f.size > MAX_FILE_SIZE);
+    const valid = pdfFiles.filter(f => f.size <= MAX_FILE_SIZE);
+    if (oversized.length > 0) {
+      toast.error(`${oversized.length} arquivo(s) excedem o limite de 16 MB: ${oversized.map(f => f.name).join(', ')}`);
+    }
+    if (valid.length > 0) {
+      setFiles(prev => [...prev, ...valid.map(f => ({ file: f, status: "pending" as const }))]);
+    }
   }, []);
 
   const removeFile = (index: number) => {
@@ -65,6 +72,9 @@ function ProcessoUpload() {
       setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "uploading" } : f));
 
       try {
+        if (fileItem.file.size > MAX_FILE_SIZE) {
+          throw new Error(`Arquivo ${fileItem.file.name} excede o limite de 16 MB`);
+        }
         const buffer = await fileItem.file.arrayBuffer();
         const base64 = btoa(
           new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
@@ -82,7 +92,9 @@ function ProcessoUpload() {
         toast.success(`${fileItem.file.name} processado com sucesso`);
       } catch (error: any) {
         let friendlyError = error.message || "Erro desconhecido";
-        if (friendlyError.includes("Data too long")) {
+        if (friendlyError.includes("grande demais") || friendlyError.includes("16 MB") || friendlyError.includes("413")) {
+          friendlyError = "O arquivo é grande demais. O limite máximo é de 16 MB por arquivo.";
+        } else if (friendlyError.includes("Data too long")) {
           friendlyError = "Dados extraídos excedem limite do campo. Tente novamente.";
         } else if (friendlyError.includes("Duplicate entry")) {
           friendlyError = "Processo ou cliente já cadastrado no sistema.";
@@ -92,6 +104,8 @@ function ProcessoUpload() {
           friendlyError = "Falha na extração via IA. O PDF pode estar em formato não suportado.";
         } else if (friendlyError.includes("Network") || friendlyError.includes("fetch")) {
           friendlyError = "Erro de conexão. Verifique sua internet e tente novamente.";
+        } else if (friendlyError.includes("resposta inesperada")) {
+          friendlyError = "Erro de comunicação com o servidor. Tente novamente.";
         } else if (friendlyError.length > 120) {
           friendlyError = friendlyError.substring(0, 120) + "...";
         }
@@ -277,16 +291,23 @@ function ContrachequeUpload() {
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
 
+  const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16 MB
+
   const handleFileSelect = useCallback((selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
-    const newFiles: FileItem[] = Array.from(selectedFiles)
-      .filter(f => f.type === "application/pdf")
-      .map(f => ({ file: f, status: "pending" as const }));
-    if (newFiles.length === 0) {
+    const pdfFiles = Array.from(selectedFiles).filter(f => f.type === "application/pdf");
+    if (pdfFiles.length === 0) {
       toast.error("Selecione apenas arquivos PDF");
       return;
     }
-    setFiles(prev => [...prev, ...newFiles]);
+    const oversized = pdfFiles.filter(f => f.size > MAX_FILE_SIZE);
+    const valid = pdfFiles.filter(f => f.size <= MAX_FILE_SIZE);
+    if (oversized.length > 0) {
+      toast.error(`${oversized.length} arquivo(s) excedem o limite de 16 MB: ${oversized.map(f => f.name).join(', ')}`);
+    }
+    if (valid.length > 0) {
+      setFiles(prev => [...prev, ...valid.map(f => ({ file: f, status: "pending" as const }))]);
+    }
   }, []);
 
   const removeFile = (index: number) => {
@@ -304,6 +325,9 @@ function ContrachequeUpload() {
       setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "uploading" } : f));
 
       try {
+        if (fileItem.file.size > MAX_FILE_SIZE) {
+          throw new Error(`Arquivo ${fileItem.file.name} excede o limite de 16 MB`);
+        }
         const buffer = await fileItem.file.arrayBuffer();
         const base64 = btoa(
           new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
@@ -321,12 +345,16 @@ function ContrachequeUpload() {
         toast.success(`Contracheque de ${result.clienteNome} processado com sucesso`);
       } catch (error: any) {
         let friendlyError = error.message || "Erro desconhecido";
-        if (friendlyError.includes("identificar o CPF")) {
+        if (friendlyError.includes("grande demais") || friendlyError.includes("16 MB") || friendlyError.includes("413")) {
+          friendlyError = "O arquivo é grande demais. O limite máximo é de 16 MB por arquivo.";
+        } else if (friendlyError.includes("identificar o CPF")) {
           friendlyError = "Não foi possível identificar o CPF do servidor no contracheque.";
         } else if (friendlyError.includes("Data too long")) {
           friendlyError = "Dados excedem limite do campo.";
         } else if (friendlyError.includes("Falha na extração")) {
           friendlyError = "Falha na extração via IA. Verifique se o PDF é um contracheque válido.";
+        } else if (friendlyError.includes("resposta inesperada")) {
+          friendlyError = "Erro de comunicação com o servidor. Tente novamente.";
         } else if (friendlyError.length > 120) {
           friendlyError = friendlyError.substring(0, 120) + "...";
         }
@@ -638,21 +666,29 @@ function ImportacaoLote() {
     }
   }, [statusLote?.master?.status]);
 
+  const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16 MB
+
   const handleFileSelect = useCallback((selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
-    const newFiles: LoteFileItem[] = Array.from(selectedFiles)
-      .filter(f => f.type === 'application/pdf')
-      .map(f => ({
+    const pdfFiles = Array.from(selectedFiles).filter(f => f.type === 'application/pdf');
+    if (pdfFiles.length === 0) {
+      toast.error('Selecione apenas arquivos PDF');
+      return;
+    }
+    const oversized = pdfFiles.filter(f => f.size > MAX_FILE_SIZE);
+    const valid = pdfFiles.filter(f => f.size <= MAX_FILE_SIZE);
+    if (oversized.length > 0) {
+      toast.error(`${oversized.length} arquivo(s) excedem o limite de 16 MB e foram ignorados: ${oversized.map(f => f.name).join(', ')}`);
+    }
+    if (valid.length > 0) {
+      const newFiles: LoteFileItem[] = valid.map(f => ({
         file: f,
         tipoDetectado: detectarTipoDocumento(f.name),
         status: 'pending' as const,
       }));
-    if (newFiles.length === 0) {
-      toast.error('Selecione apenas arquivos PDF');
-      return;
+      setFiles(prev => [...prev, ...newFiles]);
+      toast.success(`${valid.length} arquivo(s) adicionado(s) à fila`);
     }
-    setFiles(prev => [...prev, ...newFiles]);
-    toast.success(`${newFiles.length} arquivo(s) adicionado(s) à fila`);
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -686,6 +722,12 @@ function ImportacaoLote() {
       const arquivosNomes: string[] = [];
       for (let i = 0; i < pendingFiles.length; i++) {
         const item = pendingFiles[i];
+        // Validar tamanho antes de enviar
+        if (item.file.size > MAX_FILE_SIZE) {
+          setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'error' as const, erro: `Arquivo excede o limite de 16 MB (${(item.file.size / (1024*1024)).toFixed(1)} MB)` } : f));
+          toast.error(`${item.file.name} excede o limite de 16 MB e foi ignorado`);
+          continue;
+        }
         setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'uploading' } : f));
         toast.info(`Enviando ${i + 1}/${pendingFiles.length}: ${item.file.name}`);
 
@@ -694,21 +736,37 @@ function ImportacaoLote() {
           new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
         );
 
-        const result = await uploadArquivoMutation.mutateAsync({
-          fileName: item.file.name,
-          fileBase64: base64,
-          fileSize: item.file.size,
-          tipoDocumento: (item.tipoManual || item.tipoDetectado) as 'processo' | 'contracheque' | 'auto',
-          loteId: newLoteId,
-          masterJobId: 0, // Será atualizado depois
-          posicaoNoLote: i + 1,
-          totalNoLote: pendingFiles.length,
-          opcoes: { ...opcoes, prioridade: 0 },
-        });
+        try {
+          const result = await uploadArquivoMutation.mutateAsync({
+            fileName: item.file.name,
+            fileBase64: base64,
+            fileSize: item.file.size,
+            tipoDocumento: (item.tipoManual || item.tipoDetectado) as 'processo' | 'contracheque' | 'auto',
+            loteId: newLoteId,
+            masterJobId: 0,
+            posicaoNoLote: i + 1,
+            totalNoLote: pendingFiles.length,
+            opcoes: { ...opcoes, prioridade: 0 },
+          });
 
-        jobIds.push(result.jobId);
-        arquivosNomes.push(item.file.name);
-        setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'queued' } : f));
+          jobIds.push(result.jobId);
+          arquivosNomes.push(item.file.name);
+          setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'queued' } : f));
+        } catch (uploadError: any) {
+          const msg = uploadError.message || 'Erro desconhecido';
+          const friendlyMsg = msg.includes('grande demais') || msg.includes('16 MB') || msg.includes('413')
+            ? 'Arquivo grande demais para envio (limite: 16 MB)'
+            : msg.length > 80 ? msg.substring(0, 80) + '...' : msg;
+          setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'error' as const, erro: friendlyMsg } : f));
+          toast.error(`Erro ao enviar ${item.file.name}: ${friendlyMsg}`);
+        }
+      }
+
+      // Verificar se pelo menos 1 arquivo foi enviado com sucesso
+      if (jobIds.length === 0) {
+        toast.error('Nenhum arquivo foi enviado com sucesso. Verifique os tamanhos dos arquivos (máx. 16 MB).');
+        setIsProcessing(false);
+        return;
       }
 
       // Todos os arquivos enviados, agora criar o lote master e iniciar processamento

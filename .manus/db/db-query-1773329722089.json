@@ -1,0 +1,19 @@
+{
+  "query": "SHOW TABLES LIKE 'notificacoes'; SHOW TABLES LIKE 'prazos_processuais';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SHOW TABLES LIKE 'notificacoes'; SHOW TABLES LIKE 'prazos_processuais';",
+  "rows": [
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe (notificacoes)": "notificacoes"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe (notificacoes)": "Tables_in_4imSnKhwnzycXmSWcGeMqe (prazos_processuais)"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe (notificacoes)": "prazos_processuais"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_4imSnKhwnzycXmSWcGeMqe (notificacoes)\nnotificacoes\nTables_in_4imSnKhwnzycXmSWcGeMqe (prazos_processuais)\nprazos_processuais\n",
+  "stderr": "",
+  "execution_time_ms": 113
+}

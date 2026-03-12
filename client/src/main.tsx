@@ -42,11 +42,28 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
-      fetch(input, init) {
-        return globalThis.fetch(input, {
+      async fetch(input, init) {
+        const response = await globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
         });
+        // Interceptar respostas HTML (erro 413 do proxy, etc.) e converter para erro JSON
+        const contentType = response.headers.get('content-type') || '';
+        if (!response.ok && contentType.includes('text/html')) {
+          let errorMsg = 'Erro no servidor';
+          if (response.status === 413) {
+            errorMsg = 'O arquivo é grande demais para envio. O limite máximo é de 16 MB por arquivo. Reduza o tamanho do PDF e tente novamente.';
+          } else if (response.status === 502 || response.status === 504) {
+            errorMsg = 'O servidor demorou para responder. Tente novamente em alguns instantes.';
+          } else {
+            errorMsg = `Erro ${response.status}: o servidor retornou uma resposta inesperada.`;
+          }
+          return new Response(
+            JSON.stringify([{ error: { json: { message: errorMsg, code: -32000, data: { code: 'INTERNAL_SERVER_ERROR', httpStatus: response.status } } } }]),
+            { status: response.status, headers: { 'content-type': 'application/json' } }
+          );
+        }
+        return response;
       },
     }),
   ],
