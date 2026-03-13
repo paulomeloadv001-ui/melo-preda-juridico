@@ -4501,6 +4501,137 @@ Gere a petição COMPLETA, pronta para protocolo. Use formatação Markdown com 
         return { novasMovimentacoes: movimentos, total: movimentos.length };
       }),
   }),
+
+  // ==================== DASHBOARD EVOLUÇÃO ====================
+  dashboard: router({
+    evolucao: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { processosPorMes: [], honorariosPorMes: [], movimentacoesPorMes: [] };
+
+      // Processos por mês (últimos 12 meses)
+      const processosPorMes = await db.select({
+        mes: sql<string>`DATE_FORMAT(createdAt, '%Y-%m')`,
+        count: sql<number>`COUNT(*)`,
+      }).from(processos).groupBy(sql`DATE_FORMAT(createdAt, '%Y-%m')`).orderBy(sql`DATE_FORMAT(createdAt, '%Y-%m')`);
+
+      // Honorários por status
+      const honorariosPorStatus = await db.select({
+        status: movimentacoesFinanceiras.status,
+        total: sql<string>`COALESCE(SUM(valor), 0)`,
+        count: sql<number>`COUNT(*)`,
+      }).from(movimentacoesFinanceiras)
+        .where(sql`${movimentacoesFinanceiras.tipo} IN ('honorarios_sucumbenciais', 'honorarios_contratuais')`)
+        .groupBy(movimentacoesFinanceiras.status);
+
+      // Movimentações por mês (últimos 6 meses)
+      const movimentacoesPorMes = await db.select({
+        mes: sql<string>`DATE_FORMAT(data, '%Y-%m')`,
+        count: sql<number>`COUNT(*)`,
+      }).from(movimentacoes).groupBy(sql`DATE_FORMAT(data, '%Y-%m')`).orderBy(sql`DATE_FORMAT(data, '%Y-%m')`);
+
+      // Processos por tipo de ação
+      const processosPorTipo = await db.select({
+        tipo: processos.tipoAcao,
+        count: sql<number>`COUNT(*)`,
+      }).from(processos).groupBy(processos.tipoAcao).orderBy(sql`COUNT(*) DESC`).limit(10);
+
+      // Processos por status
+      const processosPorStatus = await db.select({
+        status: processos.statusProcesso,
+        count: sql<number>`COUNT(*)`,
+      }).from(processos).groupBy(processos.statusProcesso);
+
+      // Clientes por mês
+      const clientesPorMes = await db.select({
+        mes: sql<string>`DATE_FORMAT(createdAt, '%Y-%m')`,
+        count: sql<number>`COUNT(*)`,
+      }).from(clientes).groupBy(sql`DATE_FORMAT(createdAt, '%Y-%m')`).orderBy(sql`DATE_FORMAT(createdAt, '%Y-%m')`);
+
+      return {
+        processosPorMes: processosPorMes.map(p => ({ mes: p.mes, count: Number(p.count) })),
+        honorariosPorStatus: honorariosPorStatus.map(h => ({ status: h.status || 'pendente', total: parseFloat(String(h.total)), count: Number(h.count) })),
+        movimentacoesPorMes: movimentacoesPorMes.slice(-12).map(m => ({ mes: m.mes, count: Number(m.count) })),
+        processosPorTipo: processosPorTipo.map(p => ({ tipo: p.tipo || 'Não classificado', count: Number(p.count) })),
+        processosPorStatus: processosPorStatus.map(p => ({ status: p.status || 'Indefinido', count: Number(p.count) })),
+        clientesPorMes: clientesPorMes.map(c => ({ mes: c.mes, count: Number(c.count) })),
+      };
+    }),
+
+    varreduraDataJud: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const todosProcessos = await db.select({
+        id: processos.id,
+        numeroCnj: processos.numeroCnj,
+        nomeCliente: clientes.nomeCompleto,
+      }).from(processos).leftJoin(clientes, eq(processos.clienteId, clientes.id));
+
+      let consultados = 0;
+      let novasMovs = 0;
+      let erros = 0;
+      const DATAJUD_API = 'https://api-publica.datajud.cnj.jus.br/api_publica_tjgo/_search';
+      const DATAJUD_KEY = 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RZ0NhVlpFSQ==';
+
+      for (const proc of todosProcessos) {
+        if (!proc.numeroCnj || proc.numeroCnj.length < 10) continue;
+        try {
+          const numLimpo = proc.numeroCnj.replace(/[^0-9]/g, '');
+          const resp = await fetch(DATAJUD_API, {
+            method: 'POST',
+            headers: { 'Authorization': `APIKey ${DATAJUD_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: { match: { numeroProcesso: numLimpo } }, size: 1 }),
+          });
+          if (!resp.ok) { erros++; continue; }
+          const data = await resp.json();
+          const hits = data?.hits?.hits || [];
+          if (hits.length === 0) continue;
+          consultados++;
+
+          const source = hits[0]._source;
+          const movsDataJud = source.movimentos || [];
+
+          // Buscar movimentações existentes
+          const movsExistentes = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, proc.id));
+          const eventosExistentes = new Set(movsExistentes.map((m: any) => `${m.data}_${m.descricao?.substring(0, 50)}`));
+
+          let novasDesteProcesso = 0;
+          for (const mov of movsDataJud.slice(0, 20)) {
+            const dataStr = mov.dataHora?.split('T')[0] || new Date().toISOString().split('T')[0];
+            const desc = mov.nome || mov.complementosTabelados?.map((c: any) => c.descricao).join(', ') || 'Movimentação';
+            const chave = `${dataStr}_${desc.substring(0, 50)}`;
+            if (!eventosExistentes.has(chave)) {
+              await db.insert(movimentacoes).values({
+                processoId: proc.id,
+                data: dataStr,
+                evento: `DataJud-${mov.codigo || 'auto'}`,
+                descricao: desc,
+              });
+              novasDesteProcesso++;
+              novasMovs++;
+            }
+          }
+
+          if (novasDesteProcesso > 0) {
+            await criarNotificacao({
+              tipo: 'novo_processo',
+              titulo: `${novasDesteProcesso} nova(s) movimentação(ões) - ${proc.nomeCliente || 'Processo'}`,
+              mensagem: `Detectadas ${novasDesteProcesso} novas movimentações no processo ${proc.numeroCnj} via DataJud.`,
+              prioridade: 'alta',
+              linkUrl: `/cliente/${proc.id}`,
+            });
+          }
+
+          // Rate limit
+          await new Promise(r => setTimeout(r, 500));
+        } catch (e) {
+          erros++;
+        }
+      }
+
+      return { consultados, novasMovimentacoes: novasMovs, erros, totalProcessos: todosProcessos.length };
+    }),
+  }),
 });
 // ==================== PROCESSADOR DE FILA DE JOBS ====================
 async function processarFilaJobs(jobIds: number[]) {

@@ -237,3 +237,11 @@
 - [x] Integração PJe TJ-GO: página de Acompanhamento Processual com consulta individual e em lote
 - [x] Importação Projudi: 120 processos extraídos dos 8 PDFs (OAB/GO 40559)
 - [x] Importação DataJud: 92/120 processos encontrados, 75 novos inseridos, 59 clientes criados, 745 movimentações
+- [x] Dashboard: gráficos de evolução (processos novos/mês, honorários, prazos) - Recharts: AreaChart movimentações, PieChart tipos de ação, BarChart honorários por status, LineChart clientes/mês
+- [x] Dashboard: cards com links para órgãos relevantes (TJ-GO, CNJ, Receita Federal, DataJud, PJe, OAB-GO, STJ)
+- [x] Varredura automática DataJud periódica com notificações de novas movimentações - botão Varredura DataJud no header
+- [x] Dashboard: ações rápidas expandidas (8 botões: Importar, Clientes, Prazos, Acompanhamento PJe, Agente IA, Relatórios, Conhecimentos, Exportar)
+- [x] BUG: Dashboard erro 'Rendered more hooks than during previous render' - CORRIGIDO: useMemo hooks movidos para antes do return condicional de loading
+- [ ] Refinamentos UX: melhorias visuais e de usabilidade
+- [ ] Testes completos e checkpoint final
+- [ ] Gerar ZIP completo código-fonte (backend + frontend + banco + docs) para deploy externo
