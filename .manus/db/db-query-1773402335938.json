@@ -1,0 +1,266 @@
+{
+  "query": "SELECT cpfCnpj, nomeCompleto FROM clientes WHERE cpfCnpj LIKE 'PEND%' OR cpfCnpj LIKE 'SEM_CPF%' OR cpfCnpj = '' ORDER BY nomeCompleto;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT cpfCnpj, nomeCompleto FROM clientes WHERE cpfCnpj LIKE 'PEND%' OR cpfCnpj LIKE 'SEM_CPF%' OR cpfCnpj = '' ORDER BY nomeCompleto;",
+  "rows": [
+    {
+      "cpfCnpj": "PEND46b09fd7cd6",
+      "nomeCompleto": "AGÊNCIA BRASIL CENTRAL - ABC"
+    },
+    {
+      "cpfCnpj": "PEND_mmm26od8",
+      "nomeCompleto": "ALBERTO MANOEL DA COSTA - 5071305-59"
+    },
+    {
+      "cpfCnpj": "PENDbb4aa784875",
+      "nomeCompleto": "Alessandro Silverio De Almeida"
+    },
+    {
+      "cpfCnpj": "PEND_mmm2xvfu",
+      "nomeCompleto": "ALESSANDRO SILVERIO DE ALMEIDA - 5271186-58"
+    },
+    {
+      "cpfCnpj": "PEND17dde7aa970",
+      "nomeCompleto": "ALVARO PIRES ZANELLA"
+    },
+    {
+      "cpfCnpj": "PENDb62e593e78a",
+      "nomeCompleto": "Aroldo Teixeira Rocha"
+    },
+    {
+      "cpfCnpj": "PENDbed5a70491c",
+      "nomeCompleto": "B & B Credito Ltda"
+    },
+    {
+      "cpfCnpj": "PEND_mmm8yr2q",
+      "nomeCompleto": "B E B CRÉDITO - 5832286-45"
+    },
+    {
+      "cpfCnpj": "PENDdd80fb4984b",
+      "nomeCompleto": "Banco Do Brasil S A"
+    },
+    {
+      "cpfCnpj": "PEND76ca325678f",
+      "nomeCompleto": "BANCO DO BRASIL S/A"
+    },
+    {
+      "cpfCnpj": "PEND4dc84e0c97a",
+      "nomeCompleto": "CACILIA BEATRIZ DA SILVA MACHADO"
+    },
+    {
+      "cpfCnpj": "PEND6fe4626211e",
+      "nomeCompleto": "Camargos Participações Ltda"
+    },
+    {
+      "cpfCnpj": "PENDef56143fbbd",
+      "nomeCompleto": "Carlos Ferro De Lacerda"
+    },
+    {
+      "cpfCnpj": "PENDc9bccf998f3",
+      "nomeCompleto": "Claudia Manzan Marques de Souza"
+    },
+    {
+      "cpfCnpj": "PENDdc39ee36643",
+      "nomeCompleto": "Cleidiomar Santos Freitas"
+    },
+    {
+      "cpfCnpj": "PEND947097d0c70",
+      "nomeCompleto": "Cybelle Silva Tristao"
+    },
+    {
+      "cpfCnpj": "PEND4ffe4fe4370",
+      "nomeCompleto": "Dalva Lizeth Lucio Martins"
+    },
+    {
+      "cpfCnpj": "PENDce10922184b",
+      "nomeCompleto": "Dorisval Pereira De Moraes"
+    },
+    {
+      "cpfCnpj": "PEND49b1ede781a",
+      "nomeCompleto": "Edinalva Filha de Lima Ramos"
+    },
+    {
+      "cpfCnpj": "PENDe20b2a65d57",
+      "nomeCompleto": "Edna Maria De Lima"
+    },
+    {
+      "cpfCnpj": "PENDb75ecaf565d",
+      "nomeCompleto": "Eduardo Das Neves Rocha"
+    },
+    {
+      "cpfCnpj": "PEND3f6486f27cf",
+      "nomeCompleto": "Fabiana Dias Das Chagas Chaves"
+    },
+    {
+      "cpfCnpj": "PEND8e7d9627e25",
+      "nomeCompleto": "Fabio Santana Da Silva"
+    },
+    {
+      "cpfCnpj": "PENDa36eca49687",
+      "nomeCompleto": "Francisco Barrozo Neto"
+    },
+    {
+      "cpfCnpj": "PENDb76049b3e66",
+      "nomeCompleto": "Genilson Lucas Rodrigues Queiroz"
+    },
+    {
+      "cpfCnpj": "PEND5533cc01de5",
+      "nomeCompleto": "Goias Turismo Agencia Estadual De Turismo"
+    },
+    {
+      "cpfCnpj": "PEND94df12ece98",
+      "nomeCompleto": "Helio Rodrigues Soares"
+    },
+    {
+      "cpfCnpj": "PEND0fd68aab842",
+      "nomeCompleto": "Homero Pinto Figueiredo"
+    },
+    {
+      "cpfCnpj": "PEND8bca5a2e6a3",
+      "nomeCompleto": "Ione Antonia Da Silva"
+    },
+    {
+      "cpfCnpj": "PEND1adfe222d99",
+      "nomeCompleto": "Ivaldi Alves de Freitas"
+    },
+    {
+      "cpfCnpj": "PEND760851469f3",
+      "nomeCompleto": "Ivânia Ferreira De Melo"
+    },
+    {
+      "cpfCnpj": "PEND3a160ec351b",
+      "nomeCompleto": "Ivia Lucas E Silva"
+    },
+    {
+      "cpfCnpj": "PEND7b9e73ef206",
+      "nomeCompleto": "Joao Gomes Nogueira"
+    },
+    {
+      "cpfCnpj": "PEND934c1e52845",
+      "nomeCompleto": "Joselia Alves Da Silva"
+    },
+    {
+      "cpfCnpj": "PEND7a996597e29",
+      "nomeCompleto": "Julierme Francisco Maciel"
+    },
+    {
+      "cpfCnpj": "PEND683da0f397a",
+      "nomeCompleto": "Laura Rosa Moreira"
+    },
+    {
+      "cpfCnpj": "PEND29b78158ddd",
+      "nomeCompleto": "Leandro Peres De Amorim"
+    },
+    {
+      "cpfCnpj": "PEND50d95e8fdb6",
+      "nomeCompleto": "Lenildes De Jesus Fonseca"
+    },
+    {
+      "cpfCnpj": "PEND7e283b18723",
+      "nomeCompleto": "Lucia Vanda Nunes Cardoso Rodrigues"
+    },
+    {
+      "cpfCnpj": "PEND9d5822c6dd3",
+      "nomeCompleto": "MAEVE PRODUTOS HOSPITALARES LTDA EPP"
+    },
+    {
+      "cpfCnpj": "PENDae4f2634959",
+      "nomeCompleto": "Manoel Alves De Jesus"
+    },
+    {
+      "cpfCnpj": "PEND0c697188a8c",
+      "nomeCompleto": "Marco Junio Dourado De Castro"
+    },
+    {
+      "cpfCnpj": "PEND789ecb29b5b",
+      "nomeCompleto": "Maria Das Gracas De Jesus"
+    },
+    {
+      "cpfCnpj": "PENDe7aa1e293e1",
+      "nomeCompleto": "Maria De Fatima Dos Santos Dantas"
+    },
+    {
+      "cpfCnpj": "PEND04998a998ef",
+      "nomeCompleto": "Maria Moraes De Assis"
+    },
+    {
+      "cpfCnpj": "PENDb5f121f0592",
+      "nomeCompleto": "Mauricio Silvestre De Andrade"
+    },
+    {
+      "cpfCnpj": "PEND777a4bcd2cd",
+      "nomeCompleto": "MINISTERIO PUBLICO"
+    },
+    {
+      "cpfCnpj": "PEND6b3ae1aaca9",
+      "nomeCompleto": "MINISTERIO PUBLICO DO ESTADO DE GOIÁS"
+    },
+    {
+      "cpfCnpj": "PEND4b1cad048bc",
+      "nomeCompleto": "Ministério Público do Estado de Goiás"
+    },
+    {
+      "cpfCnpj": "PEND81ed15886a2",
+      "nomeCompleto": "OMNI S/A CRÉDITO FINANCIAMENTO E INVESTIMENTO"
+    },
+    {
+      "cpfCnpj": "PENDb2069fd1b63",
+      "nomeCompleto": "Orica Florinda Do Prado"
+    },
+    {
+      "cpfCnpj": "PENDab382c1f6bd",
+      "nomeCompleto": "Paulo Da Silva Melo Filho"
+    },
+    {
+      "cpfCnpj": "PEND1a42cd0fd43",
+      "nomeCompleto": "Premium Veiculos"
+    },
+    {
+      "cpfCnpj": "PEND1fb949706f7",
+      "nomeCompleto": "Ronaldo Azevedo Da Silva"
+    },
+    {
+      "cpfCnpj": "PEND823569d7d8a",
+      "nomeCompleto": "Rui Batista Vivono"
+    },
+    {
+      "cpfCnpj": "PEND_mmm17ob7",
+      "nomeCompleto": "SÔNIA"
+    },
+    {
+      "cpfCnpj": "PEND9e45dff1d6b",
+      "nomeCompleto": "Sonia Alves De Oliveira"
+    },
+    {
+      "cpfCnpj": "PENDba88b65dcaf",
+      "nomeCompleto": "TANIA MARIA QUINTAO CASTRO"
+    },
+    {
+      "cpfCnpj": "PEND55d949dc72c",
+      "nomeCompleto": "Valmir Dos Reis"
+    },
+    {
+      "cpfCnpj": "PEND736ba86ea0d",
+      "nomeCompleto": "Vanderlan Martins Borges"
+    },
+    {
+      "cpfCnpj": "PENDENTE_VER",
+      "nomeCompleto": "VERANEIDE SOARES CAMPOS LUCY"
+    },
+    {
+      "cpfCnpj": "PEND70d8b0fa4db",
+      "nomeCompleto": "Walkiria Rodrigues Da Cunha E Silva"
+    },
+    {
+      "cpfCnpj": "PEND64d1bba1226",
+      "nomeCompleto": "Willian Jose De Souza"
+    },
+    {
+      "cpfCnpj": "PEND4f6834dd83e",
+      "nomeCompleto": "Zeneide Maria De Souza Matias"
+    }
+  ],
+  "messages": [],
+  "stdout": "cpfCnpj\tnomeCompleto\nPEND46b09fd7cd6\tAGÊNCIA BRASIL CENTRAL - ABC\nPEND_mmm26od8\tALBERTO MANOEL DA COSTA - 5071305-59\nPENDbb4aa784875\tAlessandro Silverio De Almeida\nPEND_mmm2xvfu\tALESSANDRO SILVERIO DE ALMEIDA - 5271186-58\nPEND17dde7aa970\tALVARO PIRES ZANELLA\nPENDb62e593e78a\tAroldo Teixeira Rocha\nPENDbed5a70491c\tB & B Credito Ltda\nPEND_mmm8yr2q\tB E B CRÉDITO - 5832286-45\nPENDdd80fb4984b\tBanco Do Brasil S A\nPEND76ca325678f\tBANCO DO BRASIL S/A\nPEND4dc84e0c97a\tCACILIA BEATRIZ DA SILVA MACHADO\nPEND6fe4626211e\tCamargos Participações Ltda\nPENDef56143fbbd\tCarlos Ferro De Lacerda\nPENDc9bccf998f3\tClaudia Manzan Marques de Souza\nPENDdc39ee36643\tCleidiomar Santos Freitas\nPEND947097d0c70\tCybelle Silva Tristao\nPEND4ffe4fe4370\tDalva Lizeth Lucio Martins\nPENDce10922184b\tDorisval Pereira De Moraes\nPEND49b1ede781a\tEdinalva Filha de Lima Ramos\nPENDe20b2a65d57\tEdna Maria De Lima\nPENDb75ecaf565d\tEduardo Das Neves Rocha\nPEND3f6486f27cf\tFabiana Dias Das Chagas Chaves\nPEND8e7d9627e25\tFabio Santana Da Silva\nPENDa36eca49687\tFrancisco Barrozo Neto\nPENDb76049b3e66\tGenilson Lucas Rodrigues Queiroz\nPEND5533cc01de5\tGoias Turismo Agencia Estadual De Turismo\nPEND94df12ece98\tHelio Rodrigues Soares\nPEND0fd68aab842\tHomero Pinto Figueiredo\nPEND8bca5a2e6a3\tIone Antonia Da Silva\nPEND1adfe222d99\tIvaldi Alves de Freitas\nPEND760851469f3\tIvânia Ferreira De Melo\nPEND3a160ec351b\tIvia Lucas E Silva\nPEND7b9e73ef206\tJoao Gomes Nogueira\nPEND934c1e52845\tJoselia Alves Da Silva\nPEND7a996597e29\tJulierme Francisco Maciel\nPEND683da0f397a\tLaura Rosa Moreira\nPEND29b78158ddd\tLeandro Peres De Amorim\nPEND50d95e8fdb6\tLenildes De Jesus Fonseca\nPEND7e283b18723\tLucia Vanda Nunes Cardoso Rodrigues\nPEND9d5822c6dd3\tMAEVE PRODUTOS HOSPITALARES LTDA EPP\nPENDae4f2634959\tManoel Alves De Jesus\nPEND0c697188a8c\tMarco Junio Dourado De Castro\nPEND789ecb29b5b\tMaria Das Gracas De Jesus\nPENDe7aa1e293e1\tMaria De Fatima Dos Santos Dantas\nPEND04998a998ef\tMaria Moraes De Assis\nPENDb5f121f0592\tMauricio Silvestre De Andrade\nPEND777a4bcd2cd\tMINISTERIO PUBLICO\nPEND6b3ae1aaca9\tMINISTERIO PUBLICO DO ESTADO DE GOIÁS\nPEND4b1cad048bc\tMinistério Público do Estado de Goiás\nPEND81ed15886a2\tOMNI S/A CRÉDITO FINANCIAMENTO E INVESTIMENTO\nPENDb2069fd1b63\tOrica Florinda Do Prado\nPENDab382c1f6bd\tPaulo Da Silva Melo Filho\nPEND1a42cd0fd43\tPremium Veiculos\nPEND1fb949706f7\tRonaldo Azevedo Da Silva\nPEND823569d7d8a\tRui Batista Vivono\nPEND_mmm17ob7\tSÔNIA\nPEND9e45dff1d6b\tSonia Alves De Oliveira\nPENDba88b65dcaf\tTANIA MARIA QUINTAO CASTRO\nPEND55d949dc72c\tValmir Dos Reis\nPEND736ba86ea0d\tVanderlan Martins Borges\nPENDENTE_VER\tVERANEIDE SOARES CAMPOS LUCY\nPEND70d8b0fa4db\tWalkiria Rodrigues Da Cunha E Silva\nPEND64d1bba1226\tWillian Jose De Souza\nPEND4f6834dd83e\tZeneide Maria De Souza Matias\n",
+  "stderr": "",
+  "execution_time_ms": 65
+}

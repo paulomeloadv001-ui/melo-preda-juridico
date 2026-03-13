@@ -19,6 +19,8 @@ import AgenteJuridico from "./pages/AgenteJuridico";
 import PrazosProcessuais from "./pages/PrazosProcessuais";
 import AcompanhamentoPJe from "./pages/AcompanhamentoPJe";
 import Integracao from "./pages/Integracao";
+import Enriquecimento from "./pages/Enriquecimento";
+import Metricas from "./pages/Metricas";
 
 function Router() {
   return (
@@ -43,6 +45,8 @@ function Router() {
             <Route path="/prazos" component={PrazosProcessuais} />
             <Route path="/acompanhamento" component={AcompanhamentoPJe} />
             <Route path="/integracao" component={Integracao} />
+            <Route path="/enriquecimento" component={Enriquecimento} />
+            <Route path="/metricas" component={Metricas} />
             <Route path="/acessos" component={GestaoAcessos} />
             <Route path="/404" component={NotFound} />
             <Route component={NotFound} />

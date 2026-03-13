@@ -27,6 +27,42 @@ function sanitizeName(name: string): string {
     .substring(0, 60);
 }
 
+// Helper: validar CPF (dígitos verificadores)
+function validarCPF(cpf: string): boolean {
+  const nums = cpf.replace(/\D/g, '');
+  if (nums.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(nums)) return false;
+  let soma = 0;
+  for (let i = 0; i < 9; i++) soma += parseInt(nums[i]) * (10 - i);
+  let resto = (soma * 10) % 11;
+  if (resto === 10) resto = 0;
+  if (resto !== parseInt(nums[9])) return false;
+  soma = 0;
+  for (let i = 0; i < 10; i++) soma += parseInt(nums[i]) * (11 - i);
+  resto = (soma * 10) % 11;
+  if (resto === 10) resto = 0;
+  return resto === parseInt(nums[10]);
+}
+
+// Helper: validar CNPJ
+function validarCNPJ(cnpj: string): boolean {
+  const nums = cnpj.replace(/\D/g, '');
+  if (nums.length !== 14) return false;
+  if (/^(\d)\1{13}$/.test(nums)) return false;
+  const pesos1 = [5,4,3,2,9,8,7,6,5,4,3,2];
+  const pesos2 = [6,5,4,3,2,9,8,7,6,5,4,3,2];
+  let soma = 0;
+  for (let i = 0; i < 12; i++) soma += parseInt(nums[i]) * pesos1[i];
+  let resto = soma % 11;
+  const dig1 = resto < 2 ? 0 : 11 - resto;
+  if (parseInt(nums[12]) !== dig1) return false;
+  soma = 0;
+  for (let i = 0; i < 13; i++) soma += parseInt(nums[i]) * pesos2[i];
+  resto = soma % 11;
+  const dig2 = resto < 2 ? 0 : 11 - resto;
+  return parseInt(nums[13]) === dig2;
+}
+
 // Helper: generate client folder key
 function clientFolderKey(nome: string, cpf: string): string {
   const safeName = sanitizeName(nome);
@@ -5051,6 +5087,417 @@ Gere a petição COMPLETA, pronta para protocolo. Use formatação Markdown com 
         const result = await db.delete(syncLog)
           .where(sql`${syncLog.executadoEm} < ${dataLimite.toISOString()}`);
         return { removidos: Number(result[0]?.affectedRows || 0) };
+      }),
+  }),
+
+  // ==================== ENRIQUECIMENTO CADASTRAL ====================
+  enriquecimento: router({
+    // Listar clientes com CPF pendente
+    clientesPendentes: protectedProcedure
+      .query(async () => {
+        const db = await getDb();
+        if (!db) return { clientes: [], total: 0 };
+        const pendentes = await db.select({
+          id: clientes.id,
+          cpfCnpj: clientes.cpfCnpj,
+          nomeCompleto: clientes.nomeCompleto,
+          tipoPessoa: clientes.tipoPessoa,
+          telefone: clientes.telefone,
+          email: clientes.email,
+          profissao: clientes.profissao,
+          orgaoEmpregador: clientes.orgaoEmpregador,
+          createdAt: clientes.createdAt,
+        }).from(clientes)
+          .where(sql`${clientes.cpfCnpj} LIKE 'PEND%' OR ${clientes.cpfCnpj} LIKE 'SEM_CPF%' OR ${clientes.cpfCnpj} = ''`)
+          .orderBy(clientes.nomeCompleto);
+        return { clientes: pendentes, total: pendentes.length };
+      }),
+
+    // Atualizar CPF de um cliente
+    atualizarCpf: protectedProcedure
+      .input(z.object({
+        clienteId: z.number(),
+        cpfCnpj: z.string().min(11).max(18),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+        // Validar CPF
+        const cpfLimpo = input.cpfCnpj.replace(/[.\-\/]/g, '');
+        if (cpfLimpo.length === 11) {
+          if (!validarCPF(cpfLimpo)) throw new TRPCError({ code: 'BAD_REQUEST', message: 'CPF inv\u00e1lido (d\u00edgitos verificadores n\u00e3o conferem)' });
+        } else if (cpfLimpo.length === 14) {
+          if (!validarCNPJ(cpfLimpo)) throw new TRPCError({ code: 'BAD_REQUEST', message: 'CNPJ inv\u00e1lido' });
+        } else {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'CPF deve ter 11 d\u00edgitos ou CNPJ 14 d\u00edgitos' });
+        }
+        // Verificar duplicata
+        const existente = await db.select({ id: clientes.id }).from(clientes)
+          .where(sql`${clientes.cpfCnpj} = ${cpfLimpo} AND ${clientes.id} != ${input.clienteId}`).limit(1);
+        if (existente.length > 0) {
+          throw new TRPCError({ code: 'CONFLICT', message: `CPF/CNPJ j\u00e1 cadastrado para outro cliente (ID ${existente[0].id})` });
+        }
+        await db.update(clientes).set({ cpfCnpj: cpfLimpo }).where(eq(clientes.id, input.clienteId));
+        // Criar notifica\u00e7\u00e3o
+        await db.insert(notificacoes).values({
+          tipo: 'sistema',
+          prioridade: 'baixa',
+          titulo: 'CPF atualizado',
+          mensagem: `CPF do cliente ID ${input.clienteId} atualizado para ${cpfLimpo}`,
+          clienteId: input.clienteId,
+          icone: 'CheckCircle',
+          cor: 'green',
+        });
+        return { success: true, cpfNormalizado: cpfLimpo };
+      }),
+
+    // Atualizar CPFs em lote
+    atualizarCpfLote: protectedProcedure
+      .input(z.object({
+        atualizacoes: z.array(z.object({
+          clienteId: z.number(),
+          cpfCnpj: z.string().min(11).max(18),
+        })).min(1).max(100),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+        let sucesso = 0;
+        let erros: { clienteId: number; erro: string }[] = [];
+        for (const item of input.atualizacoes) {
+          try {
+            const cpfLimpo = item.cpfCnpj.replace(/[.\-\/]/g, '');
+            if (cpfLimpo.length === 11 && !validarCPF(cpfLimpo)) {
+              erros.push({ clienteId: item.clienteId, erro: 'CPF inv\u00e1lido' });
+              continue;
+            }
+            if (cpfLimpo.length === 14 && !validarCNPJ(cpfLimpo)) {
+              erros.push({ clienteId: item.clienteId, erro: 'CNPJ inv\u00e1lido' });
+              continue;
+            }
+            const existente = await db.select({ id: clientes.id }).from(clientes)
+              .where(sql`${clientes.cpfCnpj} = ${cpfLimpo} AND ${clientes.id} != ${item.clienteId}`).limit(1);
+            if (existente.length > 0) {
+              erros.push({ clienteId: item.clienteId, erro: `Duplicado (ID ${existente[0].id})` });
+              continue;
+            }
+            await db.update(clientes).set({ cpfCnpj: cpfLimpo }).where(eq(clientes.id, item.clienteId));
+            sucesso++;
+          } catch (e: any) {
+            erros.push({ clienteId: item.clienteId, erro: e.message || 'Erro desconhecido' });
+          }
+        }
+        if (sucesso > 0) {
+          await db.insert(notificacoes).values({
+            tipo: 'sistema',
+            prioridade: 'normal',
+            titulo: `Atualiza\u00e7\u00e3o em lote: ${sucesso} CPFs`,
+            mensagem: `${sucesso} CPFs atualizados com sucesso. ${erros.length} erros.`,
+            icone: 'Users',
+            cor: erros.length > 0 ? 'yellow' : 'green',
+          });
+        }
+        return { sucesso, erros, total: input.atualizacoes.length };
+      }),
+
+    // Tentar extrair CPF dos processos vinculados
+    extrairCpfDosProcessos: protectedProcedure
+      .mutation(async () => {
+        const db = await getDb();
+        if (!db) return { corrigidos: 0, naoEncontrados: 0 };
+        const pendentes = await db.select({
+          id: clientes.id,
+          nomeCompleto: clientes.nomeCompleto,
+          cpfCnpj: clientes.cpfCnpj,
+        }).from(clientes)
+          .where(sql`${clientes.cpfCnpj} LIKE 'PEND%' OR ${clientes.cpfCnpj} LIKE 'SEM_CPF%'`);
+        let corrigidos = 0;
+        let naoEncontrados = 0;
+        for (const cli of pendentes) {
+          // Buscar nas partes processuais pelo nome
+          const partes = await db.select({
+            cpfCnpj: partesProcessuais.cpfCnpj,
+          }).from(partesProcessuais)
+            .where(sql`${partesProcessuais.nome} = ${cli.nomeCompleto} AND ${partesProcessuais.cpfCnpj} IS NOT NULL AND ${partesProcessuais.cpfCnpj} != ''`)
+            .limit(1);
+          if (partes.length > 0 && partes[0].cpfCnpj) {
+            const cpfLimpo = partes[0].cpfCnpj.replace(/[.\-\/]/g, '');
+            if ((cpfLimpo.length === 11 && validarCPF(cpfLimpo)) || (cpfLimpo.length === 14 && validarCNPJ(cpfLimpo))) {
+              const dup = await db.select({ id: clientes.id }).from(clientes)
+                .where(sql`${clientes.cpfCnpj} = ${cpfLimpo} AND ${clientes.id} != ${cli.id}`).limit(1);
+              if (dup.length === 0) {
+                await db.update(clientes).set({ cpfCnpj: cpfLimpo }).where(eq(clientes.id, cli.id));
+                corrigidos++;
+                continue;
+              }
+            }
+          }
+          naoEncontrados++;
+        }
+        if (corrigidos > 0) {
+          await db.insert(notificacoes).values({
+            tipo: 'correcao_executada',
+            prioridade: 'normal',
+            titulo: `Extra\u00e7\u00e3o autom\u00e1tica: ${corrigidos} CPFs`,
+            mensagem: `${corrigidos} CPFs extra\u00eddos das partes processuais. ${naoEncontrados} n\u00e3o encontrados.`,
+            icone: 'Search',
+            cor: 'blue',
+          });
+        }
+        return { corrigidos, naoEncontrados };
+      }),
+
+    // Completar dados cadastrais de um cliente
+    completarDados: protectedProcedure
+      .input(z.object({
+        clienteId: z.number(),
+        dados: z.object({
+          rg: z.string().optional(),
+          profissao: z.string().optional(),
+          cargo: z.string().optional(),
+          orgaoEmpregador: z.string().optional(),
+          vinculoFuncional: z.string().optional(),
+          endereco: z.string().optional(),
+          cidade: z.string().optional(),
+          estado: z.string().optional(),
+          cep: z.string().optional(),
+          telefone: z.string().optional(),
+          email: z.string().optional(),
+          dataNascimento: z.string().optional(),
+          estadoCivil: z.string().optional(),
+          nacionalidade: z.string().optional(),
+        }),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+        const updateData: any = {};
+        for (const [key, value] of Object.entries(input.dados)) {
+          if (value !== undefined && value !== '') {
+            updateData[key] = value;
+          }
+        }
+        if (Object.keys(updateData).length === 0) {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Nenhum dado para atualizar' });
+        }
+        await db.update(clientes).set(updateData).where(eq(clientes.id, input.clienteId));
+        return { success: true, camposAtualizados: Object.keys(updateData).length };
+      }),
+
+    // Estat\u00edsticas de completude cadastral
+    estatisticas: protectedProcedure
+      .query(async () => {
+        const db = await getDb();
+        if (!db) return { total: 0, comCpf: 0, semCpf: 0, completude: {} as Record<string, number> };
+        const todos = await db.select().from(clientes);
+        const semCpf = todos.filter(c => c.cpfCnpj.startsWith('PEND') || c.cpfCnpj.startsWith('SEM_CPF') || c.cpfCnpj === '');
+        const campos = ['rg', 'profissao', 'cargo', 'orgaoEmpregador', 'endereco', 'cidade', 'estado', 'cep', 'telefone', 'email', 'dataNascimento', 'estadoCivil'] as const;
+        const completude: Record<string, number> = {};
+        for (const campo of campos) {
+          completude[campo] = todos.filter(c => c[campo] && c[campo] !== '').length;
+        }
+        return {
+          total: todos.length,
+          comCpf: todos.length - semCpf.length,
+          semCpf: semCpf.length,
+          percentualCpf: todos.length > 0 ? Math.round(((todos.length - semCpf.length) / todos.length) * 100) : 0,
+          completude,
+        };
+      }),
+  }),
+
+  // ==================== M\u00c9TRICAS DE PRODUTIVIDADE ====================
+  metricas: router({
+    // Dashboard de m\u00e9tricas gerais
+    geral: protectedProcedure
+      .query(async () => {
+        const db = await getDb();
+        if (!db) return null;
+        const todosClientes = await db.select().from(clientes);
+        const todosProcessos = await db.select().from(processos);
+        const todosConhecimentos = await db.select().from(conhecimentos);
+        const todosRelatorios = await db.select().from(relatorios);
+        const todasEstrategias = await db.select().from(estrategias);
+        const todosPrazos = await db.select().from(prazosProcessuais);
+        const todosJobs = await db.select().from(jobs);
+        const todasMovFin = await db.select().from(movimentacoesFinanceiras);
+        const todosCumprimentos = await db.select().from(cumprimentosSentenca);
+        const todosEmprestimos = await db.select().from(emprestimosConsignados);
+
+              // Métricas de honorários (via movimentações financeiras)
+        const movHonorarios = todasMovFin.filter(m => m.tipo === 'honorarios_sucumbenciais' || m.tipo === 'honorarios_contratuais');
+        const honorariosPagos = movHonorarios.filter(m => m.status === 'pago_levantado');
+        const honorariosALevantar = movHonorarios.filter(m => m.status === 'depositado_a_levantar' || m.status === 'pendente');
+        const valorPago = honorariosPagos.reduce((sum, m) => sum + Number(m.valor || 0), 0);
+        const valorALevantar = honorariosALevantar.reduce((sum, m) => sum + Number(m.valor || 0), 0);
+        // Honorários de cumprimentos de sentença
+        const valorHonCumprimentos = todosCumprimentos.reduce((sum, c) => sum + Number(c.valorHonorarios || 0), 0);
+
+        // M\u00e9tricas de prazos
+        const prazosVencidos = todosPrazos.filter(p => p.status === 'vencido').length;
+        const prazosCumpridos = todosPrazos.filter(p => p.status === 'cumprido').length;
+        const prazosPendentes = todosPrazos.filter(p => p.status === 'pendente').length;
+        const taxaCumprimento = (prazosCumpridos + prazosVencidos) > 0
+          ? Math.round((prazosCumpridos / (prazosCumpridos + prazosVencidos)) * 100) : 100;
+
+        // M\u00e9tricas de jobs
+        const jobsConcluidos = todosJobs.filter(j => j.status === 'concluido').length;
+        const jobsErro = todosJobs.filter(j => j.status === 'erro').length;
+        const taxaSucessoJobs = (jobsConcluidos + jobsErro) > 0
+          ? Math.round((jobsConcluidos / (jobsConcluidos + jobsErro)) * 100) : 100;
+
+        // Processos por tipo de a\u00e7\u00e3o
+        const porTipoAcao: Record<string, number> = {};
+        todosProcessos.forEach(p => {
+          const tipo = p.tipoAcao || 'N\u00e3o classificado';
+          porTipoAcao[tipo] = (porTipoAcao[tipo] || 0) + 1;
+        });
+
+        // Processos por status
+        const porStatus: Record<string, number> = {};
+        todosProcessos.forEach(p => {
+          const st = p.statusProcesso || 'Desconhecido';
+          porStatus[st] = (porStatus[st] || 0) + 1;
+        });
+
+        // Evolu\u00e7\u00e3o mensal (\u00faltimos 12 meses)
+        const evolucaoMensal: { mes: string; clientes: number; processos: number; conhecimentos: number; relatorios: number }[] = [];
+        for (let i = 11; i >= 0; i--) {
+          const d = new Date();
+          d.setMonth(d.getMonth() - i);
+          const mesStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          const mesLabel = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+          evolucaoMensal.push({
+            mes: mesLabel,
+            clientes: todosClientes.filter(c => {
+              const cd = new Date(c.createdAt);
+              return `${cd.getFullYear()}-${String(cd.getMonth() + 1).padStart(2, '0')}` === mesStr;
+            }).length,
+            processos: todosProcessos.filter(p => {
+              const cd = new Date(p.createdAt);
+              return `${cd.getFullYear()}-${String(cd.getMonth() + 1).padStart(2, '0')}` === mesStr;
+            }).length,
+            conhecimentos: todosConhecimentos.filter(c => {
+              const cd = new Date(c.createdAt);
+              return `${cd.getFullYear()}-${String(cd.getMonth() + 1).padStart(2, '0')}` === mesStr;
+            }).length,
+            relatorios: todosRelatorios.filter(r => {
+              const cd = new Date(r.createdAt);
+              return `${cd.getFullYear()}-${String(cd.getMonth() + 1).padStart(2, '0')}` === mesStr;
+            }).length,
+          });
+        }
+
+         // Honorários por status detalhado (via movimentações financeiras)
+        const honorariosPorStatus: { status: string; valor: number; quantidade: number }[] = [];
+        const statusHon: Record<string, { valor: number; qtd: number }> = {};
+        movHonorarios.forEach(m => {
+          const st = m.status || 'indefinido';
+          if (!statusHon[st]) statusHon[st] = { valor: 0, qtd: 0 };
+          statusHon[st].valor += Number(m.valor || 0);
+          statusHon[st].qtd++;
+        });
+        // Adicionar cumprimentos de sentença como categoria
+        if (todosCumprimentos.length > 0) {
+          todosCumprimentos.forEach(c => {
+            const st = c.tipo === 'Provisorio' ? 'cumprimento_provisorio' : 'cumprimento_definitivo';
+            if (!statusHon[st]) statusHon[st] = { valor: 0, qtd: 0 };
+            statusHon[st].valor += Number(c.valorHonorarios || 0);
+            statusHon[st].qtd++;
+          });
+        }
+        for (const [status, data] of Object.entries(statusHon)) {
+          honorariosPorStatus.push({ status, valor: data.valor, quantidade: data.qtd });
+        }
+
+        // Movimenta\u00e7\u00f5es financeiras por tipo
+        const movFinPorTipo: Record<string, number> = {};
+        todasMovFin.forEach(m => {
+          const tipo = m.tipo || 'outro';
+          movFinPorTipo[tipo] = (movFinPorTipo[tipo] || 0) + Number(m.valor || 0);
+        });
+
+        return {
+          resumo: {
+            totalClientes: todosClientes.length,
+            totalProcessos: todosProcessos.length,
+            totalConhecimentos: todosConhecimentos.length,
+            totalRelatorios: todosRelatorios.length,
+            totalEstrategias: todasEstrategias.length,
+            totalPrazos: todosPrazos.length,
+            totalJobs: todosJobs.length,
+            totalEmprestimos: todosEmprestimos.length,
+          },
+          honorarios: {
+            valorPago,
+            valorALevantar,
+            totalCumprimentos: todosCumprimentos.length,
+            honorariosPorStatus,
+          },
+          prazos: {
+            vencidos: prazosVencidos,
+            cumpridos: prazosCumpridos,
+            pendentes: prazosPendentes,
+            taxaCumprimento,
+          },
+          jobs: {
+            concluidos: jobsConcluidos,
+            erros: jobsErro,
+            taxaSucesso: taxaSucessoJobs,
+          },
+          porTipoAcao: Object.entries(porTipoAcao).sort((a, b) => b[1] - a[1]).map(([tipo, qtd]) => ({ tipo, qtd })),
+          porStatus: Object.entries(porStatus).sort((a, b) => b[1] - a[1]).map(([status, qtd]) => ({ status, qtd })),
+          evolucaoMensal,
+          movFinPorTipo: Object.entries(movFinPorTipo).map(([tipo, valor]) => ({ tipo, valor })),
+        };
+      }),
+
+    // Produtividade por per\u00edodo
+    produtividade: protectedProcedure
+      .input(z.object({
+        periodo: z.enum(['7d', '30d', '90d', '365d', 'tudo']).default('30d'),
+      }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+        const periodo = input?.periodo || '30d';
+        const dias = periodo === '7d' ? 7 : periodo === '30d' ? 30 : periodo === '90d' ? 90 : periodo === '365d' ? 365 : 9999;
+        const dataInicio = new Date();
+        dataInicio.setDate(dataInicio.getDate() - dias);
+
+        const todosJobs = await db.select().from(jobs);
+        const jobsPeriodo = todosJobs.filter(j => new Date(j.createdAt) >= dataInicio);
+
+        const importacoes = jobsPeriodo.filter(j => j.tipo === 'importacao_pdf' || j.tipo === 'importacao_individual');
+        const relatoriosGerados = jobsPeriodo.filter(j => j.tipo === 'geracao_relatorio');
+        const exportacoes = jobsPeriodo.filter(j => j.tipo === 'exportacao');
+
+        // Tempo m\u00e9dio de processamento (jobs com iniciadoEm e concluidoEm)
+        const jobsComTempo = jobsPeriodo.filter(j => j.iniciadoEm && j.concluidoEm);
+        const tempoMedio = jobsComTempo.length > 0
+          ? jobsComTempo.reduce((sum, j) => sum + (new Date(j.concluidoEm!).getTime() - new Date(j.iniciadoEm!).getTime()), 0) / jobsComTempo.length
+          : 0;
+
+        // Produtividade di\u00e1ria
+        const porDia: Record<string, { importacoes: number; relatorios: number; exportacoes: number }> = {};
+        jobsPeriodo.forEach(j => {
+          const dia = new Date(j.createdAt).toISOString().split('T')[0];
+          if (!porDia[dia]) porDia[dia] = { importacoes: 0, relatorios: 0, exportacoes: 0 };
+          if (j.tipo === 'importacao_pdf' || j.tipo === 'importacao_individual') porDia[dia].importacoes++;
+          if (j.tipo === 'geracao_relatorio') porDia[dia].relatorios++;
+          if (j.tipo === 'exportacao') porDia[dia].exportacoes++;
+        });
+
+        return {
+          periodo,
+          totalJobs: jobsPeriodo.length,
+          importacoes: importacoes.length,
+          relatoriosGerados: relatoriosGerados.length,
+          exportacoes: exportacoes.length,
+          tempoMedioMs: Math.round(tempoMedio),
+          tempoMedioFormatado: tempoMedio > 0 ? `${Math.round(tempoMedio / 1000)}s` : 'N/A',
+          porDia: Object.entries(porDia).sort().map(([dia, dados]) => ({ dia, ...dados })),
+        };
       }),
   }),
 });

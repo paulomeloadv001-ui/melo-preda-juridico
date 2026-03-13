@@ -242,8 +242,8 @@
 - [x] Varredura automática DataJud periódica com notificações de novas movimentações - botão Varredura DataJud no header
 - [x] Dashboard: ações rápidas expandidas (8 botões: Importar, Clientes, Prazos, Acompanhamento PJe, Agente IA, Relatórios, Conhecimentos, Exportar)
 - [x] BUG: Dashboard erro 'Rendered more hooks than during previous render' - CORRIGIDO: useMemo hooks movidos para antes do return condicional de loading
-- [ ] Refinamentos UX: melhorias visuais e de usabilidade
-- [ ] Testes completos e checkpoint final
+- [x] Refinamentos UX: melhorias visuais e de usabilidade (15 páginas no sidebar, todas testadas)
+- [x] Testes completos e checkpoint final (138/138 testes, 10 arquivos, 0 erros TypeScript)
 - [x] Gerar ZIP completo código-fonte (backend + frontend + banco + docs) para deploy externo - 6 ZIPs desacoplados com credenciais
 - [x] Gerar ZIP completo do código-fonte com README de deploy, credenciais e banco de dados exportado (1.362 registros, 20 tabelas)
 - [x] Integração Escritório → JUSCONSIG 3.0: criar router de integração com 7 endpoints
@@ -280,3 +280,20 @@
 - [x] REVISÃO GERAL: Corrigir bugs encontrados (21 jobs presos corrigidos via SQL)
 - [x] REVISÃO GERAL: Melhorias UX pendentes - todas as 13 páginas revisadas e funcionando
 - [x] MELHORIA: Auto-cleanup de jobs presos (>30min em processando) - executa a cada 15min automaticamente
+- [x] Enriquecimento cadastral: analisar clientes com CPF pendente e criar procedure de correção em lote (64 pendentes, procedures criadas)
+- [x] Enriquecimento cadastral: criar UI para edição em lote de CPFs pendentes (página /enriquecimento com edição inline)
+- [x] Enriquecimento cadastral: validação de CPF (dígitos verificadores) no backend (funções validarCPF/validarCNPJ)
+- [x] Notificações automáticas: sistema de notificações já implementado (tabela notificacoes, triggers automáticos)
+- [x] Notificações automáticas: webhook para novas movimentações DataJud detectadas (integrado na varredura DataJud)
+- [x] Notificações automáticas: alerta automático de prazos vencendo (24h, 48h, 7 dias) - verificação a cada 6h
+- [x] Notificações automáticas: notificação de novos processos importados (trigger no upload)
+- [x] Notificações automáticas: painel de notificações no frontend (sino + drawer + filtros)
+- [x] Métricas de produtividade: criar procedures tRPC para cálculo de métricas (metricasGerais + metricasProdutividade)
+- [x] Métricas de produtividade: gráfico de evolução mensal (clientes, processos, conhecimentos, relatórios)
+- [x] Métricas de produtividade: gráfico de produtividade (importações, relatórios, exportações por dia)
+- [x] Métricas de produtividade: gráfico de tipos de ação (PieChart + BarChart top 10)
+- [x] Métricas de produtividade: gráfico de honorários pagos vs a levantar (BarChart por status)
+- [x] Métricas de produtividade: gráfico de status de processos (PieChart Ativo/Petição Enviada/Pendente)
+- [x] Métricas de produtividade: criar página Métricas no frontend com Recharts (5 abas, 8 cards, 3 KPIs)
+- [x] Métricas de produtividade: adicionar rota /metricas e link no sidebar
+- [x] Testes Vitest para enriquecimento cadastral e métricas (16 testes - total 138/138 passando)

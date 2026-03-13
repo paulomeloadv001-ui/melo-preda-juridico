@@ -1,0 +1,8 @@
+{
+  "query": "SELECT cpf_cnpj, nome_completo FROM clientes WHERE cpf_cnpj LIKE 'PEND%' OR cpf_cnpj LIKE 'SEM_CPF%' OR cpf_cnpj = '' OR cpf_cnpj IS NULL ORDER BY nome_completo LIMIT 100;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT cpf_cnpj, nome_completo FROM clientes WHERE cpf_cnpj LIKE 'PEND%' OR cpf_cnpj LIKE 'SEM_CPF%' OR cpf_cnpj = '' OR cpf_cnpj IS NULL ORDER BY nome_completo LIMIT 100;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'cpf_cnpj' in 'where clause'"
+  ]
+}
