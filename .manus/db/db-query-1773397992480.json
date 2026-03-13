@@ -1,0 +1,90 @@
+{
+  "query": "SELECT 'clientes' as tabela, COUNT(*) as total FROM clientes UNION ALL SELECT 'processos', COUNT(*) FROM processos UNION ALL SELECT 'movimentacoes', COUNT(*) FROM movimentacoes UNION ALL SELECT 'movimentacoes_financeiras', COUNT(*) FROM movimentacoes_financeiras UNION ALL SELECT 'dados_financeiros', COUNT(*) FROM dados_financeiros UNION ALL SELECT 'emprestimos_consignados', COUNT(*) FROM emprestimos_consignados UNION ALL SELECT 'estrategias', COUNT(*) FROM estrategias UNION ALL SELECT 'partes_processuais', COUNT(*) FROM partes_processuais UNION ALL SELECT 'documentos', COUNT(*) FROM documentos UNION ALL SELECT 'conhecimentos', COUNT(*) FROM conhecimentos UNION ALL SELECT 'cumprimentos_sentenca', COUNT(*) FROM cumprimentos_sentenca UNION ALL SELECT 'analise_geral', COUNT(*) FROM analise_geral UNION ALL SELECT 'relatorios', COUNT(*) FROM relatorios UNION ALL SELECT 'jobs', COUNT(*) FROM jobs UNION ALL SELECT 'historico_correcoes', COUNT(*) FROM historico_correcoes UNION ALL SELECT 'notificacoes', COUNT(*) FROM notificacoes UNION ALL SELECT 'prazos_processuais', COUNT(*) FROM prazos_processuais UNION ALL SELECT 'access_requests', COUNT(*) FROM access_requests UNION ALL SELECT 'user_profiles', COUNT(*) FROM user_profiles UNION ALL SELECT 'users', COUNT(*) FROM users",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT 'clientes' as tabela, COUNT(*) as total FROM clientes UNION ALL SELECT 'processos', COUNT(*) FROM processos UNION ALL SELECT 'movimentacoes', COUNT(*) FROM movimentacoes UNION ALL SELECT 'movimentacoes_financeiras', COUNT(*) FROM movimentacoes_financeiras UNION ALL SELECT 'dados_financeiros', COUNT(*) FROM dados_financeiros UNION ALL SELECT 'emprestimos_consignados', COUNT(*) FROM emprestimos_consignados UNION ALL SELECT 'estrategias', COUNT(*) FROM estrategias UNION ALL SELECT 'partes_processuais', COUNT(*) FROM partes_processuais UNION ALL SELECT 'documentos', COUNT(*) FROM documentos UNION ALL SELECT 'conhecimentos', COUNT(*) FROM conhecimentos UNION ALL SELECT 'cumprimentos_sentenca', COUNT(*) FROM cumprimentos_sentenca UNION ALL SELECT 'analise_geral', COUNT(*) FROM analise_geral UNION ALL SELECT 'relatorios', COUNT(*) FROM relatorios UNION ALL SELECT 'jobs', COUNT(*) FROM jobs UNION ALL SELECT 'historico_correcoes', COUNT(*) FROM historico_correcoes UNION ALL SELECT 'notificacoes', COUNT(*) FROM notificacoes UNION ALL SELECT 'prazos_processuais', COUNT(*) FROM prazos_processuais UNION ALL SELECT 'access_requests', COUNT(*) FROM access_requests UNION ALL SELECT 'user_profiles', COUNT(*) FROM user_profiles UNION ALL SELECT 'users', COUNT(*) FROM users",
+  "rows": [
+    {
+      "tabela": "movimentacoes_financeiras",
+      "total": "24"
+    },
+    {
+      "tabela": "clientes",
+      "total": "77"
+    },
+    {
+      "tabela": "dados_financeiros",
+      "total": "28"
+    },
+    {
+      "tabela": "processos",
+      "total": "105"
+    },
+    {
+      "tabela": "movimentacoes",
+      "total": "804"
+    },
+    {
+      "tabela": "partes_processuais",
+      "total": "27"
+    },
+    {
+      "tabela": "emprestimos_consignados",
+      "total": "72"
+    },
+    {
+      "tabela": "documentos",
+      "total": "54"
+    },
+    {
+      "tabela": "estrategias",
+      "total": "28"
+    },
+    {
+      "tabela": "conhecimentos",
+      "total": "92"
+    },
+    {
+      "tabela": "analise_geral",
+      "total": "10"
+    },
+    {
+      "tabela": "cumprimentos_sentenca",
+      "total": "0"
+    },
+    {
+      "tabela": "relatorios",
+      "total": "4"
+    },
+    {
+      "tabela": "jobs",
+      "total": "23"
+    },
+    {
+      "tabela": "historico_correcoes",
+      "total": "5"
+    },
+    {
+      "tabela": "notificacoes",
+      "total": "3"
+    },
+    {
+      "tabela": "prazos_processuais",
+      "total": "0"
+    },
+    {
+      "tabela": "access_requests",
+      "total": "0"
+    },
+    {
+      "tabela": "users",
+      "total": "4"
+    },
+    {
+      "tabela": "user_profiles",
+      "total": "2"
+    }
+  ],
+  "messages": [],
+  "stdout": "tabela\ttotal\nmovimentacoes_financeiras\t24\nclientes\t77\ndados_financeiros\t28\nprocessos\t105\nmovimentacoes\t804\npartes_processuais\t27\nemprestimos_consignados\t72\ndocumentos\t54\nestrategias\t28\nconhecimentos\t92\nanalise_geral\t10\ncumprimentos_sentenca\t0\nrelatorios\t4\njobs\t23\nhistorico_correcoes\t5\nnotificacoes\t3\nprazos_processuais\t0\naccess_requests\t0\nusers\t4\nuser_profiles\t2\n",
+  "stderr": "",
+  "execution_time_ms": 441
+}

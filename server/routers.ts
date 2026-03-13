@@ -2,6 +2,8 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { initTRPC, TRPCError } from "@trpc/server";
+import type { TrpcContext } from "./_core/context";
 import { z } from "zod";
 import { getDb } from "./db";
 import {
@@ -4631,6 +4633,197 @@ Gere a petição COMPLETA, pronta para protocolo. Use formatação Markdown com 
 
       return { consultados, novasMovimentacoes: novasMovs, erros, totalProcessos: todosProcessos.length };
     }),
+  }),
+
+  // ============================================================
+  // INTEGRAÇÃO ESCRITÓRIO → JUSCONSIG 3.0
+  // Endpoints consumidos pela JUSCONSIG automaticamente
+  // Autenticação via header x-integration-key
+  // ============================================================
+  integracao: router({
+
+    // 1. Clientes atualizados desde uma data
+    clientesAtualizados: publicProcedure
+      .input(z.object({ desde: z.string() }))
+      .query(async ({ input, ctx }) => {
+        // Validar API Key
+        const apiKey = ctx.req?.headers['x-integration-key'];
+        const expectedKey = process.env.JUSCONSIG_API_KEY;
+        if (!expectedKey || apiKey !== expectedKey) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'API Key de integração inválida' });
+        }
+        const db = await getDb();
+        if (!db) return [];
+        const rows = await db.select().from(clientes)
+          .where(sql`${clientes.updatedAt} >= ${input.desde}`)
+          .orderBy(clientes.updatedAt)
+          .limit(500);
+        return rows;
+      }),
+
+    // 2. Processos/Ações novas e atualizadas
+    processosAtualizados: publicProcedure
+      .input(z.object({ desde: z.string() }))
+      .query(async ({ input, ctx }) => {
+        const apiKey = ctx.req?.headers['x-integration-key'];
+        const expectedKey = process.env.JUSCONSIG_API_KEY;
+        if (!expectedKey || apiKey !== expectedKey) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'API Key de integração inválida' });
+        }
+        const db = await getDb();
+        if (!db) return [];
+        const rows = await db.select().from(processos)
+          .where(sql`${processos.updatedAt} >= ${input.desde}`)
+          .orderBy(processos.updatedAt)
+          .limit(500);
+        return rows;
+      }),
+
+    // 3. Movimentações processuais recentes
+    movimentacoesRecentes: publicProcedure
+      .input(z.object({ desde: z.string() }))
+      .query(async ({ input, ctx }) => {
+        const apiKey = ctx.req?.headers['x-integration-key'];
+        const expectedKey = process.env.JUSCONSIG_API_KEY;
+        if (!expectedKey || apiKey !== expectedKey) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'API Key de integração inválida' });
+        }
+        const db = await getDb();
+        if (!db) return [];
+        const rows = await db.select().from(movimentacoes)
+          .where(sql`${movimentacoes.createdAt} >= ${input.desde}`)
+          .orderBy(movimentacoes.createdAt)
+          .limit(1000);
+        return rows;
+      }),
+
+    // 4. Base de conhecimento (teses, jurisprudência, legislação)
+    conhecimentosAtualizados: publicProcedure
+      .input(z.object({ desde: z.string() }))
+      .query(async ({ input, ctx }) => {
+        const apiKey = ctx.req?.headers['x-integration-key'];
+        const expectedKey = process.env.JUSCONSIG_API_KEY;
+        if (!expectedKey || apiKey !== expectedKey) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'API Key de integração inválida' });
+        }
+        const db = await getDb();
+        if (!db) return [];
+        const rows = await db.select().from(conhecimentos)
+          .where(sql`${conhecimentos.createdAt} >= ${input.desde}`)
+          .orderBy(conhecimentos.createdAt)
+          .limit(500);
+        return rows;
+      }),
+
+    // 5. Estratégias processuais
+    estrategiasAtualizadas: publicProcedure
+      .input(z.object({ desde: z.string() }))
+      .query(async ({ input, ctx }) => {
+        const apiKey = ctx.req?.headers['x-integration-key'];
+        const expectedKey = process.env.JUSCONSIG_API_KEY;
+        if (!expectedKey || apiKey !== expectedKey) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'API Key de integração inválida' });
+        }
+        const db = await getDb();
+        if (!db) return [];
+        const rows = await db.select().from(estrategias)
+          .where(sql`${estrategias.createdAt} >= ${input.desde}`)
+          .orderBy(estrategias.createdAt)
+          .limit(500);
+        return rows;
+      }),
+
+    // 6. Dados financeiros (movimentações financeiras)
+    financeiroAtualizado: publicProcedure
+      .input(z.object({ desde: z.string() }))
+      .query(async ({ input, ctx }) => {
+        const apiKey = ctx.req?.headers['x-integration-key'];
+        const expectedKey = process.env.JUSCONSIG_API_KEY;
+        if (!expectedKey || apiKey !== expectedKey) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'API Key de integração inválida' });
+        }
+        const db = await getDb();
+        if (!db) return { dadosFinanceiros: [], movimentacoesFinanceiras: [], emprestimos: [] };
+        const df = await db.select().from(dadosFinanceiros)
+          .where(sql`${dadosFinanceiros.updatedAt} >= ${input.desde}`)
+          .orderBy(dadosFinanceiros.updatedAt)
+          .limit(500);
+        const mf = await db.select().from(movimentacoesFinanceiras)
+          .where(sql`${movimentacoesFinanceiras.createdAt} >= ${input.desde}`)
+          .orderBy(movimentacoesFinanceiras.createdAt)
+          .limit(500);
+        const emp = await db.select().from(emprestimosConsignados)
+          .where(sql`${emprestimosConsignados.createdAt} >= ${input.desde}`)
+          .orderBy(emprestimosConsignados.createdAt)
+          .limit(500);
+        return { dadosFinanceiros: df, movimentacoesFinanceiras: mf, emprestimos: emp };
+      }),
+
+    // 7. Dados para score antifraude de um servidor (por CPF)
+    dadosScoreServidor: publicProcedure
+      .input(z.object({ cpf: z.string() }))
+      .query(async ({ input, ctx }) => {
+        const apiKey = ctx.req?.headers['x-integration-key'];
+        const expectedKey = process.env.JUSCONSIG_API_KEY;
+        if (!expectedKey || apiKey !== expectedKey) {
+          throw new TRPCError({ code: 'UNAUTHORIZED', message: 'API Key de integração inválida' });
+        }
+        const db = await getDb();
+        if (!db) return { cliente: null, processos: [], totalProcessos: 0, totalAtivos: 0, valorTotal: 0, emprestimos: [], financeiro: [] };
+
+        // Buscar cliente pelo CPF
+        const [cliente] = await db.select().from(clientes)
+          .where(eq(clientes.cpfCnpj, input.cpf))
+          .limit(1);
+        if (!cliente) return { cliente: null, processos: [], totalProcessos: 0, totalAtivos: 0, valorTotal: 0, emprestimos: [], financeiro: [] };
+
+        // Buscar processos do cliente
+        const procs = await db.select().from(processos)
+          .where(eq(processos.clienteId, cliente.id));
+        const ativos = procs.filter(p => p.statusProcesso === 'Ativo' || p.statusProcesso === 'Em andamento');
+
+        // Buscar empréstimos
+        const emps = await db.select().from(emprestimosConsignados)
+          .where(eq(emprestimosConsignados.clienteId, cliente.id));
+
+        // Buscar dados financeiros
+        const fin = await db.select().from(dadosFinanceiros)
+          .where(eq(dadosFinanceiros.clienteId, cliente.id));
+
+        return {
+          cliente: {
+            id: cliente.id,
+            nome: cliente.nomeCompleto,
+            cpf: cliente.cpfCnpj,
+            profissao: cliente.profissao,
+            orgao: cliente.orgaoEmpregador,
+          },
+          processos: procs.map(p => ({
+            id: p.id,
+            numeroCnj: p.numeroCnj,
+            tipoAcao: p.tipoAcao,
+            status: p.statusProcesso,
+            valorCausa: p.valorCausa,
+            tribunal: p.tribunal,
+            vara: p.vara,
+          })),
+          totalProcessos: procs.length,
+          totalAtivos: ativos.length,
+          valorTotal: procs.reduce((sum, p) => sum + (parseFloat(String(p.valorCausa || '0')) || 0), 0),
+          emprestimos: emps.map(e => ({
+            banco: e.banco,
+            parcela: e.valorParcela,
+            contrato: e.contrato,
+            prazoTotal: e.totalParcelas,
+          })),
+          financeiro: fin.map(f => ({
+            remuneracaoBruta: f.remuneracaoBruta,
+            remuneracaoLiquida: f.remuneracaoLiquida,
+            margemConsignavel: f.margemConsignavelValor,
+            margemDisponivel: f.margemDisponivel,
+          })),
+        };
+      }),
   }),
 });
 // ==================== PROCESSADOR DE FILA DE JOBS ====================

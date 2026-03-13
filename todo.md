@@ -244,4 +244,11 @@
 - [x] BUG: Dashboard erro 'Rendered more hooks than during previous render' - CORRIGIDO: useMemo hooks movidos para antes do return condicional de loading
 - [ ] Refinamentos UX: melhorias visuais e de usabilidade
 - [ ] Testes completos e checkpoint final
-- [ ] Gerar ZIP completo código-fonte (backend + frontend + banco + docs) para deploy externo
+- [x] Gerar ZIP completo código-fonte (backend + frontend + banco + docs) para deploy externo - 6 ZIPs desacoplados com credenciais
+- [x] Gerar ZIP completo do código-fonte com README de deploy, credenciais e banco de dados exportado (1.362 registros, 20 tabelas)
+- [x] Integração Escritório → JUSCONSIG 3.0: criar router de integração com 7 endpoints
+- [x] Integração: middleware de autenticação por API Key (JUSCONSIG_API_KEY)
+- [x] Integração: endpoints clientesAtualizados, processosAtualizados, movimentacoesRecentes
+- [x] Integração: endpoints conhecimentosAtualizados, estrategiasAtualizadas, financeiroAtualizado, dadosScoreServidor
+- [x] Integração: configurar variável JUSCONSIG_API_KEY nos Secrets (pendente configuração pelo usuário)
+- [x] Gerar código completo syncEscritorio.ts + syncScheduler.ts + integracaoEscritorioRouter.ts + migration SQL + README
