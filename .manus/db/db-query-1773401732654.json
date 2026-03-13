@@ -1,0 +1,86 @@
+{
+  "query": "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'jobs' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'jobs' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "tipo",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "status",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "prioridade",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "titulo",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "descricao",
+      "DATA_TYPE": "text"
+    },
+    {
+      "COLUMN_NAME": "inputData",
+      "DATA_TYPE": "json"
+    },
+    {
+      "COLUMN_NAME": "outputData",
+      "DATA_TYPE": "json"
+    },
+    {
+      "COLUMN_NAME": "progresso",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "mensagemProgresso",
+      "DATA_TYPE": "text"
+    },
+    {
+      "COLUMN_NAME": "clienteId",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "processoId",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "tentativas",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "maxTentativas",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "erroDetalhes",
+      "DATA_TYPE": "text"
+    },
+    {
+      "COLUMN_NAME": "iniciadoEm",
+      "DATA_TYPE": "timestamp"
+    },
+    {
+      "COLUMN_NAME": "concluidoEm",
+      "DATA_TYPE": "timestamp"
+    },
+    {
+      "COLUMN_NAME": "createdAt",
+      "DATA_TYPE": "timestamp"
+    },
+    {
+      "COLUMN_NAME": "updatedAt",
+      "DATA_TYPE": "timestamp"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\tDATA_TYPE\nid\tint\ntipo\tvarchar\nstatus\tvarchar\nprioridade\tint\ntitulo\tvarchar\ndescricao\ttext\ninputData\tjson\noutputData\tjson\nprogresso\tint\nmensagemProgresso\ttext\nclienteId\tint\nprocessoId\tint\ntentativas\tint\nmaxTentativas\tint\nerroDetalhes\ttext\niniciadoEm\ttimestamp\nconcluidoEm\ttimestamp\ncreatedAt\ttimestamp\nupdatedAt\ttimestamp\n",
+  "stderr": "",
+  "execution_time_ms": 64
+}

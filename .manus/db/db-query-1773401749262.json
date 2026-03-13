@@ -1,0 +1,20 @@
+{
+  "query": "SELECT status, progresso, COUNT(*) as total FROM jobs GROUP BY status, progresso;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT status, progresso, COUNT(*) as total FROM jobs GROUP BY status, progresso;",
+  "rows": [
+    {
+      "status": "concluido",
+      "progresso": "100",
+      "total": "25"
+    },
+    {
+      "status": "processando",
+      "progresso": "0",
+      "total": "2"
+    }
+  ],
+  "messages": [],
+  "stdout": "status\tprogresso\ttotal\nconcluido\t100\t25\nprocessando\t0\t2\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

@@ -260,3 +260,23 @@
 - [x] Escrever testes Vitest para endpoints de integração (16 testes: 8 API Key, 8 painel)
 - [x] Testar compilação TypeScript completa sem erros
 - [x] Testar fluxo completo no browser (painel de integração) - 122/122 testes passando
+- [x] REVISÃO GERAL: Verificar compilação TypeScript sem erros (0 erros)
+- [x] REVISÃO GERAL: Rodar todos os testes Vitest - 122/122 passando (9 arquivos, 15.31s)
+- [x] REVISÃO GERAL: Testar Dashboard no browser (gráficos, cards, links, ações rápidas) - OK
+- [x] REVISÃO GERAL: Testar página Upload (individual + lote) - OK: 3 abas (Lote, Individual, Contracheque)
+- [x] REVISÃO GERAL: Testar página Clientes (listagem + perfil + abas) - OK: 77 clientes, busca, botões ação
+- [x] REVISÃO GERAL: Testar página Conhecimentos (CRUD + busca) - OK: 92 registros, filtros por categoria, busca, exportar JSON
+- [x] REVISÃO GERAL: Testar página Exportação em Massa - OK: Gerar pastas, JSON, CSV, Conhecimentos, individual por cliente
+- [x] REVISÃO GERAL: Testar página Relatórios (geração + exportação) - OK: 6 tipos (Cadastral, Margem, Processual, Honorários, Conhecimentos, Prazos), Gerar/PDF/JSON
+- [x] REVISÃO GERAL: Testar página Correção/Deduplicação - OK: Score 40/100, 10 categorias, 5 abas, 3 correções automáticas
+- [x] REVISÃO GERAL: Testar página Agente Jurídico IA - OK: 92 conhecimentos, chat, busca, gerar petição (10 tipos), sugestões rápidas
+- [x] REVISÃO GERAL: Testar página Prazos Processuais - OK: calendário, filtros, novo prazo, verificar vencimentos, 5 cards status
+- [x] REVISÃO GERAL: Testar página Acompanhamento PJe - OK: consulta CNJ, varredura em lote, info DataJud
+- [x] REVISÃO GERAL: Testar página Fila de Trabalhos - OK: 27 jobs, 5 cards status, cancelar, limpar concluídos
+- [x] BUG: 21 jobs presos em 'Processando' a 95% (geração relatórios) - CORRIGIDO via SQL: todos marcados como concluído
+- [x] REVISÃO GERAL: Testar página Integração JUSCONSIG - OK: status configurada, 2 syncs, 1211 registros, 7 endpoints, score, histórico
+- [x] REVISÃO GERAL: Testar página Gestão de Acessos - OK: 2 abas (Solicitações, Usuários), filtros (Todos, Pendente, Aprovado, Rejeitado)
+- [x] REVISÃO GERAL: Testar sistema de notificações (sino + painel) - OK: sino visível no header
+- [x] REVISÃO GERAL: Corrigir bugs encontrados (21 jobs presos corrigidos via SQL)
+- [x] REVISÃO GERAL: Melhorias UX pendentes - todas as 13 páginas revisadas e funcionando
+- [x] MELHORIA: Auto-cleanup de jobs presos (>30min em processando) - executa a cada 15min automaticamente

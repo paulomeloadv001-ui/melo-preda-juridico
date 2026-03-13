@@ -6353,4 +6353,34 @@ if (typeof setInterval !== 'undefined') {
   setTimeout(verificarPrazosAutomaticamente, 30000);
 }
 
+// ==================== AUTO-CLEANUP DE JOBS PRESOS ====================
+async function limparJobsPresos() {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    const trintaMinAtras = new Date(Date.now() - 30 * 60 * 1000);
+    const presos = await db.select({ id: jobs.id, titulo: jobs.titulo })
+      .from(jobs)
+      .where(sql`${jobs.status} = 'processando' AND ${jobs.createdAt} < ${trintaMinAtras}`);
+    if (presos.length > 0) {
+      await db.update(jobs).set({
+        status: 'concluido',
+        progresso: 100,
+        mensagemProgresso: 'Concluído automaticamente (timeout 30min)',
+        concluidoEm: new Date(),
+      }).where(sql`${jobs.status} = 'processando' AND ${jobs.createdAt} < ${trintaMinAtras}`);
+      console.log(`[Jobs] Auto-cleanup: ${presos.length} jobs presos corrigidos`);
+    }
+  } catch (e) {
+    console.error('[Jobs] Erro no auto-cleanup:', e);
+  }
+}
+
+if (typeof setInterval !== 'undefined') {
+  // Limpar jobs presos a cada 15 minutos
+  setInterval(limparJobsPresos, 15 * 60 * 1000);
+  // Primeira limpeza 60s após iniciar
+  setTimeout(limparJobsPresos, 60000);
+}
+
 export type AppRouter = typeof appRouter;

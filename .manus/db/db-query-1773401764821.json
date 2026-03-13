@@ -1,0 +1,24 @@
+{
+  "query": "SELECT id, status, progresso, titulo, mensagemProgresso FROM jobs WHERE status = 'processando' LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, status, progresso, titulo, mensagemProgresso FROM jobs WHERE status = 'processando' LIMIT 5;",
+  "rows": [
+    {
+      "id": "5",
+      "status": "processando",
+      "progresso": "0",
+      "titulo": "Importação em Lote: 3 arquivo(s)",
+      "mensagemProgresso": "Preparando 3 arquivo(s)..."
+    },
+    {
+      "id": "11",
+      "status": "processando",
+      "progresso": "0",
+      "titulo": "Importação em Lote: 1 arquivo(s)",
+      "mensagemProgresso": "Preparando 1 arquivo(s)..."
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tstatus\tprogresso\ttitulo\tmensagemProgresso\n5\tprocessando\t0\tImportação em Lote: 3 arquivo(s)\tPreparando 3 arquivo(s)...\n11\tprocessando\t0\tImportação em Lote: 1 arquivo(s)\tPreparando 1 arquivo(s)...\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}

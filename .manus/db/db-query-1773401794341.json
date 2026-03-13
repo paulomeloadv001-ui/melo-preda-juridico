@@ -1,0 +1,172 @@
+{
+  "query": "SELECT id, status, progresso, LEFT(titulo, 50) as titulo FROM jobs ORDER BY id DESC LIMIT 30;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, status, progresso, LEFT(titulo, 50) as titulo FROM jobs ORDER BY id DESC LIMIT 30;",
+  "rows": [
+    {
+      "id": "90004",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "90003",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "90002",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "90001",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "60014",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "60013",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "60012",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "60011",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "60010",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "60009",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "60008",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "60007",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "60005",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "60003",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "60001",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "30001",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "21",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "19",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "17",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "15",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "13",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "11",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 1 arquivo(s)"
+    },
+    {
+      "id": "9",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "7",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "5",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 3 arquivo(s)"
+    },
+    {
+      "id": "3",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    },
+    {
+      "id": "1",
+      "status": "concluido",
+      "progresso": "100",
+      "titulo": "Importação em Lote: 0 arquivo(s)"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tstatus\tprogresso\ttitulo\n90004\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n90003\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n90002\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n90001\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n60014\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n60013\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n60012\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n60011\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n60010\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n60009\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n60008\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n60007\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n60005\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n60003\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n60001\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n30001\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n21\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n19\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n17\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n15\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n13\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n11\tconcluido\t100\tImportação em Lote: 1 arquivo(s)\n9\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n7\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n5\tconcluido\t100\tImportação em Lote: 3 arquivo(s)\n3\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n1\tconcluido\t100\tImportação em Lote: 0 arquivo(s)\n",
+  "stderr": "",
+  "execution_time_ms": 62
+}
