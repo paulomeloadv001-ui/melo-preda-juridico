@@ -16,6 +16,8 @@ import Relatorios from "./pages/Relatorios";
 import Jobs from "./pages/Jobs";
 import GestaoAcessos, { SolicitarAcesso } from "./pages/GestaoAcessos";
 import AgenteJuridico from "./pages/AgenteJuridico";
+import PrazosProcessuais from "./pages/PrazosProcessuais";
+import AcompanhamentoPJe from "./pages/AcompanhamentoPJe";
 
 function Router() {
   return (
@@ -37,6 +39,8 @@ function Router() {
             <Route path="/correcao" component={Correcao} />
             <Route path="/jobs" component={Jobs} />
             <Route path="/agente" component={AgenteJuridico} />
+            <Route path="/prazos" component={PrazosProcessuais} />
+            <Route path="/acompanhamento" component={AcompanhamentoPJe} />
             <Route path="/acessos" component={GestaoAcessos} />
             <Route path="/404" component={NotFound} />
             <Route component={NotFound} />

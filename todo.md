@@ -188,15 +188,15 @@
 - [x] Backend: notificação automática ao adicionar movimentação financeira
 - [x] Testes unitários para sistema de notificações (30 testes - total 99 passando)
 - [x] BUG: Página /upload retorna HTML em vez de JSON (Unexpected token '<', '<!doctype'...) - CORRIGIDO: validação de tamanho 16MB no frontend + interceptor de respostas HTML no tRPC client
-- [ ] Relatórios individualizados: Relatório Financeiro com exportação individual
-- [ ] Relatórios individualizados: Relatório Processual com exportação individual
-- [ ] Relatórios individualizados: Relatório Cadastral com exportação individual
-- [ ] Relatórios individualizados: Relatório de Honorários com exportação individual
-- [ ] Relatórios individualizados: Relatório de Conhecimentos Jurídicos com exportação individual
-- [ ] Relatórios individualizados: Relatório de Prazos Processuais com exportação individual
-- [ ] Backend: rotas de geração de dados para cada tipo de relatório
-- [ ] Frontend: página de Relatórios com cards individuais e botões Gerar/Exportar PDF para cada tipo
-- [ ] Frontend: visualização prévia de cada relatório antes da exportação
+- [x] Relatórios individualizados: Relatório Financeiro com exportação individual
+- [x] Relatórios individualizados: Relatório Processual com exportação individual
+- [x] Relatórios individualizados: Relatório Cadastral com exportação individual
+- [x] Relatórios individualizados: Relatório de Honorários com exportação individual
+- [x] Relatórios individualizados: Relatório de Conhecimentos Jurídicos com exportação individual
+- [x] Relatórios individualizados: Relatório de Prazos Processuais com exportação individual
+- [x] Backend: rotas de geração de dados para cada tipo de relatório
+- [x] Frontend: página de Relatórios com cards individuais e botões Gerar/Exportar PDF para cada tipo
+- [x] Frontend: visualização prévia de cada relatório antes da exportação
 - [x] Exportação completa: extrair todos os dados de todas as tabelas do banco (16 tabelas)
 - [x] Exportação completa: organizar por cliente com pasta individual (nome + CPF) - 18 clientes
 - [x] Exportação completa: incluir processos, teses, estratégias, honorários por cliente
@@ -219,3 +219,21 @@
 - [x] Criar agente IA jurídico no site com acesso à base de conhecimento completa
 - [x] Integrar agente com peticionamento automático e análise processual
 - [x] Testes do agente e verificação da base de conhecimento (106 testes passando)
+- [x] Relatórios individualizados: Relatório Financeiro com card + botão Gerar + Exportar PDF
+- [x] Relatórios individualizados: Relatório Processual com card + botão Gerar + Exportar PDF
+- [x] Relatórios individualizados: Relatório de Honorários com card + botão Gerar + Exportar PDF
+- [x] Relatórios individualizados: Relatório de Conhecimentos com card + botão Gerar + Exportar PDF
+- [x] Relatórios individualizados: Relatório de Prazos com card + botão Gerar + Exportar PDF
+- [x] Frontend: redesenhar página Relatórios com cards individuais e botões de ação
+- [x] Agente IA: geração de petições via chat com seleção de cliente/processo/tipo
+- [x] Agente IA: botão "Gerar Petição" com dialog de configuração e preview
+- [x] Página de Prazos Processuais: calendário visual com prazos por mês/semana
+- [x] Página de Prazos Processuais: formulário para cadastrar novos prazos
+- [x] Página de Prazos Processuais: alertas visuais de prazos vencendo/vencidos
+- [x] Integração PJe TJ-GO: API DataJud (CNJ) configurada e testada
+- [x] Integração PJe TJ-GO: consulta processual por número CNJ via DataJud
+- [x] Integração PJe TJ-GO: varredura em lote de todos os processos cadastrados
+- [x] Integração PJe TJ-GO: detecção de novas movimentações com notificação automática
+- [x] Integração PJe TJ-GO: página de Acompanhamento Processual com consulta individual e em lote
+- [x] Importação Projudi: 120 processos extraídos dos 8 PDFs (OAB/GO 40559)
+- [x] Importação DataJud: 92/120 processos encontrados, 75 novos inseridos, 59 clientes criados, 745 movimentações

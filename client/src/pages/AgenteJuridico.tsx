@@ -7,7 +7,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader2, Send, Bot, User, Scale, BookOpen, Gavel, FileText, Search, Sparkles, Brain, RefreshCw, Trash2 } from "lucide-react";
+import { Loader2, Send, Bot, User, Scale, BookOpen, Gavel, FileText, Search, Sparkles, Brain, RefreshCw, Trash2, Download, FilePlus, Copy, Check } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import { Streamdown } from "streamdown";
 
 type ChatMessage = {
@@ -25,6 +28,12 @@ export default function AgenteJuridico() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const chatMutation = trpc.agente.chat.useMutation();
+  const gerarPeticaoMutation = trpc.agente.gerarPeticao.useMutation();
+  const [showPeticaoDialog, setShowPeticaoDialog] = useState(false);
+  const [tipoPeticao, setTipoPeticao] = useState("");
+  const [instrucoesPeticao, setInstrucoesPeticao] = useState("");
+  const [peticaoGerada, setPeticaoGerada] = useState<{peticao: string; url: string; tipoPeticao: string; cliente: string; processo: string} | null>(null);
+  const [copied, setCopied] = useState(false);
   const estatisticas = trpc.agente.estatisticas.useQuery();
   const busca = trpc.agente.buscarConhecimento.useQuery(
     { termo: termoBusca, categoria: categoriaBusca && categoriaBusca !== "todas" ? categoriaBusca as any : undefined },
@@ -423,6 +432,42 @@ export default function AgenteJuridico() {
             </Card>
           )}
 
+          {/* Gerar Petição */}
+          <Card className="border-amber-200 dark:border-amber-800">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <FilePlus className="h-4 w-4 text-amber-600" />
+                <CardTitle className="text-sm">Gerar Petição</CardTitle>
+              </div>
+              <CardDescription className="text-xs">Gere petições completas com timbrado do escritório</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-1">
+                {[
+                  "Agravo de Instrumento",
+                  "Cumprimento Provisório de Sentença",
+                  "Cumprimento Definitivo de Sentença",
+                  "Contrarrazões de Apelação",
+                  "Embargos de Declaração",
+                  "Exceção de Pré-Executividade",
+                  "Impugnação ao Cumprimento",
+                  "Querela Nullitatis",
+                  "Obrigação de Fazer",
+                  "Petição Simples",
+                ].map((tipo) => (
+                  <button
+                    key={tipo}
+                    onClick={() => { setTipoPeticao(tipo); setShowPeticaoDialog(true); }}
+                    className="w-full flex items-center gap-2 text-left text-xs p-2 rounded hover:bg-accent transition-colors"
+                  >
+                    <FileText className="h-3.5 w-3.5 text-amber-600 flex-shrink-0" />
+                    {tipo}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Atalhos rápidos */}
           <Card>
             <CardHeader className="pb-2">
@@ -453,6 +498,147 @@ export default function AgenteJuridico() {
           </Card>
         </div>
       </div>
+
+      {/* Dialog de Geração de Petição */}
+      <Dialog open={showPeticaoDialog} onOpenChange={setShowPeticaoDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FilePlus className="h-5 w-5 text-amber-600" />
+              Gerar {tipoPeticao}
+            </DialogTitle>
+            <DialogDescription>
+              {peticaoGerada ? 'Petição gerada com sucesso' : 'Configure e gere a petição com base no contexto do processo'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!peticaoGerada ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs">Cliente (contexto)</Label>
+                  <Select
+                    value={clienteId?.toString() || "none"}
+                    onValueChange={(v) => setClienteId(v === "none" ? undefined : Number(v))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione o cliente" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem contexto</SelectItem>
+                      {clientesQuery.data?.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id.toString()}>{c.nomeCompleto}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {processosDoCliente.length > 0 && (
+                  <div>
+                    <Label className="text-xs">Processo (contexto)</Label>
+                    <Select
+                      value={processoId?.toString() || "none"}
+                      onValueChange={(v) => setProcessoId(v === "none" ? undefined : Number(v))}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Selecione o processo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Todos</SelectItem>
+                        {processosDoCliente.map((p: any) => (
+                          <SelectItem key={p.id} value={p.id.toString()}>{p.numeroCnj}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+              <div>
+                <Label className="text-xs">Instruções adicionais (opcional)</Label>
+                <Textarea
+                  value={instrucoesPeticao}
+                  onChange={(e) => setInstrucoesPeticao(e.target.value)}
+                  placeholder="Ex: Focar na tese de preclução lógica, incluir pedido de tutela de urgência..."
+                  className="min-h-[80px]"
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => { setShowPeticaoDialog(false); setPeticaoGerada(null); setInstrucoesPeticao(""); }}>
+                  Cancelar
+                </Button>
+                <Button
+                  className="bg-amber-600 hover:bg-amber-700"
+                  disabled={gerarPeticaoMutation.isPending}
+                  onClick={async () => {
+                    try {
+                      const result = await gerarPeticaoMutation.mutateAsync({
+                        tipoPeticao,
+                        clienteId,
+                        processoId,
+                        instrucoes: instrucoesPeticao || undefined,
+                      });
+                      setPeticaoGerada(result);
+                      toast.success("Petição gerada com sucesso!");
+                    } catch (error: any) {
+                      toast.error(error.message || "Erro ao gerar petição");
+                    }
+                  }}
+                >
+                  {gerarPeticaoMutation.isPending ? (
+                    <><Loader2 className="h-4 w-4 animate-spin mr-2" />Gerando petição...</>
+                  ) : (
+                    <><FilePlus className="h-4 w-4 mr-2" />Gerar Petição</>
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Badge variant="outline" className="border-amber-300 text-amber-700">{peticaoGerada.tipoPeticao}</Badge>
+                {peticaoGerada.cliente !== 'Cliente' && <Badge variant="outline">{peticaoGerada.cliente}</Badge>}
+                {peticaoGerada.processo && <Badge variant="outline" className="font-mono text-xs">{peticaoGerada.processo}</Badge>}
+              </div>
+              <div className="border rounded-lg p-4 max-h-[50vh] overflow-y-auto bg-white dark:bg-zinc-950">
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <Streamdown>{peticaoGerada.peticao}</Streamdown>
+                </div>
+              </div>
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={() => { setPeticaoGerada(null); setInstrucoesPeticao(""); }}>
+                  <RefreshCw className="h-4 w-4 mr-1" />Nova Petição
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(peticaoGerada.peticao);
+                    setCopied(true);
+                    toast.success("Petição copiada!");
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  {copied ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />}
+                  {copied ? 'Copiado!' : 'Copiar'}
+                </Button>
+                <Button
+                  className="bg-amber-600 hover:bg-amber-700"
+                  onClick={() => {
+                    const blob = new Blob([peticaoGerada.peticao], { type: 'text/markdown' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${peticaoGerada.tipoPeticao.replace(/\s+/g, '_')}_${peticaoGerada.cliente.replace(/\s+/g, '_')}.md`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success("Download iniciado!");
+                  }}
+                >
+                  <Download className="h-4 w-4 mr-1" />Download
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

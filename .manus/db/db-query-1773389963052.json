@@ -1,0 +1,60 @@
+{
+  "query": "SELECT id, numeroCnj, clienteId FROM processos WHERE numeroCnj IS NOT NULL AND numeroCnj != '' LIMIT 10",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, numeroCnj, clienteId FROM processos WHERE numeroCnj IS NOT NULL AND numeroCnj != '' LIMIT 10",
+  "rows": [
+    {
+      "id": "1",
+      "numeroCnj": "5409032-24.2025.8.09.0179",
+      "clienteId": "1"
+    },
+    {
+      "id": "4",
+      "numeroCnj": "5660467-45.2025.8.09.0117",
+      "clienteId": "4"
+    },
+    {
+      "id": "5",
+      "numeroCnj": "5726214-43.2025.8.09.0051",
+      "clienteId": "5"
+    },
+    {
+      "id": "6",
+      "numeroCnj": "5111379-59.2024.8.09.0011",
+      "clienteId": "6"
+    },
+    {
+      "id": "7",
+      "numeroCnj": "5180612-25.2024.8.09.0018",
+      "clienteId": "7"
+    },
+    {
+      "id": "8",
+      "numeroCnj": "5017749-86.2025.8.09.0051",
+      "clienteId": "8"
+    },
+    {
+      "id": "9",
+      "numeroCnj": "5363744-49.2025.8.09.0051",
+      "clienteId": "9"
+    },
+    {
+      "id": "10",
+      "numeroCnj": "5347120-22.2025.8.09.0051",
+      "clienteId": "11"
+    },
+    {
+      "id": "12",
+      "numeroCnj": "5478158-79.2025.8.09.0174",
+      "clienteId": "13"
+    },
+    {
+      "id": "30002",
+      "numeroCnj": "5380169-54.2025.8.09.0051",
+      "clienteId": "60002"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tnumeroCnj\tclienteId\n1\t5409032-24.2025.8.09.0179\t1\n4\t5660467-45.2025.8.09.0117\t4\n5\t5726214-43.2025.8.09.0051\t5\n6\t5111379-59.2024.8.09.0011\t6\n7\t5180612-25.2024.8.09.0018\t7\n8\t5017749-86.2025.8.09.0051\t8\n9\t5363744-49.2025.8.09.0051\t9\n10\t5347120-22.2025.8.09.0051\t11\n12\t5478158-79.2025.8.09.0174\t13\n30002\t5380169-54.2025.8.09.0051\t60002\n",
+  "stderr": "",
+  "execution_time_ms": 63
+}

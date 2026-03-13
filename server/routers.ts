@@ -4202,6 +4202,110 @@ ${baseConhecimento}${contextoCliente}${contextoProcesso}`;
         ).slice(0, 20);
       }),
 
+    gerarPeticao: protectedProcedure
+      .input(z.object({
+        tipoPeticao: z.string().min(1),
+        clienteId: z.number().optional(),
+        processoId: z.number().optional(),
+        instrucoes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+
+        // Buscar contexto do cliente e processo
+        let contextoCliente = '';
+        let contextoProcesso = '';
+        let nomeCliente = 'Cliente';
+        let numeroProcesso = '';
+
+        if (input.clienteId) {
+          const [cliente] = await db.select().from(clientes).where(eq(clientes.id, input.clienteId));
+          if (cliente) {
+            nomeCliente = cliente.nomeCompleto;
+            const procs = await db.select().from(processos).where(eq(processos.clienteId, cliente.id));
+            const estrats = [];
+            const movFin = [];
+            for (const p of procs) {
+              const e = await db.select().from(estrategias).where(eq(estrategias.processoId, p.id));
+              estrats.push(...e);
+              const mf = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, p.id));
+              movFin.push(...mf);
+            }
+            contextoCliente = `\nCLIENTE: ${cliente.nomeCompleto}, CPF: ${cliente.cpfCnpj}, Órgão: ${cliente.orgaoEmpregador || 'N/A'}\nProcessos: ${procs.map(p => `${p.numeroCnj} (${p.tipoAcao} - ${p.statusProcesso})`).join('; ')}\nEstratégias: ${estrats.map(e => `${e.tesePrincipal?.substring(0, 200)}`).join('\n')}\nFinanceiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ')}`;
+          }
+        }
+
+        if (input.processoId) {
+          const [proc] = await db.select().from(processos).where(eq(processos.id, input.processoId));
+          if (proc) {
+            numeroProcesso = proc.numeroCnj || '';
+            const estrats = await db.select().from(estrategias).where(eq(estrategias.processoId, proc.id));
+            const movs = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, proc.id));
+            const movFin = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, proc.id));
+            contextoProcesso = `\nPROCESSO: ${proc.numeroCnj}\nTipo: ${proc.tipoAcao}\nVara: ${proc.vara}, Comarca: ${proc.comarca}, Tribunal: ${proc.tribunal}\nValor da Causa: R$ ${proc.valorCausa}\nFase: ${proc.faseAtual}, Status: ${proc.statusProcesso}\nPolo Ativo: ${proc.poloAtivo}\nPolo Passivo: ${proc.poloPassivo}\nResumo Sentença: ${proc.resumoSentenca || 'N/A'}\nEstratégias: ${estrats.map(e => `Tese: ${e.tesePrincipal}\nFundamentação: ${e.fundamentacaoLegal}\nJurisprudência: ${e.jurisprudenciaCitada}\nPontos Fortes: ${e.pontosFortes}`).join('\n---\n')}\nMovimentações: ${movs.slice(-10).map(m => `${m.data}: ${m.evento} - ${m.descricao?.substring(0, 100)}`).join('\n')}\nFinanceiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ')}`;
+          }
+        }
+
+        // Buscar base de conhecimento relevante
+        const todosConhecimentos = await db.select().from(conhecimentos);
+        const teses = todosConhecimentos.filter(c => c.categoria === 'Tese').map(t => `- ${t.titulo}: ${t.conteudo?.substring(0, 200)}`).join('\n');
+        const jurisprudencias = todosConhecimentos.filter(c => c.categoria === 'Jurisprudencia').map(j => `- ${j.titulo}: ${j.conteudo?.substring(0, 150)}`).join('\n');
+
+        const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
+
+Gere a petição completa do tipo "${input.tipoPeticao}" seguindo rigorosamente o padrão do escritório:
+
+ESTILO DE REDAÇÃO:
+- Tom assertivo, combativo e técnico
+- Fundamentação robusta com artigos de lei, doutrina e jurisprudência
+- Uso de expressões fortes: "flagrante ilegalidade", "abuso manifesto", "violação frontal"
+- Parágrafos densos com argumentação encadeada
+- Pedidos específicos e detalhados
+
+ESTRUTURA OBRIGATÓRIA:
+1. ENDEREÇAMENTO (Exmo. Sr. Dr. Juiz de Direito da Vara...)
+2. QUALIFICAÇÃO DAS PARTES
+3. FATOS (narrativa processual detalhada)
+4. FUNDAMENTAÇÃO JURÍDICA (artigos, doutrina, jurisprudência)
+5. PEDIDOS (numerados e específicos)
+6. REQUERIMENTOS FINAIS
+7. VALOR DA CAUSA (se aplicável)
+8. FECHO (Nestes termos, pede deferimento. Local e data. Advogado.)
+
+TESES DISPONÍVEIS:\n${teses}
+
+JURISPRUDÊNCIA:\n${jurisprudencias}
+${contextoCliente}${contextoProcesso}
+
+${input.instrucoes ? `INSTRUÇÕES ADICIONAIS: ${input.instrucoes}` : ''}
+
+Gere a petição COMPLETA, pronta para protocolo. Use formatação Markdown com títulos, negritos e numeração.`;
+
+        const result = await invokeLLM({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Gere a petição de ${input.tipoPeticao} completa para o caso.` }
+          ]
+        });
+
+        const rawContent = result.choices?.[0]?.message?.content;
+        const peticaoTexto = typeof rawContent === 'string' ? rawContent : 'Erro ao gerar petição.';
+
+        // Salvar no S3 como markdown
+        const timestamp = Date.now();
+        const nomeArquivo = `peticoes/${input.tipoPeticao.replace(/\s+/g, '_')}_${nomeCliente.replace(/\s+/g, '_')}_${timestamp}.md`;
+        const { url } = await storagePut(nomeArquivo, peticaoTexto, 'text/markdown');
+
+        return {
+          peticao: peticaoTexto,
+          url,
+          tipoPeticao: input.tipoPeticao,
+          cliente: nomeCliente,
+          processo: numeroProcesso,
+        };
+      }),
+
     estatisticas: protectedProcedure.query(async () => {
       const db = await getDb();
       if (!db) return { total: 0, teses: 0, jurisprudencias: 0, estrategias: 0, legislacoes: 0, modelos: 0 };
@@ -4215,6 +4319,187 @@ ${baseConhecimento}${contextoCliente}${contextoProcesso}`;
         modelos: todos.filter(c => c.categoria === 'Modelo').length,
       };
     }),
+  }),
+
+  // ==================== DATAJUD / PJE - ACOMPANHAMENTO PROCESSUAL ====================
+  datajud: router({
+    // Consultar processo por número CNJ na API DataJud
+    consultarProcesso: protectedProcedure
+      .input(z.object({ numeroCnj: z.string() }))
+      .mutation(async ({ input }) => {
+        const numLimpo = input.numeroCnj.replace(/[^0-9]/g, '');
+        if (numLimpo.length < 15) throw new Error('Número CNJ inválido');
+        
+        // Detectar tribunal pelo código (8.09 = TJ-GO)
+        const segJustica = numLimpo.substring(13, 14);
+        const codTribunal = numLimpo.substring(14, 16);
+        let alias = 'api_publica_tjgo'; // default TJ-GO
+        
+        // Mapear tribunais estaduais comuns
+        const tribunaisMap: Record<string, string> = {
+          '8_01': 'tjac', '8_02': 'tjal', '8_03': 'tjap', '8_04': 'tjam',
+          '8_05': 'tjba', '8_06': 'tjce', '8_07': 'tjdft', '8_08': 'tjes',
+          '8_09': 'tjgo', '8_10': 'tjma', '8_11': 'tjmt', '8_12': 'tjms',
+          '8_13': 'tjmg', '8_14': 'tjpa', '8_15': 'tjpb', '8_16': 'tjpe',
+          '8_17': 'tjpi', '8_18': 'tjpr', '8_19': 'tjrj', '8_20': 'tjrn',
+          '8_21': 'tjrs', '8_22': 'tjro', '8_23': 'tjrr', '8_24': 'tjsc',
+          '8_25': 'tjse', '8_26': 'tjsp', '8_27': 'tjto',
+        };
+        const chave = `${segJustica}_${codTribunal}`;
+        if (tribunaisMap[chave]) alias = `api_publica_${tribunaisMap[chave]}`;
+        
+        const url = `https://api-publica.datajud.cnj.jus.br/${alias}/_search`;
+        const apiKey = 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==';
+        
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `APIKey ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: { match: { numeroProcesso: numLimpo } }
+          }),
+        });
+        
+        if (!resp.ok) throw new Error(`Erro na API DataJud: ${resp.status}`);
+        const data = await resp.json();
+        
+        if (!data.hits?.hits?.length) {
+          return { encontrado: false, processo: null, movimentos: [], totalMovimentos: 0 };
+        }
+        
+        const source = data.hits.hits[0]._source;
+        return {
+          encontrado: true,
+          processo: {
+            numeroProcesso: source.numeroProcesso,
+            classe: source.classe?.nome || 'N/A',
+            classeCode: source.classe?.codigo,
+            sistema: source.sistema?.nome || 'N/A',
+            formato: source.formato?.nome || 'N/A',
+            tribunal: source.tribunal || 'N/A',
+            grau: source.grau || 'N/A',
+            dataAjuizamento: source.dataAjuizamento,
+            dataUltimaAtualizacao: source.dataHoraUltimaAtualizacao,
+            nivelSigilo: source.nivelSigilo,
+            orgaoJulgador: source.orgaoJulgador?.nome || 'N/A',
+            assuntos: (source.assuntos || []).map((a: any) => a.nome).join(', '),
+          },
+          movimentos: (source.movimentos || []).map((m: any) => ({
+            codigo: m.codigo,
+            nome: m.nome,
+            dataHora: m.dataHora,
+            orgaoJulgador: m.orgaoJulgador?.nome || null,
+            complementos: (m.complementosTabelados || []).map((c: any) => c.nome).join(', '),
+          })).sort((a: any, b: any) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime()),
+          totalMovimentos: (source.movimentos || []).length,
+        };
+      }),
+
+    // Consultar todos os processos cadastrados no banco de uma vez
+    consultarTodosProcessos: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) return { resultados: [], total: 0 };
+      
+      const todosProcessos = await db.select({
+        id: processos.id,
+        numeroCnj: processos.numeroCnj,
+        clienteId: processos.clienteId,
+      }).from(processos).where(sql`${processos.numeroCnj} IS NOT NULL AND ${processos.numeroCnj} != ''`);
+      
+      const apiKey = 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==';
+      const resultados: any[] = [];
+      
+      for (const proc of todosProcessos) {
+        try {
+          const numLimpo = (proc.numeroCnj || '').replace(/[^0-9]/g, '');
+          if (numLimpo.length < 15) continue;
+          
+          const segJustica = numLimpo.substring(13, 14);
+          const codTribunal = numLimpo.substring(14, 16);
+          let alias = 'api_publica_tjgo';
+          if (segJustica === '8' && codTribunal === '09') alias = 'api_publica_tjgo';
+          
+          const resp = await fetch(`https://api-publica.datajud.cnj.jus.br/${alias}/_search`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `APIKey ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ query: { match: { numeroProcesso: numLimpo } } }),
+          });
+          
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data.hits?.hits?.length) {
+              const source = data.hits.hits[0]._source;
+              const movs = source.movimentos || [];
+              const ultimoMov = movs.sort((a: any, b: any) => 
+                new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime()
+              )[0];
+              
+              resultados.push({
+                processoId: proc.id,
+                numeroCnj: proc.numeroCnj,
+                classe: source.classe?.nome,
+                orgaoJulgador: source.orgaoJulgador?.nome,
+                totalMovimentos: movs.length,
+                ultimaAtualizacao: source.dataHoraUltimaAtualizacao,
+                ultimoMovimento: ultimoMov ? {
+                  nome: ultimoMov.nome,
+                  dataHora: ultimoMov.dataHora,
+                } : null,
+              });
+            }
+          }
+          // Rate limit: 200ms entre consultas
+          await new Promise(r => setTimeout(r, 200));
+        } catch (e) {
+          // Continua com o próximo processo
+        }
+      }
+      
+      return { resultados, total: resultados.length };
+    }),
+
+    // Verificar novas movimentações desde a última verificação
+    verificarNovasMovimentacoes: protectedProcedure
+      .input(z.object({ numeroCnj: z.string(), ultimaDataConhecida: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        const numLimpo = input.numeroCnj.replace(/[^0-9]/g, '');
+        const apiKey = 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==';
+        
+        const resp = await fetch(`https://api-publica.datajud.cnj.jus.br/api_publica_tjgo/_search`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `APIKey ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: { match: { numeroProcesso: numLimpo } } }),
+        });
+        
+        if (!resp.ok) throw new Error(`Erro na API DataJud: ${resp.status}`);
+        const data = await resp.json();
+        
+        if (!data.hits?.hits?.length) return { novasMovimentacoes: [], total: 0 };
+        
+        const source = data.hits.hits[0]._source;
+        let movimentos = (source.movimentos || []).map((m: any) => ({
+          codigo: m.codigo,
+          nome: m.nome,
+          dataHora: m.dataHora,
+          orgaoJulgador: m.orgaoJulgador?.nome || null,
+          complementos: (m.complementosTabelados || []).map((c: any) => c.nome).join(', '),
+        })).sort((a: any, b: any) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
+        
+        if (input.ultimaDataConhecida) {
+          const dataLimite = new Date(input.ultimaDataConhecida).getTime();
+          movimentos = movimentos.filter((m: any) => new Date(m.dataHora).getTime() > dataLimite);
+        }
+        
+        return { novasMovimentacoes: movimentos, total: movimentos.length };
+      }),
   }),
 });
 // ==================== PROCESSADOR DE FILA DE JOBS ====================

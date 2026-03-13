@@ -1,0 +1,25 @@
+{
+  "query": "SELECT numeroCnj FROM processos WHERE numeroCnj IS NOT NULL AND numeroCnj != '' LIMIT 5",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT numeroCnj FROM processos WHERE numeroCnj IS NOT NULL AND numeroCnj != '' LIMIT 5",
+  "rows": [
+    {
+      "numeroCnj": "5017749-86.2025.8.09.0051"
+    },
+    {
+      "numeroCnj": "5111379-59.2024.8.09.0011"
+    },
+    {
+      "numeroCnj": "5180612-25.2024.8.09.0018"
+    },
+    {
+      "numeroCnj": "5347120-22.2025.8.09.0051"
+    },
+    {
+      "numeroCnj": "5363744-49.2025.8.09.0051"
+    }
+  ],
+  "messages": [],
+  "stdout": "numeroCnj\n5017749-86.2025.8.09.0051\n5111379-59.2024.8.09.0011\n5180612-25.2024.8.09.0018\n5347120-22.2025.8.09.0051\n5363744-49.2025.8.09.0051\n",
+  "stderr": "",
+  "execution_time_ms": 60
+}
