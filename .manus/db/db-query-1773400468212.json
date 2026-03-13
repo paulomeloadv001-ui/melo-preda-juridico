@@ -1,0 +1,43 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'sync_log' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'sync_log' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "tipo"
+    },
+    {
+      "COLUMN_NAME": "direcao"
+    },
+    {
+      "COLUMN_NAME": "novos"
+    },
+    {
+      "COLUMN_NAME": "atualizados"
+    },
+    {
+      "COLUMN_NAME": "erros"
+    },
+    {
+      "COLUMN_NAME": "detalhes"
+    },
+    {
+      "COLUMN_NAME": "status"
+    },
+    {
+      "COLUMN_NAME": "duracaoMs"
+    },
+    {
+      "COLUMN_NAME": "executadoEm"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\ntipo\ndirecao\nnovos\natualizados\nerros\ndetalhes\nstatus\nduracaoMs\nexecutadoEm\ncreatedAt\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

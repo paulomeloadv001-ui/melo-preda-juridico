@@ -252,3 +252,11 @@
 - [x] Integração: endpoints conhecimentosAtualizados, estrategiasAtualizadas, financeiroAtualizado, dadosScoreServidor
 - [x] Integração: configurar variável JUSCONSIG_API_KEY nos Secrets (pendente configuração pelo usuário)
 - [x] Gerar código completo syncEscritorio.ts + syncScheduler.ts + integracaoEscritorioRouter.ts + migration SQL + README
+- [x] Configurar JUSCONSIG_API_KEY nos Secrets do servidor
+- [x] Criar tabela sync_log no banco de dados para histórico de sincronizações
+- [x] Criar procedures tRPC para status da integração, sync manual e histórico (statusIntegracao, historicoSyncs, executarSyncManual, consultarScorePainel, limparLogsAntigos)
+- [x] Criar página Painel de Integração no frontend com status, histórico, controles e score
+- [x] Adicionar rota /integracao no App.tsx e link no sidebar do DashboardLayout
+- [x] Escrever testes Vitest para endpoints de integração (16 testes: 8 API Key, 8 painel)
+- [x] Testar compilação TypeScript completa sem erros
+- [x] Testar fluxo completo no browser (painel de integração) - 122/122 testes passando

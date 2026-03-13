@@ -471,3 +471,20 @@ export const prazosProcessuais = mysqlTable("prazos_processuais", {
 
 export type PrazoProcessual = typeof prazosProcessuais.$inferSelect;
 export type InsertPrazoProcessual = typeof prazosProcessuais.$inferInsert;
+
+// ==================== LOG DE SINCRONIZAÇÃO (INTEGRAÇÃO JUSCONSIG) ====================
+export const syncLog = mysqlTable("sync_log", {
+  id: int("id").autoincrement().primaryKey(),
+  tipo: varchar("tipo", { length: 50 }).notNull(),
+  direcao: varchar("direcao", { length: 20 }).notNull().default("escritorio_jusconsig"),
+  novos: int("novos").notNull().default(0),
+  atualizados: int("atualizados").notNull().default(0),
+  erros: int("erros").notNull().default(0),
+  detalhes: text("detalhes"),
+  status: varchar("status", { length: 20 }).notNull().default("sucesso"),
+  duracaoMs: int("duracaoMs").default(0),
+  executadoEm: timestamp("executadoEm").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type SyncLog = typeof syncLog.$inferSelect;
+export type InsertSyncLog = typeof syncLog.$inferInsert;

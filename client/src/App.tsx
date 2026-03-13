@@ -18,6 +18,7 @@ import GestaoAcessos, { SolicitarAcesso } from "./pages/GestaoAcessos";
 import AgenteJuridico from "./pages/AgenteJuridico";
 import PrazosProcessuais from "./pages/PrazosProcessuais";
 import AcompanhamentoPJe from "./pages/AcompanhamentoPJe";
+import Integracao from "./pages/Integracao";
 
 function Router() {
   return (
@@ -41,6 +42,7 @@ function Router() {
             <Route path="/agente" component={AgenteJuridico} />
             <Route path="/prazos" component={PrazosProcessuais} />
             <Route path="/acompanhamento" component={AcompanhamentoPJe} />
+            <Route path="/integracao" component={Integracao} />
             <Route path="/acessos" component={GestaoAcessos} />
             <Route path="/404" component={NotFound} />
             <Route component={NotFound} />

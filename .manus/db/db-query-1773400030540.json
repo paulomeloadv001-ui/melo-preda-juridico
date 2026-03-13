@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `sync_log` (\n  `id` int AUTO_INCREMENT PRIMARY KEY,\n  `tipo` varchar(50) NOT NULL COMMENT 'Tipo: clientes, processos, movimentacoes, conhecimentos, estrategias, financeiro, completa',\n  `direcao` varchar(20) NOT NULL DEFAULT 'escritorio_jusconsig' COMMENT 'Direção da sincronização',\n  `novos` int NOT NULL DEFAULT 0,\n  `atualizados` int NOT NULL DEFAULT 0,\n  `erros` int NOT NULL DEFAULT 0,\n  `detalhes` text COMMENT 'Detalhes em JSON',\n  `status` varchar(20) NOT NULL DEFAULT 'sucesso' COMMENT 'sucesso, erro, parcial',\n  `duracaoMs` int DEFAULT 0,\n  `executadoEm` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX `idx_sync_log_tipo_data` ON `sync_log` (`tipo`, `executadoEm` DESC);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute CREATE TABLE IF NOT EXISTS `sync_log` (\n  `id` int AUTO_INCREMENT PRIMARY KEY,\n  `tipo` varchar(50) NOT NULL COMMENT 'Tipo: clientes, processos, movimentacoes, conhecimentos, estrategias, financeiro, completa',\n  `direcao` varchar(20) NOT NULL DEFAULT 'escritorio_jusconsig' COMMENT 'Direção da sincronização',\n  `novos` int NOT NULL DEFAULT 0,\n  `atualizados` int NOT NULL DEFAULT 0,\n  `erros` int NOT NULL DEFAULT 0,\n  `detalhes` text COMMENT 'Detalhes em JSON',\n  `status` varchar(20) NOT NULL DEFAULT 'sucesso' COMMENT 'sucesso, erro, parcial',\n  `duracaoMs` int DEFAULT 0,\n  `executadoEm` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX `idx_sync_log_tipo_data` ON `sync_log` (`tipo`, `executadoEm` DESC);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1005
+}

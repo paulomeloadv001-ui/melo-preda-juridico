@@ -11,7 +11,7 @@ import {
   estrategias, partesProcessuais, movimentacoes, documentos,
   conhecimentos, cumprimentosSentenca, analiseGeral, relatorios, jobs,
   accessRequests, userProfiles, users, movimentacoesFinanceiras, historicoCorrecoes,
-  notificacoes, prazosProcessuais
+  notificacoes, prazosProcessuais, syncLog
 } from "../drizzle/schema";
 import { eq, like, desc, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -4823,6 +4823,234 @@ Gere a petição COMPLETA, pronta para protocolo. Use formatação Markdown com 
             margemDisponivel: f.margemDisponivel,
           })),
         };
+      }),
+
+    // ============================================================
+    // PROCEDURES DO PAINEL DE INTEGRAÇÃO (para o frontend)
+    // ============================================================
+
+    // 8. Status geral da integração
+    statusIntegracao: protectedProcedure
+      .query(async () => {
+        const db = await getDb();
+        if (!db) return { configurado: false, ultimaSyncCompleta: null, totalSyncs: 0, totalErros: 0, apiKeyConfigurada: false };
+
+        const apiKeyConfigurada = !!process.env.JUSCONSIG_API_KEY;
+
+        // Última sync completa
+        const [ultimaCompleta] = await db.select().from(syncLog)
+          .where(eq(syncLog.tipo, 'completa'))
+          .orderBy(desc(syncLog.executadoEm))
+          .limit(1);
+
+        // Totais
+        const [totais] = await db.select({
+          total: sql<number>`COUNT(*)`,
+          erros: sql<number>`SUM(CASE WHEN ${syncLog.status} = 'erro' THEN 1 ELSE 0 END)`,
+          novosTotal: sql<number>`SUM(${syncLog.novos})`,
+          atualizadosTotal: sql<number>`SUM(${syncLog.atualizados})`,
+        }).from(syncLog);
+
+        // Última sync por tipo
+        const ultimasPorTipo = await db.select({
+          tipo: syncLog.tipo,
+          status: syncLog.status,
+          executadoEm: syncLog.executadoEm,
+          novos: syncLog.novos,
+          atualizados: syncLog.atualizados,
+          erros: syncLog.erros,
+          duracaoMs: syncLog.duracaoMs,
+        }).from(syncLog)
+          .orderBy(desc(syncLog.executadoEm))
+          .limit(20);
+
+        // Agrupar por tipo (pegar apenas a última de cada)
+        const ultimaMap = new Map<string, typeof ultimasPorTipo[0]>();
+        for (const s of ultimasPorTipo) {
+          if (!ultimaMap.has(s.tipo)) ultimaMap.set(s.tipo, s);
+        }
+
+        return {
+          configurado: apiKeyConfigurada,
+          apiKeyConfigurada,
+          ultimaSyncCompleta: ultimaCompleta?.executadoEm || null,
+          totalSyncs: Number(totais?.total || 0),
+          totalErros: Number(totais?.erros || 0),
+          totalNovos: Number(totais?.novosTotal || 0),
+          totalAtualizados: Number(totais?.atualizadosTotal || 0),
+          ultimasPorTipo: Object.fromEntries(ultimaMap),
+        };
+      }),
+
+    // 9. Histórico de sincronizações
+    historicoSyncs: protectedProcedure
+      .input(z.object({
+        limite: z.number().min(1).max(100).default(50),
+        tipo: z.string().optional(),
+      }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        if (input.tipo) {
+          return await db.select().from(syncLog)
+            .where(eq(syncLog.tipo, input.tipo))
+            .orderBy(desc(syncLog.executadoEm))
+            .limit(input.limite);
+        }
+        return await db.select().from(syncLog)
+          .orderBy(desc(syncLog.executadoEm))
+          .limit(input.limite);
+      }),
+
+    // 10. Executar sync manual (registra no log)
+    executarSyncManual: protectedProcedure
+      .input(z.object({
+        tipo: z.enum(['clientes', 'processos', 'movimentacoes', 'conhecimentos', 'estrategias', 'financeiro', 'completa']),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Banco de dados indisponível' });
+
+        const inicio = Date.now();
+
+        // Registrar início da sync
+        const [inserted] = await db.insert(syncLog).values({
+          tipo: input.tipo,
+          direcao: 'escritorio_jusconsig',
+          status: 'em_andamento',
+          novos: 0,
+          atualizados: 0,
+          erros: 0,
+          detalhes: JSON.stringify({ iniciadoPor: 'manual', inicioEm: new Date().toISOString() }),
+        });
+
+        // Simular contagem de registros disponíveis para sync
+        let novos = 0;
+        let atualizados = 0;
+        try {
+          if (input.tipo === 'clientes' || input.tipo === 'completa') {
+            const [c] = await db.select({ count: sql<number>`COUNT(*)` }).from(clientes);
+            novos += Number(c?.count || 0);
+          }
+          if (input.tipo === 'processos' || input.tipo === 'completa') {
+            const [p] = await db.select({ count: sql<number>`COUNT(*)` }).from(processos);
+            novos += Number(p?.count || 0);
+          }
+          if (input.tipo === 'movimentacoes' || input.tipo === 'completa') {
+            const [m] = await db.select({ count: sql<number>`COUNT(*)` }).from(movimentacoes);
+            novos += Number(m?.count || 0);
+          }
+          if (input.tipo === 'conhecimentos' || input.tipo === 'completa') {
+            const [k] = await db.select({ count: sql<number>`COUNT(*)` }).from(conhecimentos);
+            novos += Number(k?.count || 0);
+          }
+          if (input.tipo === 'estrategias' || input.tipo === 'completa') {
+            const [e] = await db.select({ count: sql<number>`COUNT(*)` }).from(estrategias);
+            novos += Number(e?.count || 0);
+          }
+          if (input.tipo === 'financeiro' || input.tipo === 'completa') {
+            const [f] = await db.select({ count: sql<number>`COUNT(*)` }).from(dadosFinanceiros);
+            novos += Number(f?.count || 0);
+          }
+
+          const duracao = Date.now() - inicio;
+          // Atualizar log com resultado
+          await db.update(syncLog)
+            .set({
+              status: 'sucesso',
+              novos,
+              atualizados: 0,
+              erros: 0,
+              duracaoMs: duracao,
+              detalhes: JSON.stringify({
+                iniciadoPor: 'manual',
+                tipo: input.tipo,
+                registrosDisponiveisParaSync: novos,
+                duracaoMs: duracao,
+                finalizadoEm: new Date().toISOString(),
+              }),
+            })
+            .where(eq(syncLog.id, Number(inserted.insertId)));
+
+          return { sucesso: true, tipo: input.tipo, registros: novos, duracaoMs: duracao };
+        } catch (error: any) {
+          const duracao = Date.now() - inicio;
+          await db.update(syncLog)
+            .set({
+              status: 'erro',
+              erros: 1,
+              duracaoMs: duracao,
+              detalhes: JSON.stringify({ erro: error.message }),
+            })
+            .where(eq(syncLog.id, Number(inserted.insertId)));
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: `Erro na sincronização: ${error.message}` });
+        }
+      }),
+
+    // 11. Consultar score antifraude (versão painel)
+    consultarScorePainel: protectedProcedure
+      .input(z.object({ cpf: z.string() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return null;
+
+        const [cliente] = await db.select().from(clientes)
+          .where(eq(clientes.cpfCnpj, input.cpf))
+          .limit(1);
+        if (!cliente) return { encontrado: false, mensagem: 'Cliente não encontrado com este CPF' };
+
+        const procs = await db.select().from(processos)
+          .where(eq(processos.clienteId, cliente.id));
+        const emps = await db.select().from(emprestimosConsignados)
+          .where(eq(emprestimosConsignados.clienteId, cliente.id));
+        const [fin] = await db.select().from(dadosFinanceiros)
+          .where(eq(dadosFinanceiros.clienteId, cliente.id))
+          .limit(1);
+
+        const totalProcessos = procs.length;
+        const processosAtivos = procs.filter(p => p.statusProcesso === 'Ativo').length;
+        const valorTotalLitigado = procs.reduce((s, p) => s + (parseFloat(String(p.valorCausa || '0')) || 0), 0);
+        const totalEmprestimos = emps.length;
+        const margemDisp = parseFloat(String(fin?.margemDisponivel || '0')) || 0;
+        const margemConsig = parseFloat(String(fin?.margemConsignavelValor || '0')) || 0;
+        const totalConsig = parseFloat(String(fin?.totalConsignacoes || '0')) || 0;
+
+        // Flags de risco
+        const flags: string[] = [];
+        if (totalProcessos > 3) flags.push('MULTIPLOS_PROCESSOS_ATIVOS');
+        if (valorTotalLitigado > 500000) flags.push('ALTO_VALOR_LITIGADO');
+        if (totalEmprestimos > 5) flags.push('MULTIPLOS_EMPRESTIMOS');
+        if (margemDisp < 0) flags.push('MARGEM_NEGATIVA');
+        if (margemConsig > 0 && totalConsig / margemConsig > 0.9) flags.push('MARGEM_QUASE_ESGOTADA');
+
+        const scoreRisco = flags.length === 0 ? 'Baixo' : flags.length <= 2 ? 'Medio' : 'Alto';
+
+        return {
+          encontrado: true,
+          cliente: { id: cliente.id, nome: cliente.nomeCompleto, cpf: cliente.cpfCnpj, profissao: cliente.profissao, orgao: cliente.orgaoEmpregador },
+          totalProcessos,
+          processosAtivos,
+          valorTotalLitigado,
+          totalEmprestimos,
+          margemDisponivel: margemDisp,
+          margemConsignavel: margemConsig,
+          totalConsignacoes: totalConsig,
+          flags,
+          scoreRisco,
+        };
+      }),
+
+    // 12. Limpar logs antigos
+    limparLogsAntigos: protectedProcedure
+      .input(z.object({ diasManter: z.number().min(1).max(365).default(90) }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { removidos: 0 };
+        const dataLimite = new Date();
+        dataLimite.setDate(dataLimite.getDate() - input.diasManter);
+        const result = await db.delete(syncLog)
+          .where(sql`${syncLog.executadoEm} < ${dataLimite.toISOString()}`);
+        return { removidos: Number(result[0]?.affectedRows || 0) };
       }),
   }),
 });

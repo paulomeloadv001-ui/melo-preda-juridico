@@ -1,0 +1,98 @@
+{
+  "query": "DESCRIBE sync_log;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute DESCRIBE sync_log;",
+  "rows": [
+    {
+      "Field": "id",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "PRI",
+      "Default": "NULL",
+      "Extra": "auto_increment"
+    },
+    {
+      "Field": "tipo",
+      "Type": "varchar(50)",
+      "Null": "NO",
+      "Key": "MUL",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "direcao",
+      "Type": "varchar(20)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "escritorio_jusconsig",
+      "Extra": ""
+    },
+    {
+      "Field": "novos",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "atualizados",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "erros",
+      "Type": "int",
+      "Null": "NO",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "detalhes",
+      "Type": "text",
+      "Null": "YES",
+      "Key": "",
+      "Default": "NULL",
+      "Extra": ""
+    },
+    {
+      "Field": "status",
+      "Type": "varchar(20)",
+      "Null": "NO",
+      "Key": "",
+      "Default": "sucesso",
+      "Extra": ""
+    },
+    {
+      "Field": "duracaoMs",
+      "Type": "int",
+      "Null": "YES",
+      "Key": "",
+      "Default": "0",
+      "Extra": ""
+    },
+    {
+      "Field": "executadoEm",
+      "Type": "datetime",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    },
+    {
+      "Field": "createdAt",
+      "Type": "datetime",
+      "Null": "NO",
+      "Key": "",
+      "Default": "CURRENT_TIMESTAMP",
+      "Extra": ""
+    }
+  ],
+  "messages": [],
+  "stdout": "Field\tType\tNull\tKey\tDefault\tExtra\nid\tint\tNO\tPRI\tNULL\tauto_increment\ntipo\tvarchar(50)\tNO\tMUL\tNULL\t\ndirecao\tvarchar(20)\tNO\t\tescritorio_jusconsig\t\nnovos\tint\tNO\t\t0\t\natualizados\tint\tNO\t\t0\t\nerros\tint\tNO\t\t0\t\ndetalhes\ttext\tYES\t\tNULL\t\nstatus\tvarchar(20)\tNO\t\tsucesso\t\nduracaoMs\tint\tYES\t\t0\t\nexecutadoEm\tdatetime\tNO\t\tCURRENT_TIMESTAMP\t\ncreatedAt\tdatetime\tNO\t\tCURRENT_TIMESTAMP\t\n",
+  "stderr": "",
+  "execution_time_ms": 76
+}
