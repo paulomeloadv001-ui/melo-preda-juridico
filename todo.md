@@ -297,3 +297,9 @@
 - [x] Métricas de produtividade: criar página Métricas no frontend com Recharts (5 abas, 8 cards, 3 KPIs)
 - [x] Métricas de produtividade: adicionar rota /metricas e link no sidebar
 - [x] Testes Vitest para enriquecimento cadastral e métricas (16 testes - total 138/138 passando)
+- [x] MELHORIA: Dashboard - seção de boas-vindas com explicação do projeto, fluxo de automação (5 passos) e badges
+- [x] MELHORIA: Dashboard - 6 quadros de órgãos expandidos (TJ-GO 5 links, CNJ 5 links, Receita 5 links, STJ 4 links, OAB 4 links, Outros 4 links)
+- [x] MELHORIA: Garantir botões Atualizar, Excluir e Gerar em todas as abas e páginas (já implementado)
+- [x] MELHORIA: Sidebar - reorganizado com 5 categorias (Principal, Processos, Análise & IA, Ferramentas, Sistema)
+- [x] MELHORIA: Dashboard - seção de atividade recente com 6 indicadores dinâmicos
+- [x] MELHORIA: Relatórios - integração em tempo real com dados importados (já implementado nos 6 tipos)

@@ -17,6 +17,8 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  SidebarGroup,
+  SidebarGroupLabel,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
@@ -28,23 +30,51 @@ import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Painel Geral", path: "/" },
-  { icon: Upload, label: "Upload de Processos", path: "/upload" },
-  { icon: Users, label: "Clientes", path: "/clientes" },
-  { icon: BookOpen, label: "Conhecimentos", path: "/conhecimentos" },
-  { icon: Download, label: "Exportação em Massa", path: "/exportacao" },
-  { icon: FileBarChart, label: "Relatórios", path: "/relatorios" },
-  { icon: Shield, label: "Correção / Deduplicação", path: "/correcao" },
-  { icon: Brain, label: "Agente Jurídico IA", path: "/agente" },
-  { icon: Calendar, label: "Prazos Processuais", path: "/prazos" },
-  { icon: Globe, label: "Acompanhamento PJe", path: "/acompanhamento" },
-  { icon: ListChecks, label: "Fila de Trabalhos", path: "/jobs" },
-  { icon: ArrowRightLeft, label: "Integração JUSCONSIG", path: "/integracao" },
-  { icon: UserCheck, label: "Enriquecimento Cadastral", path: "/enriquecimento" },
-  { icon: TrendingUp, label: "Métricas", path: "/metricas" },
-  { icon: ShieldCheck, label: "Gestão de Acessos", path: "/acessos" },
+const menuGroups = [
+  {
+    label: "Principal",
+    items: [
+      { icon: LayoutDashboard, label: "Painel Geral", path: "/" },
+      { icon: TrendingUp, label: "Métricas", path: "/metricas" },
+    ]
+  },
+  {
+    label: "Processos",
+    items: [
+      { icon: Upload, label: "Upload de Processos", path: "/upload" },
+      { icon: Users, label: "Clientes", path: "/clientes" },
+      { icon: Calendar, label: "Prazos Processuais", path: "/prazos" },
+      { icon: Globe, label: "Acompanhamento PJe", path: "/acompanhamento" },
+    ]
+  },
+  {
+    label: "Análise & IA",
+    items: [
+      { icon: Brain, label: "Agente Jurídico IA", path: "/agente" },
+      { icon: BookOpen, label: "Conhecimentos", path: "/conhecimentos" },
+      { icon: FileBarChart, label: "Relatórios", path: "/relatorios" },
+    ]
+  },
+  {
+    label: "Ferramentas",
+    items: [
+      { icon: Shield, label: "Correção / Deduplicação", path: "/correcao" },
+      { icon: UserCheck, label: "Enriquecimento Cadastral", path: "/enriquecimento" },
+      { icon: Download, label: "Exportação em Massa", path: "/exportacao" },
+    ]
+  },
+  {
+    label: "Sistema",
+    items: [
+      { icon: ListChecks, label: "Fila de Trabalhos", path: "/jobs" },
+      { icon: ArrowRightLeft, label: "Integração JUSCONSIG", path: "/integracao" },
+      { icon: ShieldCheck, label: "Gestão de Acessos", path: "/acessos" },
+    ]
+  },
 ];
+
+// Flat list for route matching
+const menuItems = menuGroups.flatMap(g => g.items);
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 260;
@@ -391,27 +421,34 @@ function DashboardLayoutContent({
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="gap-0">
-            <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
-                const isActive = location === item.path;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className="h-10 transition-all font-normal"
-                    >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-[oklch(0.75_0.12_85)]" : ""}`}
-                      />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+          <SidebarContent className="gap-0 overflow-y-auto">
+            {menuGroups.map((group, gi) => (
+              <SidebarGroup key={gi} className="py-1">
+                <SidebarGroupLabel className="text-[10px] uppercase tracking-wider text-sidebar-foreground/40 px-4 py-1">
+                  {group.label}
+                </SidebarGroupLabel>
+                <SidebarMenu className="px-2">
+                  {group.items.map(item => {
+                    const isActive = location === item.path;
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          isActive={isActive}
+                          onClick={() => setLocation(item.path)}
+                          tooltip={item.label}
+                          className="h-9 transition-all font-normal"
+                        >
+                          <item.icon
+                            className={`h-4 w-4 ${isActive ? "text-[oklch(0.75_0.12_85)]" : ""}`}
+                          />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroup>
+            ))}
           </SidebarContent>
 
           <SidebarFooter className="p-3">

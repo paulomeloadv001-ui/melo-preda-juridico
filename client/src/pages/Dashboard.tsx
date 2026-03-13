@@ -8,7 +8,7 @@ import {
   Users, FileText, Scale, DollarSign, RefreshCw, Upload, Download,
   Shield, BookOpen, Briefcase, MapPin, TrendingUp, Gavel, Building2,
   ChevronRight, BarChart3, Target, Brain, Banknote, CheckCircle2, Clock, AlertCircle, Landmark, Receipt,
-  ExternalLink, Calendar, Bell, Search, Radar, Activity, PieChart, Globe, Zap
+  ExternalLink, Calendar, Bell, Search, Radar, Activity, PieChart, Globe, Zap, ArrowRightLeft
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "wouter";
@@ -182,6 +182,48 @@ export default function Dashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Boas-vindas e Visão do Projeto */}
+      <Card className="border-0 bg-gradient-to-r from-amber-900/20 via-amber-800/10 to-transparent">
+        <CardContent className="p-6">
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="flex-1 space-y-3">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Scale className="h-6 w-6 text-amber-500" />
+                Sistema Jurídico Integrado
+              </h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Plataforma de intensificação de análise técnica e aprofundada de processos judiciais com peticionamento
+                técnico fundamentado, formatado no papel timbrado do escritório Melo &amp; Preda Advogados.
+                Integração com DataJud, Projudi, PJe e JUSCONSIG 3.0 para automação completa do fluxo processual.
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Badge variant="outline" className="text-xs bg-amber-500/10 border-amber-500/30"><Upload className="h-3 w-3 mr-1" /> Importação Automática</Badge>
+                <Badge variant="outline" className="text-xs bg-blue-500/10 border-blue-500/30"><Brain className="h-3 w-3 mr-1" /> Análise por IA</Badge>
+                <Badge variant="outline" className="text-xs bg-emerald-500/10 border-emerald-500/30"><FileText className="h-3 w-3 mr-1" /> Peticionamento</Badge>
+                <Badge variant="outline" className="text-xs bg-purple-500/10 border-purple-500/30"><ArrowRightLeft className="h-3 w-3 mr-1" /> Integração JUSCONSIG</Badge>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 min-w-[200px]">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fluxo de Automação</span>
+              <div className="space-y-1.5">
+                {[
+                  { step: "1", label: "Upload de processos (PDF/lote)", color: "bg-amber-500" },
+                  { step: "2", label: "Extração e análise por IA", color: "bg-blue-500" },
+                  { step: "3", label: "Geração de estratégias e petições", color: "bg-emerald-500" },
+                  { step: "4", label: "Varredura DataJud + PJe", color: "bg-purple-500" },
+                  { step: "5", label: "Sincronização JUSCONSIG 3.0", color: "bg-red-500" },
+                ].map(item => (
+                  <div key={item.step} className="flex items-center gap-2">
+                    <span className={`${item.color} text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center`}>{item.step}</span>
+                    <span className="text-xs text-muted-foreground">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Resultado da Varredura */}
       {varreduraResult && (
@@ -448,104 +490,116 @@ export default function Dashboard() {
       </Card>
 
       {/* ==================== LINKS PARA ÓRGÃOS JURÍDICOS ==================== */}
+      {/* Quadros de Órgãos com Links Específicos para Serviços */}
       <Card className="border shadow-sm">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Globe className="h-5 w-5 text-blue-600" />
-            <CardTitle className="text-lg">Acesso Rápido — Órgãos e Sistemas</CardTitle>
+            <CardTitle className="text-lg">Órgãos e Sistemas Jurídicos</CardTitle>
           </div>
-          <CardDescription>Links diretos para consulta em tribunais, órgãos públicos e sistemas jurídicos</CardDescription>
+          <CardDescription>Acesso rápido aos portais e serviços específicos de cada órgão</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <a href="https://projudi.tjgo.jus.br" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Scale className="h-5 w-5 text-blue-600" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* TJ-GO */}
+            <div className="rounded-xl border p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-teal-500/10"><Landmark className="h-5 w-5 text-teal-600" /></div>
+                <div>
+                  <span className="text-sm font-bold block">TJ-GO</span>
+                  <span className="text-[10px] text-muted-foreground">Tribunal de Justiça de Goiás</span>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-semibold block">Projudi TJ-GO</span>
-                <span className="text-xs text-muted-foreground">Processo Judicial Digital</span>
+              <div className="space-y-1">
+                <a href="https://www.tjgo.jus.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Portal Principal</a>
+                <a href="https://pje.tjgo.jus.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> PJe - Processo Eletrônico</a>
+                <a href="https://projudi.tjgo.jus.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Projudi</a>
+                <a href="https://www.tjgo.jus.br/jurisprudencia" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Jurisprudência TJ-GO</a>
+                <a href="https://www.tjgo.jus.br/index.php/consulta-processual" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Consulta Processual</a>
               </div>
-              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-            </a>
-            <a href="https://www.cnj.jus.br" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group">
-              <div className="p-2 rounded-lg bg-emerald-500/10">
-                <Gavel className="h-5 w-5 text-emerald-600" />
+            </div>
+            {/* CNJ */}
+            <div className="rounded-xl border p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-blue-500/10"><Gavel className="h-5 w-5 text-blue-600" /></div>
+                <div>
+                  <span className="text-sm font-bold block">CNJ</span>
+                  <span className="text-[10px] text-muted-foreground">Conselho Nacional de Justiça</span>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-semibold block">CNJ</span>
-                <span className="text-xs text-muted-foreground">Conselho Nacional de Justiça</span>
+              <div className="space-y-1">
+                <a href="https://www.cnj.jus.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Portal CNJ</a>
+                <a href="https://datajud-wiki.cnj.jus.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> DataJud - Base Nacional</a>
+                <a href="https://www.cnj.jus.br/poder-judiciario/consulta-processual-cnj/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Consulta Processual CNJ</a>
+                <a href="https://paineis.cnj.jus.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Painéis Estatísticos</a>
+                <a href="https://atos.cnj.jus.br/atos" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Atos Normativos</a>
               </div>
-              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-            </a>
-            <a href="https://servicos.receita.fazenda.gov.br/servicos/cpf/consultasituacao/consultapublica.asp" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group">
-              <div className="p-2 rounded-lg bg-amber-500/10">
-                <Building2 className="h-5 w-5 text-amber-600" />
+            </div>
+            {/* Receita Federal */}
+            <div className="rounded-xl border p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-green-500/10"><Building2 className="h-5 w-5 text-green-600" /></div>
+                <div>
+                  <span className="text-sm font-bold block">Receita Federal</span>
+                  <span className="text-[10px] text-muted-foreground">Consultas e Certidões</span>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-semibold block">Receita Federal</span>
-                <span className="text-xs text-muted-foreground">Consulta CPF/CNPJ</span>
+              <div className="space-y-1">
+                <a href="https://www.gov.br/receitafederal" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Portal Receita Federal</a>
+                <a href="https://servicos.receita.fazenda.gov.br/Servicos/CPF/ConsultaSituacao/ConsultaPublica.asp" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Consulta CPF</a>
+                <a href="https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/cnpjreva_solicitacao.asp" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Cartão CNPJ</a>
+                <a href="https://solucoes.receita.fazenda.gov.br/Servicos/certidaointernet/PF/Emitir" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> CND Pessoa Física</a>
+                <a href="https://cav.receita.fazenda.gov.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> e-CAC</a>
               </div>
-              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-            </a>
-            <a href="https://datajud-wiki.cnj.jus.br" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group">
-              <div className="p-2 rounded-lg bg-purple-500/10">
-                <Search className="h-5 w-5 text-purple-600" />
+            </div>
+            {/* STJ */}
+            <div className="rounded-xl border p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-indigo-500/10"><BookOpen className="h-5 w-5 text-indigo-600" /></div>
+                <div>
+                  <span className="text-sm font-bold block">STJ</span>
+                  <span className="text-[10px] text-muted-foreground">Superior Tribunal de Justiça</span>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-semibold block">DataJud</span>
-                <span className="text-xs text-muted-foreground">Base Nacional de Dados</span>
+              <div className="space-y-1">
+                <a href="https://www.stj.jus.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Portal STJ</a>
+                <a href="https://scon.stj.jus.br/SCON/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Jurisprudência STJ</a>
+                <a href="https://www.stj.jus.br/sites/portalp/Paginas/Comunicacao/Noticias/Sumulas.aspx" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Súmulas STJ</a>
+                <a href="https://processo.stj.jus.br/processo/pesquisa/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Consulta Processual</a>
               </div>
-              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-            </a>
-            <a href="https://pje.tjgo.jus.br" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group">
-              <div className="p-2 rounded-lg bg-red-500/10">
-                <FileText className="h-5 w-5 text-red-600" />
+            </div>
+            {/* OAB-GO */}
+            <div className="rounded-xl border p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-orange-500/10"><Shield className="h-5 w-5 text-orange-600" /></div>
+                <div>
+                  <span className="text-sm font-bold block">OAB-GO</span>
+                  <span className="text-[10px] text-muted-foreground">Ordem dos Advogados - Goiás</span>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-semibold block">PJe TJ-GO</span>
-                <span className="text-xs text-muted-foreground">Processo Judicial Eletrônico</span>
+              <div className="space-y-1">
+                <a href="https://www.oabgo.org.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Portal OAB-GO</a>
+                <a href="https://cna.oab.org.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> CNA - Cadastro Nacional</a>
+                <a href="https://www.oabgo.org.br/oab-go/anuidade/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Anuidade OAB</a>
+                <a href="https://www.oabgo.org.br/oab-go/servicos/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Serviços OAB</a>
               </div>
-              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-            </a>
-            <a href="https://www.tjgo.jus.br" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group">
-              <div className="p-2 rounded-lg bg-teal-500/10">
-                <Landmark className="h-5 w-5 text-teal-600" />
+            </div>
+            {/* Outros Portais */}
+            <div className="rounded-xl border p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-purple-500/10"><Scale className="h-5 w-5 text-purple-600" /></div>
+                <div>
+                  <span className="text-sm font-bold block">Outros Portais</span>
+                  <span className="text-[10px] text-muted-foreground">Serviços complementares</span>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-semibold block">TJ-GO</span>
-                <span className="text-xs text-muted-foreground">Tribunal de Justiça de Goiás</span>
+              <div className="space-y-1">
+                <a href="https://www.planalto.gov.br/ccivil_03/leis/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Legislação Federal</a>
+                <a href="https://www.jusbrasil.com.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> JusBrasil</a>
+                <a href="https://www.gabinetedigital.go.gov.br/legisla-web/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> Legislação GO</a>
+                <a href="https://sei.go.gov.br" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"><ExternalLink className="h-3 w-3" /> SEI Goiás</a>
               </div>
-              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-            </a>
-            <a href="https://www.oabgo.org.br" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group">
-              <div className="p-2 rounded-lg bg-orange-500/10">
-                <Shield className="h-5 w-5 text-orange-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-semibold block">OAB-GO</span>
-                <span className="text-xs text-muted-foreground">Ordem dos Advogados - Goiás</span>
-              </div>
-              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-            </a>
-            <a href="https://www.stj.jus.br" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group">
-              <div className="p-2 rounded-lg bg-indigo-500/10">
-                <BookOpen className="h-5 w-5 text-indigo-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-semibold block">STJ</span>
-                <span className="text-xs text-muted-foreground">Superior Tribunal de Justiça</span>
-              </div>
-              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-            </a>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -873,6 +927,43 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground">
               <strong>Dica:</strong> Para processos com dependência (ex: cumprimento provisório de sentença), faça upload dos autos principais primeiro e depois do processo dependente. O sistema vincula automaticamente pelo nome do cliente e número CNJ.
             </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Atividade Recente */}
+      <Card className="border shadow-sm">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-lg">Atividade Recente</CardTitle>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              <Clock className="h-3 w-3 mr-1" /> Últimas ações
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[
+              { icon: Users, text: `${est?.totalClientes ?? 0} clientes cadastrados no sistema`, time: "Base atual", color: "text-blue-600", bg: "bg-blue-500/10" },
+              { icon: FileText, text: `${est?.totalProcessos ?? 0} processos judiciais importados e analisados`, time: "Base atual", color: "text-amber-600", bg: "bg-amber-500/10" },
+              { icon: Brain, text: `${est?.totalConhecimentos ?? 0} conhecimentos jurídicos extraídos por IA`, time: "Base atual", color: "text-emerald-600", bg: "bg-emerald-500/10" },
+              { icon: Target, text: `${est?.totalEstrategias ?? 0} estratégias processuais geradas`, time: "Base atual", color: "text-red-600", bg: "bg-red-500/10" },
+              { icon: Banknote, text: `Honorários totais: ${formatCurrency(stats.data?.honorarios?.total ?? 0)}`, time: "Acumulado", color: "text-emerald-600", bg: "bg-emerald-500/10" },
+              { icon: Briefcase, text: `${est?.totalDocumentos ?? 0} documentos armazenados no S3`, time: "Base atual", color: "text-purple-600", bg: "bg-purple-500/10" },
+            ].map((item, idx) => (
+              <div key={idx} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                <div className={`p-1.5 rounded-lg ${item.bg}`}>
+                  <item.icon className={`h-4 w-4 ${item.color}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm">{item.text}</span>
+                </div>
+                <Badge variant="outline" className="text-[10px] shrink-0">{item.time}</Badge>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
