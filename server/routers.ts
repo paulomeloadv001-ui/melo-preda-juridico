@@ -2601,17 +2601,27 @@ ${textoExtraido}`;
         {
           id: "financeiro",
           titulo: "Relatórios Financeiros",
-          descricao: "Dados financeiros, empréstimos consignados, margem consignável",
+          descricao: "Honorários, depósitos judiciais, alvarás, margem consignável",
           subcategorias: [
+            { id: "financeiro_honorarios", titulo: "Honorários e Movimentações", descricao: "Relatório detalhado de honorários sucumbenciais, depósitos, alvarás e pagamentos" },
             { id: "financeiro_margem", titulo: "Margem Consignável", descricao: "Análise detalhada de margem consignável, empréstimos e aptidão por cliente" },
           ],
         },
         {
           id: "processual",
           titulo: "Relatórios Processuais",
-          descricao: "Acompanhamento de processos, fases, valores, estratégias",
+          descricao: "Acompanhamento de processos, fases, valores, prazos e estratégias",
           subcategorias: [
             { id: "processual_geral", titulo: "Panorama Processual", descricao: "Visão geral de todos os processos por tipo, tribunal, status e valor" },
+            { id: "processual_prazos", titulo: "Prazos Processuais", descricao: "Controle de prazos com urgência, vencimentos e status" },
+          ],
+        },
+        {
+          id: "conhecimentos",
+          titulo: "Conhecimentos Jurídicos",
+          descricao: "Jurisprudências, teses, estratégias e legislações catalogadas",
+          subcategorias: [
+            { id: "conhecimentos_geral", titulo: "Banco de Conhecimentos", descricao: "Relatório completo do acervo jurídico por categoria, tribunal e tipo de ação" },
           ],
         },
       ];
@@ -2916,10 +2926,249 @@ ${textoExtraido}`;
         relatorioId = inserted.id;
       }
 
-      return { success: true, relatorioId, url, totalProcessos: allProcessos.length, dados: relatorioData };
+       return { success: true, relatorioId, url, totalProcessos: allProcessos.length, dados: relatorioData };
+    }),
+
+    // ==================== RELATÓRIO DE HONORÁRIOS ====================
+    dadosHonorariosRealtime: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return null;
+      const allMovFin = await db.select().from(movimentacoesFinanceiras).orderBy(desc(movimentacoesFinanceiras.createdAt));
+      const allProcessos = await db.select().from(processos);
+      const allClientes = await db.select().from(clientes);
+      const clienteMap = new Map(allClientes.map(c => [c.id, c]));
+      const processoMap = new Map(allProcessos.map(p => [p.id, p]));
+
+      // Enriquecer movimentações
+      const movimentacoesEnriquecidas = allMovFin.map(m => {
+        const cli = clienteMap.get(m.clienteId);
+        const proc = processoMap.get(m.processoId);
+        return {
+          ...m,
+          clienteNome: cli?.nomeCompleto || 'N/A',
+          clienteCpf: cli?.cpfCnpj || '',
+          processoNumero: proc?.numeroCnj || 'N/A',
+          processoTribunal: proc?.tribunal || '',
+          valor: parseFloat(String(m.valor || '0')),
+          valorLevantado: parseFloat(String(m.valorLevantado || '0')),
+          valorPendente: parseFloat(String(m.valorPendente || '0')),
+        };
+      });
+
+      // Agrupamentos por tipo
+      const porTipo: Record<string, { qtd: number; valorTotal: number; valorPago: number; valorPendente: number }> = {};
+      const porStatus: Record<string, { qtd: number; valorTotal: number }> = {};
+      const porCliente: Record<number, { nome: string; qtd: number; valorTotal: number; valorPago: number; valorPendente: number }> = {};
+      let totalGeral = 0, totalPago = 0, totalPendente = 0, totalDepositado = 0;
+
+      for (const m of movimentacoesEnriquecidas) {
+        // Por tipo
+        if (!porTipo[m.tipo]) porTipo[m.tipo] = { qtd: 0, valorTotal: 0, valorPago: 0, valorPendente: 0 };
+        porTipo[m.tipo].qtd++;
+        porTipo[m.tipo].valorTotal += m.valor;
+        if (m.status === 'pago_levantado') porTipo[m.tipo].valorPago += m.valor;
+        if (m.status === 'pendente' || m.status === 'parcial') porTipo[m.tipo].valorPendente += m.valor;
+        // Por status
+        if (!porStatus[m.status]) porStatus[m.status] = { qtd: 0, valorTotal: 0 };
+        porStatus[m.status].qtd++;
+        porStatus[m.status].valorTotal += m.valor;
+        // Por cliente
+        if (!porCliente[m.clienteId]) porCliente[m.clienteId] = { nome: m.clienteNome, qtd: 0, valorTotal: 0, valorPago: 0, valorPendente: 0 };
+        porCliente[m.clienteId].qtd++;
+        porCliente[m.clienteId].valorTotal += m.valor;
+        if (m.status === 'pago_levantado') porCliente[m.clienteId].valorPago += m.valor;
+        if (m.status === 'pendente' || m.status === 'parcial') porCliente[m.clienteId].valorPendente += m.valor;
+        // Totais
+        totalGeral += m.valor;
+        if (m.status === 'pago_levantado') totalPago += m.valor;
+        if (m.status === 'pendente' || m.status === 'parcial') totalPendente += m.valor;
+        if (m.status === 'depositado_a_levantar') totalDepositado += m.valor;
+      }
+
+      return {
+        dataConsulta: new Date().toISOString(),
+        totalMovimentacoes: allMovFin.length,
+        totalGeral, totalPago, totalPendente, totalDepositado,
+        porTipo: Object.entries(porTipo).sort((a, b) => b[1].valorTotal - a[1].valorTotal).map(([tipo, d]) => ({ tipo, ...d })),
+        porStatus: Object.entries(porStatus).sort((a, b) => b[1].valorTotal - a[1].valorTotal).map(([status, d]) => ({ status, ...d })),
+        porCliente: Object.values(porCliente).sort((a, b) => b.valorTotal - a.valorTotal),
+        movimentacoes: movimentacoesEnriquecidas,
+      };
+    }),
+
+    gerarRelatorioHonorarios: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      const allMovFin = await db.select().from(movimentacoesFinanceiras);
+      const relatorioData = { totalMovimentacoes: allMovFin.length, geradoEm: new Date().toISOString() };
+      const storageKey = `relatorios/honorarios_${Date.now()}.json`;
+      const { url } = await storagePut(storageKey, JSON.stringify(relatorioData), 'application/json');
+      const existingReport = await db.select().from(relatorios).where(eq(relatorios.tipoRelatorio, 'financeiro_honorarios')).limit(1);
+      let relatorioId: number;
+      if (existingReport.length > 0) {
+        await db.update(relatorios).set({
+          titulo: 'Relatório de Honorários',
+          descricao: `${allMovFin.length} movimentações financeiras. Gerado em ${new Date().toLocaleString('pt-BR')}.`,
+          storageKey, storageUrl: url, dadosJson: relatorioData as any,
+        }).where(eq(relatorios.id, existingReport[0].id));
+        relatorioId = existingReport[0].id;
+      } else {
+        const [inserted] = await db.insert(relatorios).values({
+          titulo: 'Relatório de Honorários',
+          categoria: 'Financeiro', subcategoria: 'Honorários',
+          descricao: `${allMovFin.length} movimentações financeiras. Gerado em ${new Date().toLocaleString('pt-BR')}.`,
+          tipoRelatorio: 'financeiro_honorarios', formato: 'JSON',
+          storageKey, storageUrl: url, dadosJson: relatorioData as any, geradoPor: 'Sistema',
+        }).$returningId();
+        relatorioId = inserted.id;
+      }
+      return { success: true, relatorioId, totalMovimentacoes: allMovFin.length };
+    }),
+
+    // ==================== RELATÓRIO DE CONHECIMENTOS JURÍDICOS ====================
+    dadosConhecimentosRealtime: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return null;
+      const allConhecimentos = await db.select().from(conhecimentos).orderBy(desc(conhecimentos.createdAt));
+      const allProcessos = await db.select().from(processos);
+      const processoMap = new Map(allProcessos.map(p => [p.id, p]));
+
+      const porCategoria: Record<string, number> = {};
+      const porTribunal: Record<string, number> = {};
+      const porTipoAcao: Record<string, number> = {};
+
+      const conhecimentosEnriquecidos = allConhecimentos.map(c => {
+        const proc = c.processoOrigemId ? processoMap.get(c.processoOrigemId) : null;
+        const cat = c.categoria || 'Sem categoria';
+        porCategoria[cat] = (porCategoria[cat] || 0) + 1;
+        if (c.tribunal) porTribunal[c.tribunal] = (porTribunal[c.tribunal] || 0) + 1;
+        if (c.tipoAcao) porTipoAcao[c.tipoAcao] = (porTipoAcao[c.tipoAcao] || 0) + 1;
+        return {
+          ...c,
+          processoNumero: proc?.numeroCnj || null,
+          processoTribunal: proc?.tribunal || null,
+        };
+      });
+
+      return {
+        dataConsulta: new Date().toISOString(),
+        totalConhecimentos: allConhecimentos.length,
+        porCategoria: Object.entries(porCategoria).sort((a, b) => b[1] - a[1]).map(([cat, qtd]) => ({ categoria: cat, qtd })),
+        porTribunal: Object.entries(porTribunal).sort((a, b) => b[1] - a[1]).map(([trib, qtd]) => ({ tribunal: trib, qtd })),
+        porTipoAcao: Object.entries(porTipoAcao).sort((a, b) => b[1] - a[1]).map(([tipo, qtd]) => ({ tipo, qtd })),
+        conhecimentos: conhecimentosEnriquecidos,
+      };
+    }),
+
+    gerarRelatorioConhecimentos: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      const allConhecimentos = await db.select().from(conhecimentos);
+      const relatorioData = { totalConhecimentos: allConhecimentos.length, geradoEm: new Date().toISOString() };
+      const storageKey = `relatorios/conhecimentos_${Date.now()}.json`;
+      const { url } = await storagePut(storageKey, JSON.stringify(relatorioData), 'application/json');
+      const existingReport = await db.select().from(relatorios).where(eq(relatorios.tipoRelatorio, 'conhecimentos_geral')).limit(1);
+      let relatorioId: number;
+      if (existingReport.length > 0) {
+        await db.update(relatorios).set({
+          titulo: 'Relatório de Conhecimentos Jurídicos',
+          descricao: `${allConhecimentos.length} conhecimentos. Gerado em ${new Date().toLocaleString('pt-BR')}.`,
+          storageKey, storageUrl: url, dadosJson: relatorioData as any,
+        }).where(eq(relatorios.id, existingReport[0].id));
+        relatorioId = existingReport[0].id;
+      } else {
+        const [inserted] = await db.insert(relatorios).values({
+          titulo: 'Relatório de Conhecimentos Jurídicos',
+          categoria: 'Conhecimentos', subcategoria: 'Geral',
+          descricao: `${allConhecimentos.length} conhecimentos. Gerado em ${new Date().toLocaleString('pt-BR')}.`,
+          tipoRelatorio: 'conhecimentos_geral', formato: 'JSON',
+          storageKey, storageUrl: url, dadosJson: relatorioData as any, geradoPor: 'Sistema',
+        }).$returningId();
+        relatorioId = inserted.id;
+      }
+      return { success: true, relatorioId, totalConhecimentos: allConhecimentos.length };
+    }),
+
+    // ==================== RELATÓRIO DE PRAZOS PROCESSUAIS ====================
+    dadosPrazosRealtime: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return null;
+      const allPrazos = await db.select().from(prazosProcessuais).orderBy(prazosProcessuais.dataVencimento);
+      const allProcessos = await db.select().from(processos);
+      const allClientes = await db.select().from(clientes);
+      const processoMap = new Map(allProcessos.map(p => [p.id, p]));
+      const clienteMap = new Map(allClientes.map(c => [c.id, c]));
+
+      const agora = new Date();
+      const porStatus: Record<string, number> = {};
+      const porTipo: Record<string, number> = {};
+      let vencidos = 0, vencendoHoje = 0, proximos7dias = 0;
+
+      const prazosEnriquecidos = allPrazos.map(p => {
+        const proc = processoMap.get(p.processoId);
+        const cli = clienteMap.get(p.clienteId);
+        const st = p.status || 'pendente';
+        porStatus[st] = (porStatus[st] || 0) + 1;
+        const tp = p.tipo || 'outro';
+        porTipo[tp] = (porTipo[tp] || 0) + 1;
+        const venc = new Date(p.dataVencimento);
+        const diffDias = Math.ceil((venc.getTime() - agora.getTime()) / (1000 * 60 * 60 * 24));
+        if (st === 'pendente') {
+          if (diffDias < 0) vencidos++;
+          else if (diffDias === 0) vencendoHoje++;
+          else if (diffDias <= 7) proximos7dias++;
+        }
+        return {
+          ...p,
+          clienteNome: cli?.nomeCompleto || 'N/A',
+          processoNumero: proc?.numeroCnj || 'N/A',
+          processoTribunal: proc?.tribunal || '',
+          diasRestantes: diffDias,
+          urgencia: diffDias < 0 ? 'vencido' : diffDias === 0 ? 'hoje' : diffDias <= 3 ? 'urgente' : diffDias <= 7 ? 'atencao' : 'normal',
+        };
+      });
+
+      return {
+        dataConsulta: new Date().toISOString(),
+        totalPrazos: allPrazos.length,
+        vencidos, vencendoHoje, proximos7dias,
+        pendentes: allPrazos.filter(p => p.status === 'pendente').length,
+        cumpridos: allPrazos.filter(p => p.status === 'cumprido').length,
+        porStatus: Object.entries(porStatus).sort((a, b) => b[1] - a[1]).map(([status, qtd]) => ({ status, qtd })),
+        porTipo: Object.entries(porTipo).sort((a, b) => b[1] - a[1]).map(([tipo, qtd]) => ({ tipo, qtd })),
+        prazos: prazosEnriquecidos,
+      };
+    }),
+
+    gerarRelatorioPrazos: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('Database not available');
+      const allPrazos = await db.select().from(prazosProcessuais);
+      const relatorioData = { totalPrazos: allPrazos.length, geradoEm: new Date().toISOString() };
+      const storageKey = `relatorios/prazos_${Date.now()}.json`;
+      const { url } = await storagePut(storageKey, JSON.stringify(relatorioData), 'application/json');
+      const existingReport = await db.select().from(relatorios).where(eq(relatorios.tipoRelatorio, 'prazos_geral')).limit(1);
+      let relatorioId: number;
+      if (existingReport.length > 0) {
+        await db.update(relatorios).set({
+          titulo: 'Relatório de Prazos Processuais',
+          descricao: `${allPrazos.length} prazos. Gerado em ${new Date().toLocaleString('pt-BR')}.`,
+          storageKey, storageUrl: url, dadosJson: relatorioData as any,
+        }).where(eq(relatorios.id, existingReport[0].id));
+        relatorioId = existingReport[0].id;
+      } else {
+        const [inserted] = await db.insert(relatorios).values({
+          titulo: 'Relatório de Prazos Processuais',
+          categoria: 'Processual', subcategoria: 'Prazos',
+          descricao: `${allPrazos.length} prazos. Gerado em ${new Date().toLocaleString('pt-BR')}.`,
+          tipoRelatorio: 'prazos_geral', formato: 'JSON',
+          storageKey, storageUrl: url, dadosJson: relatorioData as any, geradoPor: 'Sistema',
+        }).$returningId();
+        relatorioId = inserted.id;
+      }
+      return { success: true, relatorioId, totalPrazos: allPrazos.length };
     }),
   }),
-
   // ==================== FILA DE TRABALHOS (JOBS) ====================
   jobs: router({
     // Listar todos os jobs com filtros

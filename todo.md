@@ -188,3 +188,22 @@
 - [x] Backend: notificação automática ao adicionar movimentação financeira
 - [x] Testes unitários para sistema de notificações (30 testes - total 99 passando)
 - [x] BUG: Página /upload retorna HTML em vez de JSON (Unexpected token '<', '<!doctype'...) - CORRIGIDO: validação de tamanho 16MB no frontend + interceptor de respostas HTML no tRPC client
+- [ ] Relatórios individualizados: Relatório Financeiro com exportação individual
+- [ ] Relatórios individualizados: Relatório Processual com exportação individual
+- [ ] Relatórios individualizados: Relatório Cadastral com exportação individual
+- [ ] Relatórios individualizados: Relatório de Honorários com exportação individual
+- [ ] Relatórios individualizados: Relatório de Conhecimentos Jurídicos com exportação individual
+- [ ] Relatórios individualizados: Relatório de Prazos Processuais com exportação individual
+- [ ] Backend: rotas de geração de dados para cada tipo de relatório
+- [ ] Frontend: página de Relatórios com cards individuais e botões Gerar/Exportar PDF para cada tipo
+- [ ] Frontend: visualização prévia de cada relatório antes da exportação
+- [x] Exportação completa: extrair todos os dados de todas as tabelas do banco (16 tabelas)
+- [x] Exportação completa: organizar por cliente com pasta individual (nome + CPF) - 18 clientes
+- [x] Exportação completa: incluir processos, teses, estratégias, honorários por cliente
+- [x] Exportação completa: gerar base de conhecimento reutilizável (Markdown + JSON)
+- [x] Exportação completa: relatórios consolidados (financeiro, processual, teses, conhecimentos)
+- [x] Exportação completa: gerar arquivo ZIP para download (0.74 MB, 172 arquivos)
+- [x] Análise técnica aprofundada do processo Leonardo Rosa Correia (5380169-54.2025.8.09.0051) - 731 páginas
+- [x] Estratégia processual: Agravo de Instrumento contra indeferimento de alvará + Contrarrazões à Apelação + Cumprimento Provisório
+- [x] Integração completa no site: cliente (ID 60002), processo (ID 30002), 8 empréstimos, 13 movimentações, 3 estratégias, 4 mov. financeiras, 5 conhecimentos
+- [x] Honorários mapeados: R$ 40.588,64 total (Itaú R$ 13.687,03 depositado/a levantar + Inter R$ 13.529,55 pendente + Pan R$ 13.529,55 pendente)
