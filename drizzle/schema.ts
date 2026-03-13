@@ -488,3 +488,77 @@ export const syncLog = mysqlTable("sync_log", {
 });
 export type SyncLog = typeof syncLog.$inferSelect;
 export type InsertSyncLog = typeof syncLog.$inferInsert;
+
+// ==================== TEMPLATES DE PETIÇÃO ====================
+export const templatesPeticao = mysqlTable("templates_peticao", {
+  id: int("id").autoincrement().primaryKey(),
+  nome: varchar("nome", { length: 255 }).notNull(),
+  tipo: varchar("tipo", { length: 100 }).notNull(),
+  descricao: text("descricao"),
+  estruturaJson: json("estrutura_json").notNull(),
+  variaveisObrigatorias: json("variaveis_obrigatorias"),
+  tesesAplicaveis: text("teses_aplicaveis"),
+  fundamentacaoPadrao: text("fundamentacao_padrao"),
+  tribunalDestino: varchar("tribunal_destino", { length: 255 }),
+  tags: text("tags"),
+  ativo: int("ativo").default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TemplatePeticao = typeof templatesPeticao.$inferSelect;
+export type InsertTemplatePeticao = typeof templatesPeticao.$inferInsert;
+
+// ==================== PETIÇÕES GERADAS ====================
+export const peticoesGeradas = mysqlTable("peticoes_geradas", {
+  id: int("id").autoincrement().primaryKey(),
+  templateId: int("templateId"),
+  processoId: int("processoId"),
+  clienteId: int("clienteId"),
+  tipo: varchar("tipo", { length: 255 }).notNull(),
+  titulo: varchar("titulo", { length: 500 }).notNull(),
+  conteudoJson: json("conteudo_json").notNull(),
+  conteudoTexto: text("conteudo_texto"),
+  status: varchar("status", { length: 50 }).default("rascunho").notNull(),
+  storageKey: varchar("storageKey", { length: 500 }),
+  storageUrl: text("storageUrl"),
+  geradoPor: varchar("geradoPor", { length: 100 }).default("agente_ia"),
+  revisadoPor: varchar("revisadoPor", { length: 100 }),
+  observacoes: text("observacoes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PeticaoGerada = typeof peticoesGeradas.$inferSelect;
+export type InsertPeticaoGerada = typeof peticoesGeradas.$inferInsert;
+
+// ==================== CONFIGURAÇÃO DO AGENTE IA ====================
+export const agenteIaConfig = mysqlTable("agente_ia_config", {
+  id: int("id").autoincrement().primaryKey(),
+  chave: varchar("chave", { length: 100 }).notNull().unique(),
+  valor: text("valor").notNull(),
+  categoria: varchar("categoria", { length: 100 }).notNull(),
+  descricao: text("descricao"),
+  ativo: int("ativo").default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AgenteIaConfig = typeof agenteIaConfig.$inferSelect;
+export type InsertAgenteIaConfig = typeof agenteIaConfig.$inferInsert;
+
+// ==================== HISTÓRICO DE CONVERSAS DO AGENTE IA ====================
+export const agenteIaHistorico = mysqlTable("agente_ia_historico", {
+  id: int("id").autoincrement().primaryKey(),
+  sessaoId: varchar("sessaoId", { length: 100 }).notNull(),
+  userId: int("userId"),
+  role: varchar("role", { length: 20 }).notNull(),
+  conteudo: text("conteudo").notNull(),
+  contextoUsado: json("contexto_usado"),
+  tokensEntrada: int("tokens_entrada").default(0),
+  tokensSaida: int("tokens_saida").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AgenteIaHistorico = typeof agenteIaHistorico.$inferSelect;
+export type InsertAgenteIaHistorico = typeof agenteIaHistorico.$inferInsert;

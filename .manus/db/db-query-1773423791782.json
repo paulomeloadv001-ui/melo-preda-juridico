@@ -1,0 +1,82 @@
+{
+  "query": "SELECT 'access_requests' as tbl, COUNT(*) as cnt FROM access_requests UNION ALL SELECT 'analise_geral', COUNT(*) FROM analise_geral UNION ALL SELECT 'clientes', COUNT(*) FROM clientes UNION ALL SELECT 'conhecimentos', COUNT(*) FROM conhecimentos UNION ALL SELECT 'cumprimentos_sentenca', COUNT(*) FROM cumprimentos_sentenca UNION ALL SELECT 'documentos', COUNT(*) FROM documentos UNION ALL SELECT 'emprestimos_consignados', COUNT(*) FROM emprestimos_consignados UNION ALL SELECT 'estrategias', COUNT(*) FROM estrategias UNION ALL SELECT 'jobs', COUNT(*) FROM jobs UNION ALL SELECT 'movimentacoes', COUNT(*) FROM movimentacoes UNION ALL SELECT 'movimentacoes_financeiras', COUNT(*) FROM movimentacoes_financeiras UNION ALL SELECT 'notificacoes', COUNT(*) FROM notificacoes UNION ALL SELECT 'partes_processuais', COUNT(*) FROM partes_processuais UNION ALL SELECT 'prazos_processuais', COUNT(*) FROM prazos_processuais UNION ALL SELECT 'processos', COUNT(*) FROM processos UNION ALL SELECT 'relatorios', COUNT(*) FROM relatorios UNION ALL SELECT 'sync_log', COUNT(*) FROM sync_log UNION ALL SELECT 'user_profiles', COUNT(*) FROM user_profiles;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT 'access_requests' as tbl, COUNT(*) as cnt FROM access_requests UNION ALL SELECT 'analise_geral', COUNT(*) FROM analise_geral UNION ALL SELECT 'clientes', COUNT(*) FROM clientes UNION ALL SELECT 'conhecimentos', COUNT(*) FROM conhecimentos UNION ALL SELECT 'cumprimentos_sentenca', COUNT(*) FROM cumprimentos_sentenca UNION ALL SELECT 'documentos', COUNT(*) FROM documentos UNION ALL SELECT 'emprestimos_consignados', COUNT(*) FROM emprestimos_consignados UNION ALL SELECT 'estrategias', COUNT(*) FROM estrategias UNION ALL SELECT 'jobs', COUNT(*) FROM jobs UNION ALL SELECT 'movimentacoes', COUNT(*) FROM movimentacoes UNION ALL SELECT 'movimentacoes_financeiras', COUNT(*) FROM movimentacoes_financeiras UNION ALL SELECT 'notificacoes', COUNT(*) FROM notificacoes UNION ALL SELECT 'partes_processuais', COUNT(*) FROM partes_processuais UNION ALL SELECT 'prazos_processuais', COUNT(*) FROM prazos_processuais UNION ALL SELECT 'processos', COUNT(*) FROM processos UNION ALL SELECT 'relatorios', COUNT(*) FROM relatorios UNION ALL SELECT 'sync_log', COUNT(*) FROM sync_log UNION ALL SELECT 'user_profiles', COUNT(*) FROM user_profiles;",
+  "rows": [
+    {
+      "tbl": "cumprimentos_sentenca",
+      "cnt": "0"
+    },
+    {
+      "tbl": "analise_geral",
+      "cnt": "10"
+    },
+    {
+      "tbl": "conhecimentos",
+      "cnt": "92"
+    },
+    {
+      "tbl": "clientes",
+      "cnt": "77"
+    },
+    {
+      "tbl": "access_requests",
+      "cnt": "0"
+    },
+    {
+      "tbl": "estrategias",
+      "cnt": "31"
+    },
+    {
+      "tbl": "documentos",
+      "cnt": "63"
+    },
+    {
+      "tbl": "jobs",
+      "cnt": "39"
+    },
+    {
+      "tbl": "emprestimos_consignados",
+      "cnt": "72"
+    },
+    {
+      "tbl": "movimentacoes_financeiras",
+      "cnt": "24"
+    },
+    {
+      "tbl": "movimentacoes",
+      "cnt": "804"
+    },
+    {
+      "tbl": "partes_processuais",
+      "cnt": "27"
+    },
+    {
+      "tbl": "notificacoes",
+      "cnt": "4"
+    },
+    {
+      "tbl": "prazos_processuais",
+      "cnt": "0"
+    },
+    {
+      "tbl": "relatorios",
+      "cnt": "4"
+    },
+    {
+      "tbl": "processos",
+      "cnt": "108"
+    },
+    {
+      "tbl": "user_profiles",
+      "cnt": "2"
+    },
+    {
+      "tbl": "sync_log",
+      "cnt": "10"
+    }
+  ],
+  "messages": [],
+  "stdout": "tbl\tcnt\ncumprimentos_sentenca\t0\nanalise_geral\t10\nconhecimentos\t92\nclientes\t77\naccess_requests\t0\nestrategias\t31\ndocumentos\t63\njobs\t39\nemprestimos_consignados\t72\nmovimentacoes_financeiras\t24\nmovimentacoes\t804\npartes_processuais\t27\nnotificacoes\t4\nprazos_processuais\t0\nrelatorios\t4\nprocessos\t108\nuser_profiles\t2\nsync_log\t10\n",
+  "stderr": "",
+  "execution_time_ms": 63
+}

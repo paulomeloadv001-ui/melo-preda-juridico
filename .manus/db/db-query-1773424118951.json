@@ -1,0 +1,9 @@
+{
+  "query": "DELETE FROM estrategias WHERE processoId = 30001 AND processoId NOT IN (SELECT id FROM processos);\nDELETE FROM documentos WHERE clienteId = 90002 AND clienteId NOT IN (SELECT id FROM clientes);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute DELETE FROM estrategias WHERE processoId = 30001 AND processoId NOT IN (SELECT id FROM processos);\nDELETE FROM documentos WHERE clienteId = 90002 AND clienteId NOT IN (SELECT id FROM clientes);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 81
+}

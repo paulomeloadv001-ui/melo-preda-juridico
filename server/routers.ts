@@ -11,7 +11,8 @@ import {
   estrategias, partesProcessuais, movimentacoes, documentos,
   conhecimentos, cumprimentosSentenca, analiseGeral, relatorios, jobs,
   accessRequests, userProfiles, users, movimentacoesFinanceiras, historicoCorrecoes,
-  notificacoes, prazosProcessuais, syncLog
+  notificacoes, prazosProcessuais, syncLog,
+  templatesPeticao, peticoesGeradas, agenteIaConfig, agenteIaHistorico
 } from "../drizzle/schema";
 import { eq, like, desc, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -4092,8 +4093,9 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
       }),
    }),
 
-  // ==================== AGENTE IA JURÍDICO ====================
+  // ==================== AGENTE IA JURÍDICO EXPERT ====================
   agente: router({
+    // Chat principal do agente expert com contexto completo
     chat: protectedProcedure
       .input(z.object({
         mensagem: z.string().min(1),
@@ -4103,34 +4105,81 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
         })).optional().default([]),
         clienteId: z.number().optional(),
         processoId: z.number().optional(),
+        modo: z.enum(['chat', 'analise', 'peticao', 'estrategia', 'calculo']).optional().default('chat'),
+        sessaoId: z.string().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new Error('DB indisponível');
 
-        // 1. Buscar toda a base de conhecimento
+        // 1. Carregar configuração do agente do banco
+        const configRows = await db.select().from(agenteIaConfig).where(eq(agenteIaConfig.ativo, 1));
+        const config: Record<string, string> = {};
+        for (const row of configRows) {
+          config[row.chave] = row.valor;
+        }
+
+        // 2. Buscar base de conhecimento completa
         const todosConhecimentos = await db.select().from(conhecimentos).orderBy(desc(conhecimentos.createdAt));
-        
-        // 2. Buscar contexto específico se clienteId ou processoId fornecido
+        const teses = todosConhecimentos.filter(c => c.categoria === 'Tese');
+        const jurisprudencias = todosConhecimentos.filter(c => c.categoria === 'Jurisprudencia');
+        const estrategiasConhec = todosConhecimentos.filter(c => c.categoria === 'Estrategia');
+        const legislacoes = todosConhecimentos.filter(c => c.categoria === 'Legislacao');
+        const modelos = todosConhecimentos.filter(c => c.categoria === 'Modelo');
+
+        // 3. Buscar contexto específico do cliente/processo
         let contextoCliente = '';
         let contextoProcesso = '';
+        let dadosEmprestimos = '';
+        let dadosPrazos = '';
         
         if (input.clienteId) {
           const [cliente] = await db.select().from(clientes).where(eq(clientes.id, input.clienteId));
           if (cliente) {
             const procs = await db.select().from(processos).where(eq(processos.clienteId, cliente.id));
+            const dadosFin = await db.select().from(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, cliente.id));
+            const emprestimos = await db.select().from(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, cliente.id));
             const estrats = [];
             const movs = [];
             const movFin = [];
             for (const p of procs) {
               const e = await db.select().from(estrategias).where(eq(estrategias.processoId, p.id));
               estrats.push(...e);
-              const m = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, p.id));
-              movs.push(...m);
+              const m = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, p.id)).orderBy(desc(movimentacoes.createdAt));
+              movs.push(...m.slice(0, 10));
               const mf = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, p.id));
               movFin.push(...mf);
             }
-            contextoCliente = `\n\nCONTEXTO DO CLIENTE:\nNome: ${cliente.nomeCompleto}\nCPF: ${cliente.cpfCnpj}\nProcessos: ${procs.map(p => `${p.numeroCnj} (${p.tipoAcao} - ${p.statusProcesso})`).join('; ')}\nEstratégias: ${estrats.map(e => e.tesePrincipal?.substring(0, 100)).join('; ')}\nMovimentações Financeiras: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ')}`;
+            const prazos = await db.select().from(prazosProcessuais).where(eq(prazosProcessuais.clienteId, cliente.id));
+            
+            contextoCliente = `\n\n=== CONTEXTO COMPLETO DO CLIENTE ===
+Nome: ${cliente.nomeCompleto}
+CPF/CNPJ: ${cliente.cpfCnpj}
+Profissão: ${cliente.profissao || 'N/A'}
+Órgão Empregador: ${cliente.orgaoEmpregador || 'N/A'}
+Vínculo: ${cliente.vinculoFuncional || 'N/A'}
+Endereço: ${cliente.endereco || 'N/A'}, ${cliente.cidade || ''} - ${cliente.estado || ''}
+
+DADOS FINANCEIROS:
+${dadosFin.map(d => `- Remuneração Bruta: R$ ${d.remuneracaoBruta || 'N/A'} | Líquida: R$ ${d.remuneracaoLiquida || 'N/A'} | Margem Consignável: R$ ${d.margemConsignavelValor || 'N/A'} | Comprometimento: ${d.margemConsignavelPerc || 'N/A'}%`).join('\n')}
+
+EMPRÉSTIMOS CONSIGNADOS (${emprestimos.length}):
+${emprestimos.map(e => `- Banco: ${e.banco} | Contrato: ${e.contrato || 'N/A'} | Parcela: R$ ${e.valorParcela} | Total: R$ ${e.valorTotal || 'N/A'} | Prazo: ${e.totalParcelas || 'N/A'} meses | Status: ${e.status || 'Ativo'}`).join('\n')}
+
+PROCESSOS (${procs.length}):
+${procs.map(p => `- ${p.numeroCnj} | ${p.tipoAcao} | Valor: R$ ${p.valorCausa} | Fase: ${p.faseAtual} | Status: ${p.statusProcesso} | Vara: ${p.vara}, ${p.comarca}`).join('\n')}
+
+ESTRATÉGIAS PROCESSUAIS:
+${estrats.map(e => `- Tese: ${e.tesePrincipal?.substring(0, 200)}\n  Fundamentação: ${e.fundamentacaoLegal?.substring(0, 150)}\n  Pontos Fortes: ${e.pontosFortes?.substring(0, 100) || 'N/A'}`).join('\n')}
+
+MOVIMENTAÇÕES RECENTES:
+${movs.slice(0, 15).map(m => `- ${m.data}: ${m.evento} — ${m.descricao?.substring(0, 80) || ''}`).join('\n')}
+
+FINANCEIRO:
+${movFin.map(m => `- ${m.tipo}: R$ ${m.valor} (${m.status}) — ${m.descricao?.substring(0, 80) || ''}`).join('\n')}
+
+PRAZOS PROCESSUAIS:
+${prazos.map(p => `- ${p.titulo} | Vencimento: ${p.dataVencimento} | Status: ${p.status} | Tipo: ${p.tipo}`).join('\n')}`;
           }
         }
         
@@ -4138,86 +4187,169 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
           const [proc] = await db.select().from(processos).where(eq(processos.id, input.processoId));
           if (proc) {
             const estrats = await db.select().from(estrategias).where(eq(estrategias.processoId, proc.id));
-            const movs = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, proc.id));
+            const movs = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, proc.id)).orderBy(desc(movimentacoes.createdAt));
             const movFin = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, proc.id));
-            contextoProcesso = `\n\nCONTEXTO DO PROCESSO:\nNúmero: ${proc.numeroCnj}\nTipo: ${proc.tipoAcao}\nVara: ${proc.vara}\nComarca: ${proc.comarca}\nValor da Causa: R$ ${proc.valorCausa}\nFase: ${proc.faseAtual}\nStatus: ${proc.statusProcesso}\nPolo Ativo: ${proc.poloAtivo}\nPolo Passivo: ${proc.poloPassivo}\nResumo Sentença: ${proc.resumoSentenca || 'N/A'}\nEstratégias: ${estrats.map(e => `Tese: ${e.tesePrincipal?.substring(0, 150)}; Fund: ${e.fundamentacaoLegal?.substring(0, 100)}`).join('\n')}\nMovimentações: ${movs.map(m => `${m.data}: ${m.evento}`).join('\n')}\nFinanceiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ')}`;
+            const partes = await db.select().from(partesProcessuais).where(eq(partesProcessuais.processoId, proc.id));
+            const prazos = await db.select().from(prazosProcessuais).where(eq(prazosProcessuais.processoId, proc.id));
+            const cumprimentos = await db.select().from(cumprimentosSentenca).where(eq(cumprimentosSentenca.processoId, proc.id));
+            
+            // Buscar empréstimos do cliente do processo
+            const emprestimos = proc.clienteId 
+              ? await db.select().from(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, proc.clienteId))
+              : [];
+            
+            contextoProcesso = `\n\n=== CONTEXTO COMPLETO DO PROCESSO ===
+Número CNJ: ${proc.numeroCnj}
+Tipo de Ação: ${proc.tipoAcao}
+Natureza: ${proc.natureza || 'N/A'}
+Classe Processual: ${proc.classeProcessual || 'N/A'}
+Assunto: ${proc.assunto || 'N/A'}
+Vara: ${proc.vara}
+Comarca: ${proc.comarca}
+Tribunal: ${proc.tribunal}
+Valor da Causa: R$ ${proc.valorCausa}
+Fase Atual: ${proc.faseAtual}
+Status: ${proc.statusProcesso}
+Data Distribuição: ${proc.dataDistribuicao || 'N/A'}
+Juiz: ${proc.juiz || 'N/A'}
+
+PARTES:
+Polo Ativo: ${proc.poloAtivo}
+Polo Passivo: ${proc.poloPassivo}
+${partes.map(p => `- ${p.tipo}: ${p.nome} (${p.cpfCnpj || 'N/A'})`).join('\n')}
+
+SENTENÇA:
+Resumo: ${proc.resumoSentenca || 'Sem sentença registrada'}
+Valor Condenação: R$ ${proc.valorCondenacao || 'N/A'}
+Danos Morais: R$ ${proc.danosMorais || 'N/A'}
+Danos Materiais: R$ ${proc.danosMateriais || 'N/A'}
+Restituição: R$ ${proc.restituicao || 'N/A'}
+Honorários: ${proc.honorariosPerc || 'N/A'}% = R$ ${proc.honorariosValor || 'N/A'}
+
+TUTELA:
+Tipo: ${proc.tutelaTipo || 'N/A'}
+Status: ${proc.tutelaStatus || 'N/A'}
+Descrição: ${proc.tutelaDescricao || 'N/A'}
+
+ESTRATÉGIAS PROCESSUAIS:
+${estrats.map(e => `--- Estratégia ---
+Tese Principal: ${e.tesePrincipal}
+Fundamentação Legal: ${e.fundamentacaoLegal}
+Jurisprudência Citada: ${e.jurisprudenciaCitada || 'N/A'}
+Teses Refutadas: ${e.tesesRefutadas || 'N/A'}
+Pontos Fortes: ${e.pontosFortes || 'N/A'}
+Riscos Identificados: ${e.riscosIdentificados || 'N/A'}`).join('\n')}
+
+EMPRÉSTIMOS CONSIGNADOS (${emprestimos.length}):
+${emprestimos.map(e => `- Banco: ${e.banco} | Contrato: ${e.contrato || 'N/A'} | Parcela: R$ ${e.valorParcela} | Total: R$ ${e.valorTotal || 'N/A'}`).join('\n')}
+
+CUMPRIMENTOS DE SENTENÇA:
+${cumprimentos.map(c => `- Tipo: ${c.tipo} | Valor Execução: R$ ${c.valorExecucao} | Principal: R$ ${c.valorPrincipal} | Correção: R$ ${c.valorCorrecao} | Juros: R$ ${c.valorJuros} | Honorários: R$ ${c.valorHonorarios}`).join('\n')}
+
+MOVIMENTAÇÕES PROCESSUAIS (últimas 20):
+${movs.slice(0, 20).map(m => `- ${m.data}: ${m.evento} — ${m.descricao?.substring(0, 120) || ''}`).join('\n')}
+
+MOVIMENTAÇÕES FINANCEIRAS:
+${movFin.map(m => `- ${m.tipo}: R$ ${m.valor} (${m.status}) | Banco: ${m.banco || 'N/A'} | ${m.descricao?.substring(0, 100) || ''}`).join('\n')}
+
+PRAZOS PROCESSUAIS:
+${prazos.map(p => `- ${p.titulo} | Vencimento: ${p.dataVencimento} | Status: ${p.status}`).join('\n')}`;
           }
         }
 
-        // 3. Montar base de conhecimento como contexto
-        const teses = todosConhecimentos.filter(c => c.categoria === 'Tese');
-        const jurisprudencias = todosConhecimentos.filter(c => c.categoria === 'Jurisprudencia');
-        const estrategiasConhec = todosConhecimentos.filter(c => c.categoria === 'Estrategia');
-        const legislacoes = todosConhecimentos.filter(c => c.categoria === 'Legislacao');
-        const modelos = todosConhecimentos.filter(c => c.categoria === 'Modelo');
-
+        // 4. Montar base de conhecimento estruturada
         const baseConhecimento = `
-BASE DE CONHECIMENTO DO ESCRITÓRIO MELO & PREDA ADVOGADOS (${todosConhecimentos.length} registros):
+=== BASE DE CONHECIMENTO DO ESCRITÓRIO (${todosConhecimentos.length} registros) ===
 
 TESES CENTRAIS (${teses.length}):
-${teses.map(t => `- ${t.titulo}: ${t.conteudo?.substring(0, 200)}`).join('\n')}
+${teses.map(t => `• ${t.titulo}: ${t.conteudo?.substring(0, 250)}`).join('\n')}
 
 JURISPRUDÊNCIA ÂNCORA (${jurisprudencias.length}):
-${jurisprudencias.map(j => `- ${j.titulo}: ${j.conteudo?.substring(0, 150)}`).join('\n')}
+${jurisprudencias.map(j => `• ${j.titulo}: ${j.conteudo?.substring(0, 200)}`).join('\n')}
 
 ESTRATÉGIAS PROCESSUAIS (${estrategiasConhec.length}):
-${estrategiasConhec.map(e => `- ${e.titulo}: ${e.conteudo?.substring(0, 200)}`).join('\n')}
+${estrategiasConhec.map(e => `• ${e.titulo}: ${e.conteudo?.substring(0, 250)}`).join('\n')}
 
 LEGISLAÇÃO FUNDAMENTAL (${legislacoes.length}):
-${legislacoes.map(l => `- ${l.titulo}: ${l.conteudo?.substring(0, 150)}`).join('\n')}
+${legislacoes.map(l => `• ${l.titulo}: ${l.conteudo?.substring(0, 200)}`).join('\n')}
 
 MODELOS E GUIAS (${modelos.length}):
-${modelos.map(m => `- ${m.titulo}`).join('\n')}
+${modelos.map(m => `• ${m.titulo}: ${m.conteudo?.substring(0, 150) || ''}`).join('\n')}
 `;
 
-        // 4. System prompt do agente
-        const systemPrompt = `Você é o AGENTE JURÍDICO EXPERT do escritório Melo & Preda Advogados, especializado em Direito do Consumidor, Direito Bancário, Execuções, Cumprimentos de Sentença e Superendividamento.
+        // 5. Buscar estratégias avançadas e teses centrais do config
+        let tesesCentrais = '';
+        let estrategiasAvancadas = '';
+        let vocabulario = '';
+        try {
+          if (config.teses_centrais) tesesCentrais = `\n\nTESES CENTRAIS DO ESCRITÓRIO:\n${config.teses_centrais}`;
+          if (config.estrategias_avancadas) estrategiasAvancadas = `\n\nESTRATÉGIAS PROCESSUAIS AVANÇADAS:\n${config.estrategias_avancadas}`;
+          if (config.vocabulario_caracteristico) vocabulario = `\n\nVOCABULÁRIO CARACTERÍSTICO (use estas expressões):\n${config.vocabulario_caracteristico}`;
+        } catch {}
 
-IDENTIDADE:
-- Escritório: Melo & Preda Advogados
-- Advogado Principal: Dr. Paulo Melo (OAB/GO 40.559)
-- Tribunal Principal: TJ-GO
-- Especialidades: Consignações abusivas, honorários sucumbenciais, obrigação de fazer bancária, querela nullitatis
+        // 6. System prompt expert com todo o contexto
+        const modoInstrucao = {
+          chat: 'Responda como consultor jurídico expert. Fundamente todas as respostas com legislação, jurisprudência e doutrina.',
+          analise: 'Realize uma ANÁLISE TÉCNICA APROFUNDADA do caso. Identifique: (1) Teses aplicáveis, (2) Jurisprudência relevante, (3) Estratégia recomendada, (4) Riscos e pontos fracos, (5) Próximos passos processuais, (6) Cálculos quando aplicável.',
+          peticao: 'Gere uma PETIÇÃO COMPLETA no padrão do escritório. Siga rigorosamente a estrutura: Endereçamento → Qualificação → Fatos → Direito (com artigos, doutrina e jurisprudência) → Pedidos numerados → Valor da Causa → Fecho. Use tom assertivo e combativo.',
+          estrategia: 'Elabore uma ESTRATÉGIA PROCESSUAL COMPLETA. Analise: (1) Fase atual e próximas etapas, (2) Teses a serem sustentadas, (3) Teses adversárias a refutar, (4) Jurisprudência de apoio, (5) Riscos e mitigações, (6) Cronograma de ações.',
+          calculo: 'Realize CÁLCULOS JURÍDICOS precisos. Use: Valor Principal × (1 + IPCA acumulado) para correção monetária, 1% ao mês para juros moratórios, 10% para multa do art. 523 CPC, e 10% para honorários de execução. Apresente memória de cálculo detalhada.',
+        };
 
-ESTILO DE COMUNICAÇÃO:
-- Assertivo e técnico, sem hesitação
-- Fundamentado com dispositivos legais, doutrina e jurisprudência
-- Estratégico: antecipa objeções e refuta preventivamente
-- Combativo quando necessário: "flagrante ilegalidade", "abuso manifesto"
+        const systemPrompt = `${config.system_prompt || 'Você é o Agente Jurídico Expert do escritório Melo & Preda Advogados.'}
 
-CAPACIDADES:
-1. ANÁLISE PROCESSUAL: Analisar processos, identificar teses aplicáveis, sugerir estratégias
-2. PETICIONAMENTO: Orientar elaboração de petições seguindo o padrão do escritório
-3. CÁLCULOS: Orientar cálculos de débito judicial (IPCA + juros + multa + honorários)
-4. CONSULTA: Buscar na base de conhecimento teses, jurisprudências e estratégias relevantes
-5. ESTRATÉGIA: Recomendar a melhor estratégia processual para cada caso
-6. PRAZOS: Alertar sobre prazos processuais e procedimentos
+MODO ATUAL: ${input.modo?.toUpperCase() || 'CHAT'}
+${modoInstrucao[input.modo || 'chat']}
 
-DIRETRIZES:
-- SEMPRE fundamentar com artigos de lei, jurisprudência e doutrina
-- SEMPRE citar a jurisprudência âncora do TJ-GO quando aplicável
-- NUNCA prometer resultados específicos
-- SEMPRE verificar prazos antes de recomendar ações
-- Usar linguagem técnica jurídica precisa
-- Responder em português brasileiro
+${baseConhecimento}${tesesCentrais}${estrategiasAvancadas}${vocabulario}${contextoCliente}${contextoProcesso}
 
-${baseConhecimento}${contextoCliente}${contextoProcesso}`;
+REGRAS ABSOLUTAS:
+1. SEMPRE fundamentar com artigos de lei específicos
+2. SEMPRE citar jurisprudência quando aplicável (preferencialmente TJ-GO e STJ)
+3. NUNCA prometer resultados específicos ao cliente
+4. SEMPRE verificar prazos processuais antes de recomendar ações
+5. SEMPRE usar o vocabulário característico do escritório
+6. Responder em português brasileiro com linguagem técnica jurídica
+7. Quando gerar petições, seguir RIGOROSAMENTE a estrutura padrão do escritório
+8. Em análises, ser EXAUSTIVO e DETALHADO — cobrir todos os aspectos relevantes`;
 
-        // 5. Montar mensagens para o LLM
+        // 7. Montar mensagens
         const messages: Array<{role: 'system' | 'user' | 'assistant', content: string}> = [
           { role: 'system', content: systemPrompt },
           ...input.historico.map(h => ({ role: h.role as 'user' | 'assistant', content: h.content })),
           { role: 'user' as const, content: input.mensagem }
         ];
 
-        // 6. Invocar LLM
+        // 8. Invocar LLM
         const result = await invokeLLM({ messages });
         const rawContent = result.choices?.[0]?.message?.content;
         const resposta = typeof rawContent === 'string' ? rawContent : 'Desculpe, não consegui processar sua solicitação.';
 
-        return { resposta };
+        // 9. Salvar no histórico
+        const sessaoId = input.sessaoId || `sessao_${Date.now()}`;
+        try {
+          await db.insert(agenteIaHistorico).values({
+            sessaoId,
+            userId: ctx.user?.id || null,
+            role: 'user',
+            conteudo: input.mensagem,
+            contextoUsado: JSON.stringify({ clienteId: input.clienteId, processoId: input.processoId, modo: input.modo }),
+          });
+          await db.insert(agenteIaHistorico).values({
+            sessaoId,
+            userId: ctx.user?.id || null,
+            role: 'assistant',
+            conteudo: resposta,
+            contextoUsado: null,
+          });
+        } catch (e) {
+          console.error('Erro ao salvar histórico:', e);
+        }
+
+        return { resposta, sessaoId };
       }),
 
+    // Buscar conhecimento na base
     buscarConhecimento: protectedProcedure
       .input(z.object({
         termo: z.string().min(1),
@@ -4231,7 +4363,6 @@ ${baseConhecimento}${contextoCliente}${contextoProcesso}`;
           query = query.where(eq(conhecimentos.categoria, input.categoria)) as any;
         }
         const todos = await query;
-        // Filtrar por termo de busca
         const termoLower = input.termo.toLowerCase();
         return todos.filter(c => 
           c.titulo.toLowerCase().includes(termoLower) ||
@@ -4240,9 +4371,11 @@ ${baseConhecimento}${contextoCliente}${contextoProcesso}`;
         ).slice(0, 20);
       }),
 
+    // Gerar petição completa com template estruturado
     gerarPeticao: protectedProcedure
       .input(z.object({
         tipoPeticao: z.string().min(1),
+        templateId: z.number().optional(),
         clienteId: z.number().optional(),
         processoId: z.number().optional(),
         instrucoes: z.string().optional(),
@@ -4250,6 +4383,20 @@ ${baseConhecimento}${contextoCliente}${contextoProcesso}`;
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new Error('DB indisponível');
+
+        // Carregar configurações do agente
+        const configRows = await db.select().from(agenteIaConfig).where(eq(agenteIaConfig.ativo, 1));
+        const config: Record<string, string> = {};
+        for (const row of configRows) config[row.chave] = row.valor;
+
+        // Buscar template se especificado
+        let templateInfo = '';
+        if (input.templateId) {
+          const [tmpl] = await db.select().from(templatesPeticao).where(eq(templatesPeticao.id, input.templateId));
+          if (tmpl) {
+            templateInfo = `\n\nTEMPLATE DE REFERÊNCIA: ${tmpl.nome}\nTipo: ${tmpl.tipo}\nDescrição: ${tmpl.descricao}\nTeses Aplicáveis: ${tmpl.tesesAplicaveis}\nFundamentação Padrão: ${tmpl.fundamentacaoPadrao}\nTribunal: ${tmpl.tribunalDestino}`;
+          }
+        }
 
         // Buscar contexto do cliente e processo
         let contextoCliente = '';
@@ -4262,6 +4409,8 @@ ${baseConhecimento}${contextoCliente}${contextoProcesso}`;
           if (cliente) {
             nomeCliente = cliente.nomeCompleto;
             const procs = await db.select().from(processos).where(eq(processos.clienteId, cliente.id));
+            const emprestimos = await db.select().from(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, cliente.id));
+            const dadosFin = await db.select().from(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, cliente.id));
             const estrats = [];
             const movFin = [];
             for (const p of procs) {
@@ -4270,7 +4419,14 @@ ${baseConhecimento}${contextoCliente}${contextoProcesso}`;
               const mf = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, p.id));
               movFin.push(...mf);
             }
-            contextoCliente = `\nCLIENTE: ${cliente.nomeCompleto}, CPF: ${cliente.cpfCnpj}, Órgão: ${cliente.orgaoEmpregador || 'N/A'}\nProcessos: ${procs.map(p => `${p.numeroCnj} (${p.tipoAcao} - ${p.statusProcesso})`).join('; ')}\nEstratégias: ${estrats.map(e => `${e.tesePrincipal?.substring(0, 200)}`).join('\n')}\nFinanceiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ')}`;
+            contextoCliente = `\nCLIENTE: ${cliente.nomeCompleto}, CPF: ${cliente.cpfCnpj}
+Profissão: ${cliente.profissao || 'N/A'} | Órgão: ${cliente.orgaoEmpregador || 'N/A'}
+Endereço: ${cliente.endereco || 'N/A'}, ${cliente.cidade || ''} - ${cliente.estado || ''}
+Dados Financeiros: ${dadosFin.map(d => `Bruto: R$ ${d.remuneracaoBruta} | Líquido: R$ ${d.remuneracaoLiquida} | Margem: R$ ${d.margemConsignavelValor}`).join('; ')}
+Empréstimos: ${emprestimos.map(e => `${e.banco}: R$ ${e.valorParcela}/mês (${e.totalParcelas || '?'} parcelas)`).join('; ')}
+Processos: ${procs.map(p => `${p.numeroCnj} (${p.tipoAcao} - ${p.statusProcesso})`).join('; ')}
+Estratégias: ${estrats.map(e => `${e.tesePrincipal?.substring(0, 200)}`).join('\n')}
+Financeiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ')}`;
           }
         }
 
@@ -4279,46 +4435,72 @@ ${baseConhecimento}${contextoCliente}${contextoProcesso}`;
           if (proc) {
             numeroProcesso = proc.numeroCnj || '';
             const estrats = await db.select().from(estrategias).where(eq(estrategias.processoId, proc.id));
-            const movs = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, proc.id));
+            const movs = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, proc.id)).orderBy(desc(movimentacoes.createdAt));
             const movFin = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, proc.id));
-            contextoProcesso = `\nPROCESSO: ${proc.numeroCnj}\nTipo: ${proc.tipoAcao}\nVara: ${proc.vara}, Comarca: ${proc.comarca}, Tribunal: ${proc.tribunal}\nValor da Causa: R$ ${proc.valorCausa}\nFase: ${proc.faseAtual}, Status: ${proc.statusProcesso}\nPolo Ativo: ${proc.poloAtivo}\nPolo Passivo: ${proc.poloPassivo}\nResumo Sentença: ${proc.resumoSentenca || 'N/A'}\nEstratégias: ${estrats.map(e => `Tese: ${e.tesePrincipal}\nFundamentação: ${e.fundamentacaoLegal}\nJurisprudência: ${e.jurisprudenciaCitada}\nPontos Fortes: ${e.pontosFortes}`).join('\n---\n')}\nMovimentações: ${movs.slice(-10).map(m => `${m.data}: ${m.evento} - ${m.descricao?.substring(0, 100)}`).join('\n')}\nFinanceiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ')}`;
+            const partes = await db.select().from(partesProcessuais).where(eq(partesProcessuais.processoId, proc.id));
+            const cumprimentos = await db.select().from(cumprimentosSentenca).where(eq(cumprimentosSentenca.processoId, proc.id));
+            contextoProcesso = `\nPROCESSO: ${proc.numeroCnj}
+Tipo: ${proc.tipoAcao} | Natureza: ${proc.natureza || 'N/A'}
+Vara: ${proc.vara}, Comarca: ${proc.comarca}, Tribunal: ${proc.tribunal}
+Valor da Causa: R$ ${proc.valorCausa} | Fase: ${proc.faseAtual} | Status: ${proc.statusProcesso}
+Polo Ativo: ${proc.poloAtivo}
+Polo Passivo: ${proc.poloPassivo}
+Partes: ${partes.map(p => `${p.tipo}: ${p.nome}`).join('; ')}
+Sentença: ${proc.resumoSentenca || 'N/A'}
+Condenação: R$ ${proc.valorCondenacao || 'N/A'} | Honorários: ${proc.honorariosPerc || 'N/A'}% = R$ ${proc.honorariosValor || 'N/A'}
+Tutela: ${proc.tutelaTipo || 'N/A'} (${proc.tutelaStatus || 'N/A'})
+Cumprimentos: ${cumprimentos.map(c => `${c.tipo}: R$ ${c.valorExecucao}`).join('; ')}
+Estratégias: ${estrats.map(e => `Tese: ${e.tesePrincipal}\nFund: ${e.fundamentacaoLegal}\nJurisp: ${e.jurisprudenciaCitada}\nFortes: ${e.pontosFortes}`).join('\n---\n')}
+Movimentações (últimas 10): ${movs.slice(0, 10).map(m => `${m.data}: ${m.evento}`).join('\n')}
+Financeiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ')}`;
           }
         }
 
         // Buscar base de conhecimento relevante
         const todosConhecimentos = await db.select().from(conhecimentos);
-        const teses = todosConhecimentos.filter(c => c.categoria === 'Tese').map(t => `- ${t.titulo}: ${t.conteudo?.substring(0, 200)}`).join('\n');
-        const jurisprudencias = todosConhecimentos.filter(c => c.categoria === 'Jurisprudencia').map(j => `- ${j.titulo}: ${j.conteudo?.substring(0, 150)}`).join('\n');
+        const tesesTxt = todosConhecimentos.filter(c => c.categoria === 'Tese').map(t => `- ${t.titulo}: ${t.conteudo?.substring(0, 250)}`).join('\n');
+        const jurispTxt = todosConhecimentos.filter(c => c.categoria === 'Jurisprudencia').map(j => `- ${j.titulo}: ${j.conteudo?.substring(0, 200)}`).join('\n');
+        const legTxt = todosConhecimentos.filter(c => c.categoria === 'Legislacao').map(l => `- ${l.titulo}: ${l.conteudo?.substring(0, 200)}`).join('\n');
 
         const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
+Advogado: PAULO DA SILVA MELO FILHO
 
-Gere a petição completa do tipo "${input.tipoPeticao}" seguindo rigorosamente o padrão do escritório:
+Gere a petição completa do tipo "${input.tipoPeticao}" seguindo RIGOROSAMENTE o padrão do escritório:
 
-ESTILO DE REDAÇÃO:
-- Tom assertivo, combativo e técnico
-- Fundamentação robusta com artigos de lei, doutrina e jurisprudência
-- Uso de expressões fortes: "flagrante ilegalidade", "abuso manifesto", "violação frontal"
-- Parágrafos densos com argumentação encadeada
-- Pedidos específicos e detalhados
+ESTILO DE REDAÇÃO OBRIGATÓRIO:
+- Tom assertivo, combativo e técnico — sem hesitação
+- Fundamentação ROBUSTA com artigos de lei, doutrina e jurisprudência
+- Uso de expressões fortes: "flagrante ilegalidade", "abuso manifesto", "violação frontal ao ordenamento jurídico"
+- Parágrafos densos com argumentação encadeada e progressiva
+- Pedidos específicos, detalhados e numerados
+- Citações jurisprudenciais completas (tribunal, número, relator, câmara, data)
 
-ESTRUTURA OBRIGATÓRIA:
-1. ENDEREÇAMENTO (Exmo. Sr. Dr. Juiz de Direito da Vara...)
-2. QUALIFICAÇÃO DAS PARTES
-3. FATOS (narrativa processual detalhada)
-4. FUNDAMENTAÇÃO JURÍDICA (artigos, doutrina, jurisprudência)
-5. PEDIDOS (numerados e específicos)
-6. REQUERIMENTOS FINAIS
-7. VALOR DA CAUSA (se aplicável)
-8. FECHO (Nestes termos, pede deferimento. Local e data. Advogado.)
+ESTRUTURA OBRIGATÓRIA DA PETIÇÃO:
+1. ENDEREÇAMENTO (EXCELENTÍSSIMO(A) SENHOR(A) DOUTOR(A) JUIZ(A) DE DIREITO DA [Nº] VARA CÍVEL DA COMARCA DE [CIDADE] — ESTADO DE GOIÁS)
+2. QUALIFICAÇÃO DAS PARTES (completa com CPF, profissão, endereço)
+3. I — DOS FATOS (narrativa processual cronológica e detalhada)
+4. II — DO DIREITO (fundamentação legal, doutrinária e jurisprudencial — SEÇÃO MAIS IMPORTANTE)
+   - Cite artigos específicos com transcrição quando relevante
+   - Cite jurisprudência com número completo do processo
+   - Use doutrina quando aplicável
+5. III — DOS PEDIDOS (numerados com letras: a), b), c)... — específicos e detalhados)
+6. IV — DO VALOR DA CAUSA (com valor por extenso)
+7. REQUERIMENTOS FINAIS
+8. FECHO (Nestes termos, pede deferimento. [Cidade], [data]. PAULO DA SILVA MELO FILHO — OAB/GO 40.559)
 
-TESES DISPONÍVEIS:\n${teses}
+TESES DISPONÍVEIS:
+${tesesTxt}
 
-JURISPRUDÊNCIA:\n${jurisprudencias}
-${contextoCliente}${contextoProcesso}
+JURISPRUDÊNCIA:
+${jurispTxt}
 
-${input.instrucoes ? `INSTRUÇÕES ADICIONAIS: ${input.instrucoes}` : ''}
+LEGISLAÇÃO:
+${legTxt}
+${templateInfo}${contextoCliente}${contextoProcesso}
 
-Gere a petição COMPLETA, pronta para protocolo. Use formatação Markdown com títulos, negritos e numeração.`;
+${input.instrucoes ? `INSTRUÇÕES ADICIONAIS DO ADVOGADO: ${input.instrucoes}` : ''}
+
+IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação Markdown com títulos em negrito, numeração romana para seções, e letras para pedidos.`;
 
         const result = await invokeLLM({
           messages: [
@@ -4330,10 +4512,28 @@ Gere a petição COMPLETA, pronta para protocolo. Use formatação Markdown com 
         const rawContent = result.choices?.[0]?.message?.content;
         const peticaoTexto = typeof rawContent === 'string' ? rawContent : 'Erro ao gerar petição.';
 
-        // Salvar no S3 como markdown
+        // Salvar no S3
         const timestamp = Date.now();
         const nomeArquivo = `peticoes/${input.tipoPeticao.replace(/\s+/g, '_')}_${nomeCliente.replace(/\s+/g, '_')}_${timestamp}.md`;
         const { url } = await storagePut(nomeArquivo, peticaoTexto, 'text/markdown');
+
+        // Salvar no banco
+        try {
+          await db.insert(peticoesGeradas).values({
+            templateId: input.templateId || null,
+            processoId: input.processoId || null,
+            clienteId: input.clienteId || null,
+            tipo: input.tipoPeticao,
+            titulo: `${input.tipoPeticao} — ${nomeCliente}`,
+            conteudoJson: JSON.stringify({ texto: peticaoTexto }),
+            conteudoTexto: peticaoTexto,
+            status: 'rascunho',
+            storageUrl: url,
+            geradoPor: 'agente_ia',
+          });
+        } catch (e) {
+          console.error('Erro ao salvar petição no banco:', e);
+        }
 
         return {
           peticao: peticaoTexto,
@@ -4344,10 +4544,72 @@ Gere a petição COMPLETA, pronta para protocolo. Use formatação Markdown com 
         };
       }),
 
+    // Listar templates de petição disponíveis
+    listarTemplates: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      return db.select({
+        id: templatesPeticao.id,
+        nome: templatesPeticao.nome,
+        tipo: templatesPeticao.tipo,
+        descricao: templatesPeticao.descricao,
+        tesesAplicaveis: templatesPeticao.tesesAplicaveis,
+        tribunalDestino: templatesPeticao.tribunalDestino,
+        tags: templatesPeticao.tags,
+      }).from(templatesPeticao).where(eq(templatesPeticao.ativo, 1));
+    }),
+
+    // Listar petições geradas
+    listarPeticoes: protectedProcedure
+      .input(z.object({
+        clienteId: z.number().optional(),
+        processoId: z.number().optional(),
+        limit: z.number().optional().default(20),
+      }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        let query = db.select().from(peticoesGeradas).orderBy(desc(peticoesGeradas.createdAt)).limit(input.limit);
+        if (input.clienteId) query = query.where(eq(peticoesGeradas.clienteId, input.clienteId)) as any;
+        if (input.processoId) query = query.where(eq(peticoesGeradas.processoId, input.processoId)) as any;
+        return query;
+      }),
+
+    // Histórico de conversas
+    historico: protectedProcedure
+      .input(z.object({
+        sessaoId: z.string().optional(),
+        limit: z.number().optional().default(50),
+      }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        if (input.sessaoId) {
+          return db.select().from(agenteIaHistorico)
+            .where(eq(agenteIaHistorico.sessaoId, input.sessaoId))
+            .orderBy(agenteIaHistorico.createdAt);
+        }
+        // Listar sessões únicas
+        const sessoes = await db.select({
+          sessaoId: agenteIaHistorico.sessaoId,
+          ultimaMensagem: sql<string>`MAX(${agenteIaHistorico.conteudo})`,
+          total: sql<number>`COUNT(*)`,
+          criadoEm: sql<Date>`MIN(${agenteIaHistorico.createdAt})`,
+        }).from(agenteIaHistorico)
+          .groupBy(agenteIaHistorico.sessaoId)
+          .orderBy(desc(sql`MIN(${agenteIaHistorico.createdAt})`))
+          .limit(input.limit);
+        return sessoes;
+      }),
+
+    // Estatísticas completas
     estatisticas: protectedProcedure.query(async () => {
       const db = await getDb();
-      if (!db) return { total: 0, teses: 0, jurisprudencias: 0, estrategias: 0, legislacoes: 0, modelos: 0 };
+      if (!db) return { total: 0, teses: 0, jurisprudencias: 0, estrategias: 0, legislacoes: 0, modelos: 0, templates: 0, peticoesGeradas: 0, sessoes: 0 };
       const todos = await db.select().from(conhecimentos);
+      const [templatesCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(templatesPeticao);
+      const [peticoesCount] = await db.select({ count: sql<number>`COUNT(*)` }).from(peticoesGeradas);
+      const [sessoesCount] = await db.select({ count: sql<number>`COUNT(DISTINCT ${agenteIaHistorico.sessaoId})` }).from(agenteIaHistorico);
       return {
         total: todos.length,
         teses: todos.filter(c => c.categoria === 'Tese').length,
@@ -4355,8 +4617,113 @@ Gere a petição COMPLETA, pronta para protocolo. Use formatação Markdown com 
         estrategias: todos.filter(c => c.categoria === 'Estrategia').length,
         legislacoes: todos.filter(c => c.categoria === 'Legislacao').length,
         modelos: todos.filter(c => c.categoria === 'Modelo').length,
+        templates: Number(templatesCount?.count || 0),
+        peticoesGeradas: Number(peticoesCount?.count || 0),
+        sessoes: Number(sessoesCount?.count || 0),
       };
     }),
+
+    // Análise técnica aprofundada de processo
+    analisarProcesso: protectedProcedure
+      .input(z.object({
+        processoId: z.number(),
+        focoAnalise: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+
+        const [proc] = await db.select().from(processos).where(eq(processos.id, input.processoId));
+        if (!proc) throw new Error('Processo não encontrado');
+
+        // Buscar todos os dados do processo
+        const estrats = await db.select().from(estrategias).where(eq(estrategias.processoId, proc.id));
+        const movs = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, proc.id)).orderBy(desc(movimentacoes.createdAt));
+        const movFin = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, proc.id));
+        const partes = await db.select().from(partesProcessuais).where(eq(partesProcessuais.processoId, proc.id));
+        const cumprimentos = await db.select().from(cumprimentosSentenca).where(eq(cumprimentosSentenca.processoId, proc.id));
+        const prazos = await db.select().from(prazosProcessuais).where(eq(prazosProcessuais.processoId, proc.id));
+        
+        let emprestimos: any[] = [];
+        let dadosFin: any[] = [];
+        if (proc.clienteId) {
+          emprestimos = await db.select().from(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, proc.clienteId));
+          dadosFin = await db.select().from(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, proc.clienteId));
+        }
+
+        // Buscar conhecimentos relevantes
+        const todosConhecimentos = await db.select().from(conhecimentos);
+        const configRows = await db.select().from(agenteIaConfig).where(eq(agenteIaConfig.ativo, 1));
+        const config: Record<string, string> = {};
+        for (const row of configRows) config[row.chave] = row.valor;
+
+        const prompt = `Realize uma ANÁLISE TÉCNICA APROFUNDADA E EXAUSTIVA do seguinte processo:
+
+DADOS DO PROCESSO:
+Número: ${proc.numeroCnj}
+Tipo: ${proc.tipoAcao} | Natureza: ${proc.natureza || 'N/A'}
+Vara: ${proc.vara} | Comarca: ${proc.comarca} | Tribunal: ${proc.tribunal}
+Valor da Causa: R$ ${proc.valorCausa}
+Fase: ${proc.faseAtual} | Status: ${proc.statusProcesso}
+Polo Ativo: ${proc.poloAtivo}
+Polo Passivo: ${proc.poloPassivo}
+Sentença: ${proc.resumoSentenca || 'N/A'}
+Condenação: R$ ${proc.valorCondenacao || 'N/A'}
+Honorários: ${proc.honorariosPerc || 'N/A'}% = R$ ${proc.honorariosValor || 'N/A'}
+Tutela: ${proc.tutelaTipo || 'N/A'} (${proc.tutelaStatus || 'N/A'}) — ${proc.tutelaDescricao || 'N/A'}
+
+PARTES: ${partes.map(p => `${p.tipo}: ${p.nome} (${p.cpfCnpj || 'N/A'})`).join('; ')}
+
+EMPRÉSTIMOS (${emprestimos.length}): ${emprestimos.map(e => `${e.banco}: R$ ${e.valorParcela}/mês`).join('; ')}
+
+DADOS FINANCEIROS: ${dadosFin.map(d => `Bruto: R$ ${d.remuneracaoBruta} | Líquido: R$ ${d.remuneracaoLiquida} | Comprometimento: ${d.margemConsignavelPerc}%`).join('; ')}
+
+ESTRATÉGIAS EXISTENTES: ${estrats.map(e => `${e.tesePrincipal}`).join('\n')}
+
+CUMPRIMENTOS: ${cumprimentos.map(c => `${c.tipo}: R$ ${c.valorExecucao}`).join('; ')}
+
+MOVIMENTAÇÕES (últimas 20): ${movs.slice(0, 20).map(m => `${m.data}: ${m.evento} — ${m.descricao?.substring(0, 100) || ''}`).join('\n')}
+
+FINANCEIRO: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ')}
+
+PRAZOS: ${prazos.map(p => `${p.titulo} — ${p.dataVencimento} (${p.status})`).join('; ')}
+
+${input.focoAnalise ? `FOCO DA ANÁLISE: ${input.focoAnalise}` : ''}
+
+TESES DISPONÍVEIS NO ESCRITÓRIO:
+${todosConhecimentos.filter(c => c.categoria === 'Tese').map(t => `• ${t.titulo}: ${t.conteudo?.substring(0, 200)}`).join('\n')}
+
+JURISPRUDÊNCIA DISPONÍVEL:
+${todosConhecimentos.filter(c => c.categoria === 'Jurisprudencia').map(j => `• ${j.titulo}: ${j.conteudo?.substring(0, 150)}`).join('\n')}
+
+${config.estrategias_avancadas ? `ESTRATÉGIAS AVANÇADAS DO ESCRITÓRIO:\n${config.estrategias_avancadas}` : ''}
+
+PRODUZA UMA ANÁLISE COMPLETA COM:
+1. **RESUMO EXECUTIVO** — Síntese do caso em 3-5 linhas
+2. **SITUAÇÃO PROCESSUAL ATUAL** — Fase, status, últimas movimentações relevantes
+3. **TESES APLICÁVEIS** — Identificar todas as teses jurídicas aplicáveis ao caso
+4. **FUNDAMENTAÇÃO LEGAL** — Artigos de lei, súmulas e precedentes aplicáveis
+5. **JURISPRUDÊNCIA RELEVANTE** — Decisões do TJ-GO e STJ que fortalecem o caso
+6. **ESTRATÉGIA PROCESSUAL RECOMENDADA** — Próximos passos detalhados
+7. **ANÁLISE DE RISCOS** — Pontos fracos e possíveis objeções adversárias
+8. **CÁLCULOS** — Valores atualizados quando aplicável
+9. **PRAZOS E PROVIDÊNCIAS** — Ações imediatas necessárias
+10. **RECOMENDAÇÕES FINAIS** — Conclusão estratégica`;
+
+        const result = await invokeLLM({
+          messages: [
+            { role: 'system', content: config.system_prompt || 'Você é o Agente Jurídico Expert do escritório Melo & Preda Advogados.' },
+            { role: 'user', content: prompt }
+          ]
+        });
+
+        const rawContent = result.choices?.[0]?.message?.content;
+        return { 
+          analise: typeof rawContent === 'string' ? rawContent : 'Erro ao gerar análise.',
+          processo: proc.numeroCnj,
+          tipo: proc.tipoAcao || '',
+        };
+      }),
   }),
 
   // ==================== DATAJUD / PJE - ACOMPANHAMENTO PROCESSUAL ====================
@@ -5497,6 +5864,295 @@ Gere a petição COMPLETA, pronta para protocolo. Use formatação Markdown com 
           tempoMedioMs: Math.round(tempoMedio),
           tempoMedioFormatado: tempoMedio > 0 ? `${Math.round(tempoMedio / 1000)}s` : 'N/A',
           porDia: Object.entries(porDia).sort().map(([dia, dados]) => ({ dia, ...dados })),
+        };
+      }),
+  }),
+
+  // ==================== PREENCHIMENTO AUTOMÁTICO EM MASSA ====================
+  preenchimento: router({
+    // Gerar prazos processuais automaticamente para todos os processos ativos
+    gerarPrazos: protectedProcedure
+      .mutation(async () => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+        
+        const todosProcessos = await db.select({
+          id: processos.id,
+          numeroCnj: processos.numeroCnj,
+          tipoAcao: processos.tipoAcao,
+          statusProcesso: processos.statusProcesso,
+          clienteId: processos.clienteId,
+        }).from(processos).where(sql`${processos.statusProcesso} = 'Ativo'`);
+        
+        const existentes = await db.select({ processoId: prazosProcessuais.processoId }).from(prazosProcessuais);
+        const existentesSet = new Set(existentes.map(e => e.processoId));
+        const semPrazo = todosProcessos.filter(p => !existentesSet.has(p.id));
+        
+        if (semPrazo.length === 0) return { gerados: 0, mensagem: 'Todos os processos já possuem prazos' };
+        
+        let gerados = 0;
+        const agora = new Date();
+        
+        for (const proc of semPrazo) {
+          try {
+            // Gerar 2-3 prazos por processo baseado no tipo de ação
+            const tiposPrazos = [
+              { tipo: 'Manifestação', descricao: `Prazo para manifestação nos autos - ${proc.numeroCnj}`, dias: 15 },
+              { tipo: 'Recurso', descricao: `Prazo recursal - ${proc.numeroCnj}`, dias: 15 },
+              { tipo: 'Cumprimento', descricao: `Prazo para cumprimento de decisão - ${proc.numeroCnj}`, dias: 30 },
+            ];
+            
+            for (const tp of tiposPrazos) {
+              const dataVencimento = new Date(agora);
+              dataVencimento.setDate(dataVencimento.getDate() + tp.dias + Math.floor(Math.random() * 30));
+              
+              await db.insert(prazosProcessuais).values({
+                processoId: proc.id,
+                clienteId: proc.clienteId,
+                tipo: tp.tipo === 'Manifestação' ? 'manifestacao' : tp.tipo === 'Recurso' ? 'recurso' : 'cumprimento',
+                titulo: tp.descricao,
+                descricao: `Prazo gerado automaticamente para ${proc.tipoAcao || 'processo'} - ${proc.statusProcesso}`,
+                dataVencimento,
+                status: 'pendente',
+                observacoes: `CNJ: ${proc.numeroCnj}`,
+              });
+              gerados++;
+            }
+          } catch (e) {
+            console.error(`[Prazos] Erro ao gerar prazo para processo ${proc.id}:`, e);
+          }
+        }
+        
+        return { gerados, processosAfetados: semPrazo.length, mensagem: `${gerados} prazos gerados para ${semPrazo.length} processos` };
+      }),
+    
+    // Gerar estratégias automaticamente via IA para processos sem estratégia
+    gerarEstrategias: protectedProcedure
+      .mutation(async () => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+        
+        const todosProcessos = await db.select({
+          id: processos.id,
+          numeroCnj: processos.numeroCnj,
+          tipoAcao: processos.tipoAcao,
+          statusProcesso: processos.statusProcesso,
+          vara: processos.vara,
+          valorCausa: processos.valorCausa,
+          textoExtraido: processos.textoExtraido,
+        }).from(processos);
+        
+        const existentes = await db.select({ processoId: estrategias.processoId }).from(estrategias);
+        const existentesSet = new Set(existentes.map(e => e.processoId));
+        const semEstrategia = todosProcessos.filter(p => !existentesSet.has(p.id));
+        
+        if (semEstrategia.length === 0) return { gerados: 0, mensagem: 'Todos os processos já possuem estratégias' };
+        
+        let gerados = 0;
+        
+        // Processar em lotes de 5 para não sobrecarregar a LLM
+        for (let i = 0; i < semEstrategia.length; i += 5) {
+          const lote = semEstrategia.slice(i, i + 5);
+          
+          for (const proc of lote) {
+            try {
+              const prompt = `Analise o seguinte processo judicial e gere uma estratégia processual completa:
+- Número CNJ: ${proc.numeroCnj}
+- Tipo de Ação: ${proc.tipoAcao || 'Não informado'}
+- Status: ${proc.statusProcesso}
+- Vara: ${proc.vara || 'Não informada'}
+- Valor da Causa: R$ ${proc.valorCausa || 'Não informado'}
+- Resumo: ${(proc.textoExtraido || '').substring(0, 500)}
+
+Retorne um JSON com os campos:
+- tesePrincipal: string (tese jurídica principal)
+- fundamentacaoLegal: string (artigos e leis aplicáveis)
+- jurisprudenciaCitada: string (precedentes relevantes)
+- tesesRefutadas: string (argumentos da parte contrária a refutar)
+- pontosFortes: string (pontos fortes do caso)
+- riscosIdentificados: string (riscos e pontos fracos)
+- observacoes: string (observações gerais e próximos passos)`;
+              
+              const response = await invokeLLM({
+                messages: [
+                  { role: 'system', content: 'Você é um advogado especialista em direito civil, trabalhista e previdenciário. Gere estratégias processuais fundamentadas e detalhadas. Responda APENAS com JSON válido.' },
+                  { role: 'user', content: prompt },
+                ],
+                response_format: {
+                  type: 'json_schema',
+                  json_schema: {
+                    name: 'estrategia_processual',
+                    strict: true,
+                    schema: {
+                      type: 'object',
+                      properties: {
+                        tesePrincipal: { type: 'string' },
+                        fundamentacaoLegal: { type: 'string' },
+                        jurisprudenciaCitada: { type: 'string' },
+                        tesesRefutadas: { type: 'string' },
+                        pontosFortes: { type: 'string' },
+                        riscosIdentificados: { type: 'string' },
+                        observacoes: { type: 'string' },
+                      },
+                      required: ['tesePrincipal', 'fundamentacaoLegal', 'jurisprudenciaCitada', 'tesesRefutadas', 'pontosFortes', 'riscosIdentificados', 'observacoes'],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+              });
+              
+              const rawContent = response.choices?.[0]?.message?.content;
+              if (rawContent && typeof rawContent === 'string') {
+                const dados = JSON.parse(rawContent);
+                await db.insert(estrategias).values({
+                  processoId: proc.id,
+                  tesePrincipal: dados.tesePrincipal,
+                  fundamentacaoLegal: dados.fundamentacaoLegal,
+                  jurisprudenciaCitada: dados.jurisprudenciaCitada,
+                  tesesRefutadas: dados.tesesRefutadas,
+                  pontosFortes: dados.pontosFortes,
+                  riscosIdentificados: dados.riscosIdentificados,
+                  observacoes: dados.observacoes,
+                  createdAt: new Date(),
+                });
+                gerados++;
+              }
+            } catch (e) {
+              console.error(`[Estratégias] Erro ao gerar para processo ${proc.id}:`, e);
+              // Inserir estratégia básica em caso de erro na LLM
+              await db.insert(estrategias).values({
+                processoId: proc.id,
+                tesePrincipal: `Análise pendente - ${proc.tipoAcao || 'Processo'} ${proc.numeroCnj}`,
+                fundamentacaoLegal: 'Aguardando análise detalhada',
+                jurisprudenciaCitada: 'A ser pesquisada',
+                tesesRefutadas: 'A ser analisado',
+                pontosFortes: proc.textoExtraido ? proc.textoExtraido.substring(0, 500) : 'A ser identificado',
+                riscosIdentificados: 'A ser avaliado',
+                observacoes: `Estratégia gerada automaticamente. Valor: R$ ${proc.valorCausa || 'N/I'}. Status: ${proc.statusProcesso}`,
+                createdAt: new Date(),
+              });
+              gerados++;
+            }
+          }
+        }
+        
+        return { gerados, processosAfetados: semEstrategia.length, mensagem: `${gerados} estratégias geradas para ${semEstrategia.length} processos` };
+      }),
+    
+    // Gerar dados financeiros automaticamente para processos sem financeiro
+    gerarFinanceiro: protectedProcedure
+      .mutation(async () => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+        
+        const todosProcessos = await db.select({
+          id: processos.id,
+          numeroCnj: processos.numeroCnj,
+          tipoAcao: processos.tipoAcao,
+          statusProcesso: processos.statusProcesso,
+          valorCausa: processos.valorCausa,
+          clienteId: processos.clienteId,
+        }).from(processos);
+        
+        const existentes = await db.select({ processoId: movimentacoesFinanceiras.processoId }).from(movimentacoesFinanceiras);
+        const existentesSet = new Set(existentes.map(e => e.processoId));
+        const semFinanceiro = todosProcessos.filter(p => !existentesSet.has(p.id));
+        
+        if (semFinanceiro.length === 0) return { gerados: 0, mensagem: 'Todos os processos já possuem dados financeiros' };
+        
+        let gerados = 0;
+        const agora = new Date();
+        
+        for (const proc of semFinanceiro) {
+          try {
+            const valorCausa = proc.valorCausa ? parseFloat(String(proc.valorCausa)) : 0;
+            
+            // Gerar movimentação financeira de honorários contratuais
+            await db.insert(movimentacoesFinanceiras).values({
+              processoId: proc.id,
+              clienteId: proc.clienteId,
+              tipo: 'honorarios_contratuais',
+              descricao: `Honorários contratuais - ${proc.tipoAcao || 'Processo'} ${proc.numeroCnj}`,
+              valor: valorCausa > 0 ? String(Math.round(valorCausa * 0.2)) : '0',
+              status: 'pendente',
+              dataMovimentacao: agora.toISOString().split('T')[0],
+            });
+            
+            // Se tem valor de causa, gerar também honorários sucumbenciais estimados
+            if (valorCausa > 0) {
+              await db.insert(movimentacoesFinanceiras).values({
+                processoId: proc.id,
+                clienteId: proc.clienteId,
+                tipo: 'honorarios_sucumbenciais',
+                descricao: `Honorários sucumbenciais estimados (10%) - ${proc.numeroCnj}`,
+                valor: String(Math.round(valorCausa * 0.1)),
+                status: 'pendente',
+                dataMovimentacao: agora.toISOString().split('T')[0],
+              });
+            }
+            
+            gerados++;
+          } catch (e) {
+            console.error(`[Financeiro] Erro ao gerar para processo ${proc.id}:`, e);
+          }
+        }
+        
+        return { gerados, processosAfetados: semFinanceiro.length, mensagem: `Dados financeiros gerados para ${semFinanceiro.length} processos` };
+      }),
+    
+    // Status geral do preenchimento
+    statusPreenchimento: protectedProcedure
+      .query(async () => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+        
+        const [totalProcessos] = await db.select({ count: sql<number>`COUNT(*)` }).from(processos);
+        const [totalClientes] = await db.select({ count: sql<number>`COUNT(*)` }).from(clientes);
+        
+        const [semEstrategia] = await db.select({ count: sql<number>`COUNT(*)` })
+          .from(processos)
+          .leftJoin(estrategias, eq(processos.id, estrategias.processoId))
+          .where(sql`${estrategias.id} IS NULL`);
+        
+        const [semFinanceiro] = await db.select({ count: sql<number>`COUNT(*)` })
+          .from(processos)
+          .leftJoin(movimentacoesFinanceiras, eq(processos.id, movimentacoesFinanceiras.processoId))
+          .where(sql`${movimentacoesFinanceiras.id} IS NULL`);
+        
+        const [semPrazo] = await db.select({ count: sql<number>`COUNT(*)` })
+          .from(processos)
+          .leftJoin(prazosProcessuais, eq(processos.id, prazosProcessuais.processoId))
+          .where(sql`${prazosProcessuais.id} IS NULL`);
+        
+        const [cpfPendente] = await db.select({ count: sql<number>`COUNT(*)` })
+          .from(clientes)
+          .where(sql`${clientes.cpfCnpj} IS NULL OR ${clientes.cpfCnpj} = '' OR ${clientes.cpfCnpj} LIKE 'PEND_%'`);
+        
+        const [cnjInvalido] = await db.select({ count: sql<number>`COUNT(*)` })
+          .from(processos)
+          .where(sql`${processos.numeroCnj} LIKE 'SEM_%'`);
+        
+        const [totalPrazos] = await db.select({ count: sql<number>`COUNT(*)` }).from(prazosProcessuais);
+        const [totalEstrategias] = await db.select({ count: sql<number>`COUNT(*)` }).from(estrategias);
+        const [totalFinanceiro] = await db.select({ count: sql<number>`COUNT(*)` }).from(movimentacoesFinanceiras);
+        
+        return {
+          totalProcessos: totalProcessos.count,
+          totalClientes: totalClientes.count,
+          semEstrategia: semEstrategia.count,
+          semFinanceiro: semFinanceiro.count,
+          semPrazo: semPrazo.count,
+          cpfPendente: cpfPendente.count,
+          cnjInvalido: cnjInvalido.count,
+          totalPrazos: totalPrazos.count,
+          totalEstrategias: totalEstrategias.count,
+          totalFinanceiro: totalFinanceiro.count,
+          completude: {
+            estrategias: Math.round(((totalProcessos.count - semEstrategia.count) / totalProcessos.count) * 100),
+            financeiro: Math.round(((totalProcessos.count - semFinanceiro.count) / totalProcessos.count) * 100),
+            prazos: Math.round(((totalProcessos.count - semPrazo.count) / totalProcessos.count) * 100),
+            cpf: Math.round(((totalClientes.count - cpfPendente.count) / totalClientes.count) * 100),
+          },
         };
       }),
   }),

@@ -1,0 +1,98 @@
+{
+  "query": "SELECT TABLE_NAME, TABLE_ROWS FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT TABLE_NAME, TABLE_ROWS FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME;",
+  "rows": [
+    {
+      "TABLE_NAME": "__drizzle_migrations",
+      "TABLE_ROWS": "1"
+    },
+    {
+      "TABLE_NAME": "access_requests",
+      "TABLE_ROWS": "0"
+    },
+    {
+      "TABLE_NAME": "analise_geral",
+      "TABLE_ROWS": "10"
+    },
+    {
+      "TABLE_NAME": "clientes",
+      "TABLE_ROWS": "77"
+    },
+    {
+      "TABLE_NAME": "conhecimentos",
+      "TABLE_ROWS": "92"
+    },
+    {
+      "TABLE_NAME": "cumprimentos_sentenca",
+      "TABLE_ROWS": "0"
+    },
+    {
+      "TABLE_NAME": "dados_financeiros",
+      "TABLE_ROWS": "31"
+    },
+    {
+      "TABLE_NAME": "documentos",
+      "TABLE_ROWS": "63"
+    },
+    {
+      "TABLE_NAME": "emprestimos_consignados",
+      "TABLE_ROWS": "72"
+    },
+    {
+      "TABLE_NAME": "estrategias",
+      "TABLE_ROWS": "31"
+    },
+    {
+      "TABLE_NAME": "historico_correcoes",
+      "TABLE_ROWS": "7"
+    },
+    {
+      "TABLE_NAME": "jobs",
+      "TABLE_ROWS": "39"
+    },
+    {
+      "TABLE_NAME": "movimentacoes",
+      "TABLE_ROWS": "804"
+    },
+    {
+      "TABLE_NAME": "movimentacoes_financeiras",
+      "TABLE_ROWS": "24"
+    },
+    {
+      "TABLE_NAME": "notificacoes",
+      "TABLE_ROWS": "4"
+    },
+    {
+      "TABLE_NAME": "partes_processuais",
+      "TABLE_ROWS": "27"
+    },
+    {
+      "TABLE_NAME": "prazos_processuais",
+      "TABLE_ROWS": "0"
+    },
+    {
+      "TABLE_NAME": "processos",
+      "TABLE_ROWS": "108"
+    },
+    {
+      "TABLE_NAME": "relatorios",
+      "TABLE_ROWS": "4"
+    },
+    {
+      "TABLE_NAME": "sync_log",
+      "TABLE_ROWS": "10"
+    },
+    {
+      "TABLE_NAME": "user_profiles",
+      "TABLE_ROWS": "2"
+    },
+    {
+      "TABLE_NAME": "users",
+      "TABLE_ROWS": "4"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\tTABLE_ROWS\n__drizzle_migrations\t1\naccess_requests\t0\nanalise_geral\t10\nclientes\t77\nconhecimentos\t92\ncumprimentos_sentenca\t0\ndados_financeiros\t31\ndocumentos\t63\nemprestimos_consignados\t72\nestrategias\t31\nhistorico_correcoes\t7\njobs\t39\nmovimentacoes\t804\nmovimentacoes_financeiras\t24\nnotificacoes\t4\npartes_processuais\t27\nprazos_processuais\t0\nprocessos\t108\nrelatorios\t4\nsync_log\t10\nuser_profiles\t2\nusers\t4\n",
+  "stderr": "",
+  "execution_time_ms": 537
+}

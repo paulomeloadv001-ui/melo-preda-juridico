@@ -21,6 +21,7 @@ import AcompanhamentoPJe from "./pages/AcompanhamentoPJe";
 import Integracao from "./pages/Integracao";
 import Enriquecimento from "./pages/Enriquecimento";
 import Metricas from "./pages/Metricas";
+import PreenchimentoDB from "./pages/PreenchimentoDB";
 
 function Router() {
   return (
@@ -47,6 +48,7 @@ function Router() {
             <Route path="/integracao" component={Integracao} />
             <Route path="/enriquecimento" component={Enriquecimento} />
             <Route path="/metricas" component={Metricas} />
+            <Route path="/preenchimento" component={PreenchimentoDB} />
             <Route path="/acessos" component={GestaoAcessos} />
             <Route path="/404" component={NotFound} />
             <Route component={NotFound} />

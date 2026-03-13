@@ -24,7 +24,7 @@ import {
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
-import { LayoutDashboard, Users, Upload, Download, BookOpen, LogOut, PanelLeft, Scale, Shield, FileBarChart, ListChecks, ShieldCheck, Bell, Clock, AlertTriangle, DollarSign, FileText, CheckCircle, X, Trash2, Brain, Calendar, Globe, ArrowRightLeft, UserCheck, TrendingUp } from "lucide-react";
+import { LayoutDashboard, Users, Upload, Download, BookOpen, LogOut, PanelLeft, Scale, Shield, FileBarChart, ListChecks, ShieldCheck, Bell, Clock, AlertTriangle, DollarSign, FileText, CheckCircle, X, Trash2, Brain, Calendar, Globe, ArrowRightLeft, UserCheck, TrendingUp, Database } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -61,6 +61,7 @@ const menuGroups = [
       { icon: Shield, label: "Correção / Deduplicação", path: "/correcao" },
       { icon: UserCheck, label: "Enriquecimento Cadastral", path: "/enriquecimento" },
       { icon: Download, label: "Exportação em Massa", path: "/exportacao" },
+      { icon: Database, label: "Preenchimento BD", path: "/preenchimento" },
     ]
   },
   {

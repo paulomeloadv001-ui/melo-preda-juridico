@@ -303,3 +303,41 @@
 - [x] MELHORIA: Sidebar - reorganizado com 5 categorias (Principal, Processos, Análise & IA, Ferramentas, Sistema)
 - [x] MELHORIA: Dashboard - seção de atividade recente com 6 indicadores dinâmicos
 - [x] MELHORIA: Relatórios - integração em tempo real com dados importados (já implementado nos 6 tipos)
+- [x] AUDITORIA FLUXO: Verificar schema completo - 22 tabelas, 1397+ registros, 3 órfãos encontrados
+- [x] AUDITORIA FLUXO: Verificar integridade referencial - 3 órfãos (1 cliente, 1 estratégia, 1 documento)
+- [ ] AUDITORIA FLUXO: Testar fluxo Upload → Extração IA → Cliente → Processo → Conhecimentos → Estratégias
+- [ ] AUDITORIA FLUXO: Verificar fluxo financeiro completo (honorários, cumprimentos, empréstimos, movimentações)
+- [ ] AUDITORIA FLUXO: Verificar fluxo de relatórios (6 tipos) com dados reais
+- [ ] AUDITORIA FLUXO: Verificar exportação em massa (JSON, CSV, individual)
+- [ ] AUDITORIA FLUXO: Corrigir todos os bugs e inconsistências encontrados
+- [ ] AUDITORIA FLUXO: Garantir sequência lógica de ponta a ponta sem interrupções
+- [ ] AGENTE IA COMPLETO: Extrair skill-v4 e mapear todos os conhecimentos do escritório
+- [ ] AGENTE IA COMPLETO: Fixar system prompt com expertise total (teses, estratégias, peticionamento, jurisprudência)
+- [ ] AGENTE IA COMPLETO: Integrar base de conhecimentos completa + processos + estratégias no contexto do agente
+- [ ] AGENTE IA COMPLETO: Opções de análise processual técnica aprofundada nos moldes do escritório
+- [ ] AGENTE IA COMPLETO: Banco de petições com todos os tipos (Querela Nullitatis, Cumprimento, Embargos, Recursos)
+- [ ] AGENTE IA COMPLETO: Consulta de teses, fundamentações e jurisprudência por processo
+- [ ] AGENTE IA COMPLETO: Reescrever frontend com todas as opções de consulta e geração
+- [ ] AGENTE IA COMPLETO: Exportar conhecimentos para uso no servidor externo
+- [ ] AGENTE IA COMPLETO: Testes e validação completa
+- [x] Criar tabelas templates_peticao, peticoes_geradas, agente_ia_config, agente_ia_historico no banco de dados
+- [x] Importar 5 templates de petição do skill-v4 para o banco (Agravo, Cumprimento Provisório, Querela Nullitatis, Obrigação de Fazer, Embargos)
+- [x] Importar 10 configurações do agente IA (system_prompt, teses_centrais, estratégias_avançadas, vocabulário, etc.)
+- [x] Importar 92 conhecimentos jurídicos do skill-v4 (teses, jurisprudência, estratégias, legislação, modelos)
+- [x] Importar 86 estratégias processuais do skill-v4
+- [x] Backend: Agente IA Expert com 5 modos de operação (chat, análise, petição, estratégia, cálculo)
+- [x] Backend: Chat com contexto completo do cliente e processo (empréstimos, financeiro, movimentações, prazos)
+- [x] Backend: Geração de petição completa com templates estruturados e armazenamento S3
+- [x] Backend: Análise técnica aprofundada de processo com 10 seções obrigatórias
+- [x] Backend: Histórico de conversas com sessões persistentes
+- [x] Backend: Estatísticas completas incluindo templates, petições geradas e sessões
+- [x] Backend: Listagem de templates e petições geradas
+- [x] Frontend: Interface expert redesenhada com seletor de modo de operação
+- [x] Frontend: Sugestões contextuais por modo (chat, análise, petição, estratégia, cálculo)
+- [x] Frontend: Painel lateral com 4 abas (Ações, Busca, Petições, Templates)
+- [x] Frontend: Dialog de análise técnica aprofundada com foco customizável
+- [x] Frontend: Dialog de geração de petição com seleção de template
+- [x] Frontend: Listagem de petições geradas com download
+- [x] Frontend: Listagem de templates disponíveis com botão "Usar Template"
+- [x] Frontend: Atalhos expert (teses centrais, jurisprudência âncora, estratégias avançadas, legislação, cálculos, checklist)
+- [x] Testes unitários: 12 testes do agente expert passando (estatísticas, templates, petições, histórico, modos, sessões)

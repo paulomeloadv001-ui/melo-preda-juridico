@@ -1,0 +1,18 @@
+{
+  "query": "SELECT \n  (SELECT COUNT(*) FROM estrategias e LEFT JOIN processos p ON e.processoId = p.id WHERE p.id IS NULL) as estrategias_orfas,\n  (SELECT COUNT(*) FROM documentos d LEFT JOIN clientes c ON d.clienteId = c.id WHERE c.id IS NULL) as docs_orfaos,\n  (SELECT COUNT(*) FROM processos WHERE numeroCnj LIKE 'SEM_%') as cnj_invalidos,\n  (SELECT COUNT(*) FROM processos p LEFT JOIN estrategias e ON p.id = e.processoId WHERE e.id IS NULL) as processos_sem_estrategia,\n  (SELECT COUNT(*) FROM processos p LEFT JOIN movimentacoes_financeiras mf ON p.id = mf.processoId WHERE mf.id IS NULL) as processos_sem_financeiro,\n  (SELECT COUNT(*) FROM prazos_processuais) as total_prazos;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT \n  (SELECT COUNT(*) FROM estrategias e LEFT JOIN processos p ON e.processoId = p.id WHERE p.id IS NULL) as estrategias_orfas,\n  (SELECT COUNT(*) FROM documentos d LEFT JOIN clientes c ON d.clienteId = c.id WHERE c.id IS NULL) as docs_orfaos,\n  (SELECT COUNT(*) FROM processos WHERE numeroCnj LIKE 'SEM_%') as cnj_invalidos,\n  (SELECT COUNT(*) FROM processos p LEFT JOIN estrategias e ON p.id = e.processoId WHERE e.id IS NULL) as processos_sem_estrategia,\n  (SELECT COUNT(*) FROM processos p LEFT JOIN movimentacoes_financeiras mf ON p.id = mf.processoId WHERE mf.id IS NULL) as processos_sem_financeiro,\n  (SELECT COUNT(*) FROM prazos_processuais) as total_prazos;",
+  "rows": [
+    {
+      "estrategias_orfas": "0",
+      "docs_orfaos": "0",
+      "cnj_invalidos": "11",
+      "processos_sem_estrategia": "83",
+      "processos_sem_financeiro": "91",
+      "total_prazos": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "estrategias_orfas\tdocs_orfaos\tcnj_invalidos\tprocessos_sem_estrategia\tprocessos_sem_financeiro\ttotal_prazos\n0\t0\t11\t83\t91\t0\n",
+  "stderr": "",
+  "execution_time_ms": 65
+}
