@@ -22,7 +22,7 @@ import {
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
-import { LayoutDashboard, Users, Upload, Download, BookOpen, LogOut, PanelLeft, Scale, Shield, FileBarChart, ListChecks, ShieldCheck, Bell, Clock, AlertTriangle, DollarSign, FileText, CheckCircle, X, Trash2 } from "lucide-react";
+import { LayoutDashboard, Users, Upload, Download, BookOpen, LogOut, PanelLeft, Scale, Shield, FileBarChart, ListChecks, ShieldCheck, Bell, Clock, AlertTriangle, DollarSign, FileText, CheckCircle, X, Trash2, Brain } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -36,6 +36,7 @@ const menuItems = [
   { icon: Download, label: "Exportação em Massa", path: "/exportacao" },
   { icon: FileBarChart, label: "Relatórios", path: "/relatorios" },
   { icon: Shield, label: "Correção / Deduplicação", path: "/correcao" },
+  { icon: Brain, label: "Agente Jurídico IA", path: "/agente" },
   { icon: ListChecks, label: "Fila de Trabalhos", path: "/jobs" },
   { icon: ShieldCheck, label: "Gestão de Acessos", path: "/acessos" },
 ];

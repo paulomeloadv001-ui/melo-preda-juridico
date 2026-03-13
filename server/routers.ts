@@ -4052,9 +4052,171 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
         }
         return { notificacoesEnviadas, prazosVencidos, totalVerificados: pendentes.length };
       }),
+   }),
+
+  // ==================== AGENTE IA JURÍDICO ====================
+  agente: router({
+    chat: protectedProcedure
+      .input(z.object({
+        mensagem: z.string().min(1),
+        historico: z.array(z.object({
+          role: z.enum(['user', 'assistant']),
+          content: z.string()
+        })).optional().default([]),
+        clienteId: z.number().optional(),
+        processoId: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+
+        // 1. Buscar toda a base de conhecimento
+        const todosConhecimentos = await db.select().from(conhecimentos).orderBy(desc(conhecimentos.createdAt));
+        
+        // 2. Buscar contexto específico se clienteId ou processoId fornecido
+        let contextoCliente = '';
+        let contextoProcesso = '';
+        
+        if (input.clienteId) {
+          const [cliente] = await db.select().from(clientes).where(eq(clientes.id, input.clienteId));
+          if (cliente) {
+            const procs = await db.select().from(processos).where(eq(processos.clienteId, cliente.id));
+            const estrats = [];
+            const movs = [];
+            const movFin = [];
+            for (const p of procs) {
+              const e = await db.select().from(estrategias).where(eq(estrategias.processoId, p.id));
+              estrats.push(...e);
+              const m = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, p.id));
+              movs.push(...m);
+              const mf = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, p.id));
+              movFin.push(...mf);
+            }
+            contextoCliente = `\n\nCONTEXTO DO CLIENTE:\nNome: ${cliente.nomeCompleto}\nCPF: ${cliente.cpfCnpj}\nProcessos: ${procs.map(p => `${p.numeroCnj} (${p.tipoAcao} - ${p.statusProcesso})`).join('; ')}\nEstratégias: ${estrats.map(e => e.tesePrincipal?.substring(0, 100)).join('; ')}\nMovimentações Financeiras: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ')}`;
+          }
+        }
+        
+        if (input.processoId) {
+          const [proc] = await db.select().from(processos).where(eq(processos.id, input.processoId));
+          if (proc) {
+            const estrats = await db.select().from(estrategias).where(eq(estrategias.processoId, proc.id));
+            const movs = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, proc.id));
+            const movFin = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, proc.id));
+            contextoProcesso = `\n\nCONTEXTO DO PROCESSO:\nNúmero: ${proc.numeroCnj}\nTipo: ${proc.tipoAcao}\nVara: ${proc.vara}\nComarca: ${proc.comarca}\nValor da Causa: R$ ${proc.valorCausa}\nFase: ${proc.faseAtual}\nStatus: ${proc.statusProcesso}\nPolo Ativo: ${proc.poloAtivo}\nPolo Passivo: ${proc.poloPassivo}\nResumo Sentença: ${proc.resumoSentenca || 'N/A'}\nEstratégias: ${estrats.map(e => `Tese: ${e.tesePrincipal?.substring(0, 150)}; Fund: ${e.fundamentacaoLegal?.substring(0, 100)}`).join('\n')}\nMovimentações: ${movs.map(m => `${m.data}: ${m.evento}`).join('\n')}\nFinanceiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ')}`;
+          }
+        }
+
+        // 3. Montar base de conhecimento como contexto
+        const teses = todosConhecimentos.filter(c => c.categoria === 'Tese');
+        const jurisprudencias = todosConhecimentos.filter(c => c.categoria === 'Jurisprudencia');
+        const estrategiasConhec = todosConhecimentos.filter(c => c.categoria === 'Estrategia');
+        const legislacoes = todosConhecimentos.filter(c => c.categoria === 'Legislacao');
+        const modelos = todosConhecimentos.filter(c => c.categoria === 'Modelo');
+
+        const baseConhecimento = `
+BASE DE CONHECIMENTO DO ESCRITÓRIO MELO & PREDA ADVOGADOS (${todosConhecimentos.length} registros):
+
+TESES CENTRAIS (${teses.length}):
+${teses.map(t => `- ${t.titulo}: ${t.conteudo?.substring(0, 200)}`).join('\n')}
+
+JURISPRUDÊNCIA ÂNCORA (${jurisprudencias.length}):
+${jurisprudencias.map(j => `- ${j.titulo}: ${j.conteudo?.substring(0, 150)}`).join('\n')}
+
+ESTRATÉGIAS PROCESSUAIS (${estrategiasConhec.length}):
+${estrategiasConhec.map(e => `- ${e.titulo}: ${e.conteudo?.substring(0, 200)}`).join('\n')}
+
+LEGISLAÇÃO FUNDAMENTAL (${legislacoes.length}):
+${legislacoes.map(l => `- ${l.titulo}: ${l.conteudo?.substring(0, 150)}`).join('\n')}
+
+MODELOS E GUIAS (${modelos.length}):
+${modelos.map(m => `- ${m.titulo}`).join('\n')}
+`;
+
+        // 4. System prompt do agente
+        const systemPrompt = `Você é o AGENTE JURÍDICO EXPERT do escritório Melo & Preda Advogados, especializado em Direito do Consumidor, Direito Bancário, Execuções, Cumprimentos de Sentença e Superendividamento.
+
+IDENTIDADE:
+- Escritório: Melo & Preda Advogados
+- Advogado Principal: Dr. Paulo Melo (OAB/GO 40.559)
+- Tribunal Principal: TJ-GO
+- Especialidades: Consignações abusivas, honorários sucumbenciais, obrigação de fazer bancária, querela nullitatis
+
+ESTILO DE COMUNICAÇÃO:
+- Assertivo e técnico, sem hesitação
+- Fundamentado com dispositivos legais, doutrina e jurisprudência
+- Estratégico: antecipa objeções e refuta preventivamente
+- Combativo quando necessário: "flagrante ilegalidade", "abuso manifesto"
+
+CAPACIDADES:
+1. ANÁLISE PROCESSUAL: Analisar processos, identificar teses aplicáveis, sugerir estratégias
+2. PETICIONAMENTO: Orientar elaboração de petições seguindo o padrão do escritório
+3. CÁLCULOS: Orientar cálculos de débito judicial (IPCA + juros + multa + honorários)
+4. CONSULTA: Buscar na base de conhecimento teses, jurisprudências e estratégias relevantes
+5. ESTRATÉGIA: Recomendar a melhor estratégia processual para cada caso
+6. PRAZOS: Alertar sobre prazos processuais e procedimentos
+
+DIRETRIZES:
+- SEMPRE fundamentar com artigos de lei, jurisprudência e doutrina
+- SEMPRE citar a jurisprudência âncora do TJ-GO quando aplicável
+- NUNCA prometer resultados específicos
+- SEMPRE verificar prazos antes de recomendar ações
+- Usar linguagem técnica jurídica precisa
+- Responder em português brasileiro
+
+${baseConhecimento}${contextoCliente}${contextoProcesso}`;
+
+        // 5. Montar mensagens para o LLM
+        const messages: Array<{role: 'system' | 'user' | 'assistant', content: string}> = [
+          { role: 'system', content: systemPrompt },
+          ...input.historico.map(h => ({ role: h.role as 'user' | 'assistant', content: h.content })),
+          { role: 'user' as const, content: input.mensagem }
+        ];
+
+        // 6. Invocar LLM
+        const result = await invokeLLM({ messages });
+        const rawContent = result.choices?.[0]?.message?.content;
+        const resposta = typeof rawContent === 'string' ? rawContent : 'Desculpe, não consegui processar sua solicitação.';
+
+        return { resposta };
+      }),
+
+    buscarConhecimento: protectedProcedure
+      .input(z.object({
+        termo: z.string().min(1),
+        categoria: z.enum(['Tese', 'Jurisprudencia', 'Estrategia', 'Legislacao', 'Modelo']).optional(),
+      }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        let query = db.select().from(conhecimentos);
+        if (input.categoria) {
+          query = query.where(eq(conhecimentos.categoria, input.categoria)) as any;
+        }
+        const todos = await query;
+        // Filtrar por termo de busca
+        const termoLower = input.termo.toLowerCase();
+        return todos.filter(c => 
+          c.titulo.toLowerCase().includes(termoLower) ||
+          (c.conteudo && c.conteudo.toLowerCase().includes(termoLower)) ||
+          (c.tags && c.tags.toLowerCase().includes(termoLower))
+        ).slice(0, 20);
+      }),
+
+    estatisticas: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { total: 0, teses: 0, jurisprudencias: 0, estrategias: 0, legislacoes: 0, modelos: 0 };
+      const todos = await db.select().from(conhecimentos);
+      return {
+        total: todos.length,
+        teses: todos.filter(c => c.categoria === 'Tese').length,
+        jurisprudencias: todos.filter(c => c.categoria === 'Jurisprudencia').length,
+        estrategias: todos.filter(c => c.categoria === 'Estrategia').length,
+        legislacoes: todos.filter(c => c.categoria === 'Legislacao').length,
+        modelos: todos.filter(c => c.categoria === 'Modelo').length,
+      };
+    }),
   }),
 });
-
 // ==================== PROCESSADOR DE FILA DE JOBS ====================
 async function processarFilaJobs(jobIds: number[]) {
   const db = await getDb();

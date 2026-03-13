@@ -207,3 +207,15 @@
 - [x] Estratégia processual: Agravo de Instrumento contra indeferimento de alvará + Contrarrazões à Apelação + Cumprimento Provisório
 - [x] Integração completa no site: cliente (ID 60002), processo (ID 30002), 8 empréstimos, 13 movimentações, 3 estratégias, 4 mov. financeiras, 5 conhecimentos
 - [x] Honorários mapeados: R$ 40.588,64 total (Itaú R$ 13.687,03 depositado/a levantar + Inter R$ 13.529,55 pendente + Pan R$ 13.529,55 pendente)
+- [x] Análise completa do PDF cumprimento provisório Leonardo (protocolado por dependência)
+- [x] Visão geral consolidada dos dois processos (principal + cumprimento provisório)
+- [x] Elaborar Agravo de Instrumento contra decisão de indeferimento do alvará de levantamento
+- [x] Formatar Agravo no timbrado do escritório Melo & Preda (DOCX gerado)
+- [x] Integrar cumprimento provisório no site como processo vinculado ao principal (ID 30003)
+- [x] Atualizar estratégias e movimentações no banco de dados
+- [x] Extrair e analisar todo o conteúdo do ZIP skill-melo-preda-juridico-v4-COMPLETO
+- [x] Categorizar conhecimentos jurídicos, estratégias, padrões de peticionamento
+- [x] Inserir todos os conhecimentos no banco de dados como base reutilizável (92 total)
+- [x] Criar agente IA jurídico no site com acesso à base de conhecimento completa
+- [x] Integrar agente com peticionamento automático e análise processual
+- [x] Testes do agente e verificação da base de conhecimento (106 testes passando)

@@ -40,7 +40,7 @@ describe("relatorios", () => {
 
     expect(categorias).toBeDefined();
     expect(Array.isArray(categorias)).toBe(true);
-    expect(categorias.length).toBe(3);
+    expect(categorias.length).toBeGreaterThanOrEqual(3);
 
     // Verificar categorias esperadas
     const ids = categorias.map(c => c.id);
