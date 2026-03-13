@@ -47,7 +47,8 @@ export default function AgenteJuridico() {
   const [showPeticaoDialog, setShowPeticaoDialog] = useState(false);
   const [tipoPeticao, setTipoPeticao] = useState("");
   const [instrucoesPeticao, setInstrucoesPeticao] = useState("");
-  const [peticaoGerada, setPeticaoGerada] = useState<{peticao: string; url: string; tipoPeticao: string; cliente: string; processo: string} | null>(null);
+  const [peticaoGerada, setPeticaoGerada] = useState<{peticao: string; url: string; docxUrl?: string; tipoPeticao: string; cliente: string; processo: string} | null>(null);
+  const exportarDocxMutation = trpc.agente.exportarDocx.useMutation();
   const [copied, setCopied] = useState(false);
   const [showAnaliseDialog, setShowAnaliseDialog] = useState(false);
   const [analiseResult, setAnaliseResult] = useState<{analise: string; processo: string; tipo: string} | null>(null);
@@ -823,7 +824,7 @@ export default function AgenteJuridico() {
                   {copied ? 'Copiado!' : 'Copiar'}
                 </Button>
                 <Button
-                  className="bg-amber-600 hover:bg-amber-700"
+                  variant="outline"
                   onClick={() => {
                     const blob = new Blob([peticaoGerada.peticao], { type: 'text/markdown' });
                     const url = URL.createObjectURL(blob);
@@ -832,10 +833,37 @@ export default function AgenteJuridico() {
                     a.download = `${peticaoGerada.tipoPeticao.replace(/\s+/g, '_')}_${peticaoGerada.cliente.replace(/\s+/g, '_')}.md`;
                     a.click();
                     URL.revokeObjectURL(url);
-                    toast.success("Download iniciado!");
+                    toast.success("Download MD iniciado!");
                   }}
                 >
-                  <Download className="h-4 w-4 mr-1" />Download
+                  <Download className="h-4 w-4 mr-1" />Markdown
+                </Button>
+                <Button
+                  className="bg-amber-600 hover:bg-amber-700"
+                  disabled={exportarDocxMutation.isPending}
+                  onClick={async () => {
+                    if (peticaoGerada.docxUrl) {
+                      window.open(peticaoGerada.docxUrl, '_blank');
+                      toast.success("Download DOCX iniciado!");
+                      return;
+                    }
+                    try {
+                      const result = await exportarDocxMutation.mutateAsync({
+                        conteudo: peticaoGerada.peticao,
+                        titulo: `${peticaoGerada.tipoPeticao} \u2014 ${peticaoGerada.cliente}`,
+                      });
+                      if (result.docxUrl) {
+                        setPeticaoGerada({ ...peticaoGerada, docxUrl: result.docxUrl });
+                        window.open(result.docxUrl, '_blank');
+                        toast.success("DOCX com timbrado gerado e baixado!");
+                      }
+                    } catch (e) {
+                      toast.error("Erro ao gerar DOCX");
+                    }
+                  }}
+                >
+                  {exportarDocxMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileText className="h-4 w-4 mr-1" />}
+                  {exportarDocxMutation.isPending ? 'Gerando...' : 'DOCX Timbrado'}
                 </Button>
               </DialogFooter>
             </div>

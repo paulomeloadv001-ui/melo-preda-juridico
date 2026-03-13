@@ -341,3 +341,14 @@
 - [x] Frontend: Listagem de templates disponíveis com botão "Usar Template"
 - [x] Frontend: Atalhos expert (teses centrais, jurisprudência âncora, estratégias avançadas, legislação, cálculos, checklist)
 - [x] Testes unitários: 12 testes do agente expert passando (estatísticas, templates, petições, histórico, modos, sessões)
+- [x] Exportação de petições em DOCX com timbrado oficial do escritório Melo & Preda
+- [x] Integrar template DOCX com cabeçalho (brasão), rodapé e estilos de formatação
+- [x] Botão de download DOCX na interface de geração de petições
+- [x] API REST pública do Agente IA para consumo externo (chat, análise, petição, busca) - 10 endpoints testados
+- [x] Documentação da API REST com endpoints e exemplos (GET /api/v1/docs)
+- [x] Teste completo com caso real: análise técnica aprofundada de processo existente (Carlos Andrade)
+- [x] Teste completo com caso real: geração de petição completa com contexto do processo (Contrarrazões + Penhora Online)
+- [x] BUG: Corrigir barra lateral (sidebar) - letras e funções bagunçadas (nomes simplificados, largura 18rem, padding reduzido)
+- [x] TESTE PONTA A PONTA: Carlos Andrade - Obrigação de Fazer (Upload PDF → Extração IA → Banco → Análise → Petição → DOCX) ✅
+- [x] TESTE PONTA A PONTA: Carlos Andrade - Cumprimento de Sentença (Upload PDF → Extração IA → Banco → Análise → Petição → DOCX) ✅
+- [x] TESTE PONTA A PONTA: Testar via API REST (chat, análise, petição, DOCX) ✅ - 152 testes passando

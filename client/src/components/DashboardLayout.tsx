@@ -36,40 +36,40 @@ const menuGroups = [
     items: [
       { icon: LayoutDashboard, label: "Painel Geral", path: "/" },
       { icon: TrendingUp, label: "Métricas", path: "/metricas" },
+      { icon: Upload, label: "Upload", path: "/upload" },
+      { icon: Users, label: "Clientes", path: "/clientes" },
     ]
   },
   {
     label: "Processos",
     items: [
-      { icon: Upload, label: "Upload de Processos", path: "/upload" },
-      { icon: Users, label: "Clientes", path: "/clientes" },
-      { icon: Calendar, label: "Prazos Processuais", path: "/prazos" },
-      { icon: Globe, label: "Acompanhamento PJe", path: "/acompanhamento" },
+      { icon: Calendar, label: "Prazos", path: "/prazos" },
+      { icon: Globe, label: "Acompanhamento", path: "/acompanhamento" },
     ]
   },
   {
-    label: "Análise & IA",
+    label: "Inteligência",
     items: [
-      { icon: Brain, label: "Agente Jurídico IA", path: "/agente" },
-      { icon: BookOpen, label: "Conhecimentos", path: "/conhecimentos" },
+      { icon: Brain, label: "Agente IA", path: "/agente" },
+      { icon: BookOpen, label: "Base Jurídica", path: "/conhecimentos" },
       { icon: FileBarChart, label: "Relatórios", path: "/relatorios" },
     ]
   },
   {
     label: "Ferramentas",
     items: [
-      { icon: Shield, label: "Correção / Deduplicação", path: "/correcao" },
-      { icon: UserCheck, label: "Enriquecimento Cadastral", path: "/enriquecimento" },
-      { icon: Download, label: "Exportação em Massa", path: "/exportacao" },
-      { icon: Database, label: "Preenchimento BD", path: "/preenchimento" },
+      { icon: Shield, label: "Correção", path: "/correcao" },
+      { icon: UserCheck, label: "Enriquecer", path: "/enriquecimento" },
+      { icon: Download, label: "Exportar", path: "/exportacao" },
+      { icon: Database, label: "Preencher BD", path: "/preenchimento" },
     ]
   },
   {
     label: "Sistema",
     items: [
-      { icon: ListChecks, label: "Fila de Trabalhos", path: "/jobs" },
-      { icon: ArrowRightLeft, label: "Integração JUSCONSIG", path: "/integracao" },
-      { icon: ShieldCheck, label: "Gestão de Acessos", path: "/acessos" },
+      { icon: ListChecks, label: "Fila de Jobs", path: "/jobs" },
+      { icon: ArrowRightLeft, label: "JUSCONSIG", path: "/integracao" },
+      { icon: ShieldCheck, label: "Acessos", path: "/acessos" },
     ]
   },
 ];
@@ -78,8 +78,8 @@ const menuGroups = [
 const menuItems = menuGroups.flatMap(g => g.items);
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
-const DEFAULT_WIDTH = 260;
-const MIN_WIDTH = 200;
+const DEFAULT_WIDTH = 288;
+const MIN_WIDTH = 250;
 const MAX_WIDTH = 400;
 
 function getNotifIcon(tipo: string) {
@@ -422,13 +422,13 @@ function DashboardLayoutContent({
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="gap-0 overflow-y-auto">
+          <SidebarContent className="gap-0 overflow-y-auto scrollbar-thin">
             {menuGroups.map((group, gi) => (
-              <SidebarGroup key={gi} className="py-1">
-                <SidebarGroupLabel className="text-[10px] uppercase tracking-wider text-sidebar-foreground/40 px-4 py-1">
+              <SidebarGroup key={gi} className="py-0.5 px-1">
+                <SidebarGroupLabel className="text-[9px] uppercase tracking-widest text-sidebar-foreground/35 px-4 py-0.5 mb-0">
                   {group.label}
                 </SidebarGroupLabel>
-                <SidebarMenu className="px-2">
+                <SidebarMenu className="px-1 gap-0.5">
                   {group.items.map(item => {
                     const isActive = location === item.path;
                     return (
@@ -437,12 +437,12 @@ function DashboardLayoutContent({
                           isActive={isActive}
                           onClick={() => setLocation(item.path)}
                           tooltip={item.label}
-                          className="h-9 transition-all font-normal"
+                          className="h-8 transition-all font-normal text-[13px]"
                         >
                           <item.icon
-                            className={`h-4 w-4 ${isActive ? "text-[oklch(0.75_0.12_85)]" : ""}`}
+                            className={`h-4 w-4 shrink-0 ${isActive ? "text-[oklch(0.75_0.12_85)]" : ""}`}
                           />
-                          <span>{item.label}</span>
+                          <span className="truncate">{item.label}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     );

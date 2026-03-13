@@ -17,6 +17,7 @@ import {
 import { eq, like, desc, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
 import { storagePut, storageGet } from "./storage";
+import { gerarPeticaoDocx } from "./docxGenerator";
 
 // Helper: sanitize name for folder path
 function sanitizeName(name: string): string {
@@ -4512,10 +4513,24 @@ IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação M
         const rawContent = result.choices?.[0]?.message?.content;
         const peticaoTexto = typeof rawContent === 'string' ? rawContent : 'Erro ao gerar petição.';
 
-        // Salvar no S3
+        // Salvar no S3 (Markdown)
         const timestamp = Date.now();
         const nomeArquivo = `peticoes/${input.tipoPeticao.replace(/\s+/g, '_')}_${nomeCliente.replace(/\s+/g, '_')}_${timestamp}.md`;
         const { url } = await storagePut(nomeArquivo, peticaoTexto, 'text/markdown');
+
+        // Gerar DOCX com timbrado e salvar no S3
+        let docxUrl = '';
+        try {
+          const docxBuffer = await gerarPeticaoDocx(
+            peticaoTexto,
+            `${input.tipoPeticao} — ${nomeCliente}`
+          );
+          const docxNome = `peticoes/${input.tipoPeticao.replace(/\s+/g, '_')}_${nomeCliente.replace(/\s+/g, '_')}_${timestamp}.docx`;
+          const docxResult = await storagePut(docxNome, docxBuffer, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+          docxUrl = docxResult.url;
+        } catch (e) {
+          console.error('Erro ao gerar DOCX:', e);
+        }
 
         // Salvar no banco
         try {
@@ -4525,7 +4540,7 @@ IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação M
             clienteId: input.clienteId || null,
             tipo: input.tipoPeticao,
             titulo: `${input.tipoPeticao} — ${nomeCliente}`,
-            conteudoJson: JSON.stringify({ texto: peticaoTexto }),
+            conteudoJson: JSON.stringify({ texto: peticaoTexto, docxUrl }),
             conteudoTexto: peticaoTexto,
             status: 'rascunho',
             storageUrl: url,
@@ -4538,6 +4553,7 @@ IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação M
         return {
           peticao: peticaoTexto,
           url,
+          docxUrl,
           tipoPeticao: input.tipoPeticao,
           cliente: nomeCliente,
           processo: numeroProcesso,
@@ -4575,7 +4591,61 @@ IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação M
         return query;
       }),
 
-    // Histórico de conversas
+    // Exportar petição existente para DOCX com timbrado
+    exportarDocx: protectedProcedure
+      .input(z.object({
+        peticaoId: z.number().optional(),
+        conteudo: z.string().optional(),
+        titulo: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        let conteudo = input.conteudo || '';
+        let titulo = input.titulo || 'Peti\u00E7\u00E3o';
+
+        // Se peticaoId, buscar do banco
+        if (input.peticaoId) {
+          const db = await getDb();
+          if (db) {
+            const [pet] = await db.select().from(peticoesGeradas).where(eq(peticoesGeradas.id, input.peticaoId));
+            if (pet) {
+              conteudo = pet.conteudoTexto || '';
+              titulo = pet.titulo || titulo;
+              // Se já tem docxUrl, retornar direto
+              try {
+                const json = typeof pet.conteudoJson === 'string' ? JSON.parse(pet.conteudoJson) : (pet.conteudoJson as any) || {};
+                if (json.docxUrl) return { docxUrl: json.docxUrl as string, titulo };
+              } catch (_e) {}
+            }
+          }
+        }
+
+        if (!conteudo) throw new Error('Conte\u00FAdo da peti\u00E7\u00E3o n\u00E3o encontrado');
+
+        // Gerar DOCX
+        const docxBuffer = await gerarPeticaoDocx(conteudo, titulo);
+        const timestamp = Date.now();
+        const nomeArquivo = `peticoes/docx_${titulo.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50)}_${timestamp}.docx`;
+        const { url: docxUrl } = await storagePut(nomeArquivo, docxBuffer, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+        // Atualizar banco se peticaoId
+        if (input.peticaoId) {
+          const db = await getDb();
+          if (db) {
+            const [pet] = await db.select().from(peticoesGeradas).where(eq(peticoesGeradas.id, input.peticaoId));
+            if (pet) {
+              try {
+                const json = typeof pet.conteudoJson === 'string' ? JSON.parse(pet.conteudoJson) : (pet.conteudoJson as any) || {};
+                json.docxUrl = docxUrl;
+                await db.update(peticoesGeradas).set({ conteudoJson: JSON.stringify(json) }).where(eq(peticoesGeradas.id, input.peticaoId));
+              } catch (_e) {}
+            }
+          }
+        }
+
+        return { docxUrl, titulo };
+      }),
+
+    // Hist\u00f3rico de conversas
     historico: protectedProcedure
       .input(z.object({
         sessaoId: z.string().optional(),
