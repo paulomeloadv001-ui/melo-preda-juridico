@@ -1,0 +1,50 @@
+{
+  "query": "SELECT id, numeroCnj, tipoAcao, vara, comarca, assunto FROM processos WHERE tipoAcao IS NULL OR tipoAcao = '' OR tipoAcao = 'Não classificado' LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, numeroCnj, tipoAcao, vara, comarca, assunto FROM processos WHERE tipoAcao IS NULL OR tipoAcao = '' OR tipoAcao = 'Não classificado' LIMIT 5;",
+  "rows": [
+    {
+      "id": "60001",
+      "numeroCnj": "SEM_mmm17okl",
+      "tipoAcao": "NULL",
+      "vara": "NULL",
+      "comarca": "NULL",
+      "assunto": "NULL"
+    },
+    {
+      "id": "60002",
+      "numeroCnj": "SEM_mmm1861x",
+      "tipoAcao": "NULL",
+      "vara": "NULL",
+      "comarca": "NULL",
+      "assunto": "NULL"
+    },
+    {
+      "id": "60004",
+      "numeroCnj": "SEM_mmm26om5",
+      "tipoAcao": "NULL",
+      "vara": "NULL",
+      "comarca": "NULL",
+      "assunto": "NULL"
+    },
+    {
+      "id": "60005",
+      "numeroCnj": "SEM_mmm2xwjb",
+      "tipoAcao": "NULL",
+      "vara": "NULL",
+      "comarca": "NULL",
+      "assunto": "NULL"
+    },
+    {
+      "id": "60006",
+      "numeroCnj": "SEM_mmm2y29y",
+      "tipoAcao": "NULL",
+      "vara": "NULL",
+      "comarca": "NULL",
+      "assunto": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tnumeroCnj\ttipoAcao\tvara\tcomarca\tassunto\n60001\tSEM_mmm17okl\tNULL\tNULL\tNULL\tNULL\n60002\tSEM_mmm1861x\tNULL\tNULL\tNULL\tNULL\n60004\tSEM_mmm26om5\tNULL\tNULL\tNULL\tNULL\n60005\tSEM_mmm2xwjb\tNULL\tNULL\tNULL\tNULL\n60006\tSEM_mmm2y29y\tNULL\tNULL\tNULL\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 61
+}

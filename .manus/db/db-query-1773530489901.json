@@ -1,0 +1,13 @@
+{
+  "query": "SELECT COUNT(*) as total FROM processos WHERE tipoAcao IS NULL OR tipoAcao = '' OR tipoAcao = 'Não classificado';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT COUNT(*) as total FROM processos WHERE tipoAcao IS NULL OR tipoAcao = '' OR tipoAcao = 'Não classificado';",
+  "rows": [
+    {
+      "total": "90"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\n90\n",
+  "stderr": "",
+  "execution_time_ms": 92
+}

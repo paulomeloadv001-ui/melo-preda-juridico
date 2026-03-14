@@ -534,8 +534,8 @@ function TabPermissoes() {
                 onChange={(e) => { setSelectedUser(Number(e.target.value) || null); setLocalPerms({}); }}
               >
                 <option value="">Selecione um usuário...</option>
-                {usuarios?.filter((u: any) => u.role !== "admin").map((u: any) => (
-                  <option key={u.id} value={u.id}>{u.name || u.email || `ID ${u.id}`} {u.ativo === 0 ? "(Inativo)" : ""}</option>
+                {usuarios?.map((u: any) => (
+                  <option key={u.id} value={u.id}>{u.name || u.email || `ID ${u.id}`} {u.role === "admin" ? "(Admin)" : "(Usuário)"} {u.ativo === 0 ? "- Inativo" : ""}</option>
                 ))}
               </select>
             </div>

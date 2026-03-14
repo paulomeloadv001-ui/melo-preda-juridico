@@ -1,0 +1,14 @@
+{
+  "query": "SELECT COUNT(*) as total, GROUP_CONCAT(DISTINCT tipoAcao) as tipos FROM processos WHERE tipoAcao IS NULL OR tipoAcao = '' OR tipoAcao = 'Não classificado';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT COUNT(*) as total, GROUP_CONCAT(DISTINCT tipoAcao) as tipos FROM processos WHERE tipoAcao IS NULL OR tipoAcao = '' OR tipoAcao = 'Não classificado';",
+  "rows": [
+    {
+      "total": "90",
+      "tipos": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\ttipos\n90\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}
