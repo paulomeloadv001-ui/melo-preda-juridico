@@ -24,64 +24,64 @@ import {
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { trpc } from "@/lib/trpc";
-import { LayoutDashboard, Users, Upload, Download, BookOpen, LogOut, PanelLeft, Scale, Shield, FileBarChart, ListChecks, ShieldCheck, Bell, Clock, AlertTriangle, DollarSign, FileText, CheckCircle, X, Trash2, Brain, Calendar, Globe, ArrowRightLeft, UserCheck, TrendingUp, Database } from "lucide-react";
+import {
+  LayoutDashboard, Users, Upload, Download, BookOpen, LogOut, PanelLeft, Scale,
+  Shield, FileBarChart, ListChecks, ShieldCheck, Bell, Clock, AlertTriangle,
+  DollarSign, FileText, CheckCircle, X, Trash2, Brain, Calendar, Globe,
+  ArrowRightLeft, UserCheck, TrendingUp, Database, ChevronDown, ChevronRight,
+  Gavel, Settings, Wrench
+} from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
 
+// ==================== MENU STRUCTURE ====================
+// Reorganized: fewer groups, collapsible submenus, no overlapping labels
 const menuGroups = [
   {
-    label: "Principal",
+    label: "",
     items: [
-      { icon: LayoutDashboard, label: "Painel Geral", path: "/" },
+      { icon: LayoutDashboard, label: "Painel", path: "/" },
       { icon: TrendingUp, label: "Métricas", path: "/metricas" },
       { icon: Upload, label: "Upload", path: "/upload" },
       { icon: Users, label: "Clientes", path: "/clientes" },
-    ]
-  },
-  {
-    label: "Processos",
-    items: [
       { icon: Calendar, label: "Prazos", path: "/prazos" },
-      { icon: Globe, label: "Acompanhamento", path: "/acompanhamento" },
+      { icon: Globe, label: "Acompanhar", path: "/acompanhamento" },
     ]
   },
   {
     label: "Inteligência",
     items: [
       { icon: Brain, label: "Agente IA", path: "/agente" },
-      { icon: FileText, label: "Peticionamento", path: "/peticionamento" },
+      { icon: Gavel, label: "Petições", path: "/peticionamento" },
       { icon: BookOpen, label: "Base Jurídica", path: "/conhecimentos" },
       { icon: FileBarChart, label: "Relatórios", path: "/relatorios" },
     ]
   },
-  {
-    label: "Ferramentas",
-    items: [
-      { icon: Shield, label: "Correção", path: "/correcao" },
-      { icon: UserCheck, label: "Enriquecer", path: "/enriquecimento" },
-      { icon: Download, label: "Exportar", path: "/exportacao" },
-      { icon: Database, label: "Preencher BD", path: "/preenchimento" },
-    ]
-  },
-  {
-    label: "Sistema",
-    items: [
-      { icon: ListChecks, label: "Fila de Jobs", path: "/jobs" },
-      { icon: ArrowRightLeft, label: "JUSCONSIG", path: "/integracao" },
-      { icon: ShieldCheck, label: "Acessos", path: "/acessos" },
-    ]
-  },
+];
+
+// Collapsible "Ferramentas" submenu items
+const ferramentasItems = [
+  { icon: Shield, label: "Correção", path: "/correcao" },
+  { icon: UserCheck, label: "Enriquecer", path: "/enriquecimento" },
+  { icon: Download, label: "Exportar", path: "/exportacao" },
+  { icon: Database, label: "Preencher BD", path: "/preenchimento" },
+  { icon: ListChecks, label: "Fila de Jobs", path: "/jobs" },
+  { icon: ArrowRightLeft, label: "JUSCONSIG", path: "/integracao" },
+  { icon: ShieldCheck, label: "Acessos", path: "/acessos" },
 ];
 
 // Flat list for route matching
-const menuItems = menuGroups.flatMap(g => g.items);
+const allItems = [
+  ...menuGroups.flatMap(g => g.items),
+  ...ferramentasItems,
+];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
-const DEFAULT_WIDTH = 288;
-const MIN_WIDTH = 250;
-const MAX_WIDTH = 400;
+const DEFAULT_WIDTH = 260;
+const MIN_WIDTH = 230;
+const MAX_WIDTH = 360;
 
 function getNotifIcon(tipo: string) {
   switch (tipo) {
@@ -139,7 +139,6 @@ function NotificacoesPanel() {
   const totalNaoLidas = notifData?.totalNaoLidas || 0;
   const notificacoes = notifData?.notificacoes || [];
 
-  // Fechar ao clicar fora
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
@@ -152,7 +151,6 @@ function NotificacoesPanel() {
 
   return (
     <div className="relative" ref={panelRef}>
-      {/* Botão Sino */}
       <button
         onClick={() => setAberto(!aberto)}
         className="relative h-9 w-9 flex items-center justify-center rounded-lg hover:bg-sidebar-accent/50 transition-colors"
@@ -166,10 +164,8 @@ function NotificacoesPanel() {
         )}
       </button>
 
-      {/* Painel Dropdown */}
       {aberto && (
         <div className="fixed bottom-20 left-4 w-96 max-h-[70vh] bg-[oklch(0.2_0.01_60)] border border-[oklch(0.3_0.02_60)] rounded-xl shadow-2xl z-[200] overflow-hidden flex flex-col">
-          {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[oklch(0.3_0.02_60)]">
             <div className="flex items-center gap-2">
               <Bell className="h-4 w-4 text-[oklch(0.75_0.12_85)]" />
@@ -208,7 +204,6 @@ function NotificacoesPanel() {
             </div>
           </div>
 
-          {/* Lista */}
           <div className="overflow-y-auto flex-1">
             {notificacoes.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 px-4">
@@ -279,6 +274,88 @@ function NotificacoesPanel() {
   );
 }
 
+// ==================== COLLAPSIBLE FERRAMENTAS SUBMENU ====================
+function FerramentasSubmenu() {
+  const [location, setLocation] = useLocation();
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+  
+  // Auto-expand if current route is in ferramentas
+  const isFerramentaActive = ferramentasItems.some(item => item.path === location);
+  const [expanded, setExpanded] = useState(isFerramentaActive);
+
+  useEffect(() => {
+    if (isFerramentaActive) setExpanded(true);
+  }, [isFerramentaActive]);
+
+  if (isCollapsed) {
+    // When collapsed, show just the wrench icon
+    return (
+      <SidebarGroup className="py-0">
+        <SidebarMenu className="gap-0">
+          {ferramentasItems.map(item => {
+            const isActive = location === item.path;
+            return (
+              <SidebarMenuItem key={item.path}>
+                <SidebarMenuButton
+                  isActive={isActive}
+                  onClick={() => setLocation(item.path)}
+                  tooltip={item.label}
+                  className="h-8"
+                >
+                  <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[oklch(0.75_0.12_85)]" : ""}`} />
+                  <span className="truncate">{item.label}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarGroup>
+    );
+  }
+
+  return (
+    <SidebarGroup className="py-0">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2 w-full px-4 py-1.5 text-[10px] uppercase tracking-widest text-sidebar-foreground/40 hover:text-sidebar-foreground/60 transition-colors"
+      >
+        <Wrench className="h-3 w-3" />
+        <span>Ferramentas</span>
+        {expanded ? (
+          <ChevronDown className="h-3 w-3 ml-auto" />
+        ) : (
+          <ChevronRight className="h-3 w-3 ml-auto" />
+        )}
+        {isFerramentaActive && !expanded && (
+          <div className="h-1.5 w-1.5 rounded-full bg-[oklch(0.75_0.12_85)] ml-1" />
+        )}
+      </button>
+      {expanded && (
+        <SidebarMenu className="px-1 gap-0">
+          {ferramentasItems.map(item => {
+            const isActive = location === item.path;
+            return (
+              <SidebarMenuItem key={item.path}>
+                <SidebarMenuButton
+                  isActive={isActive}
+                  onClick={() => setLocation(item.path)}
+                  tooltip={item.label}
+                  className="h-7 text-[12px] pl-6"
+                >
+                  <item.icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? "text-[oklch(0.75_0.12_85)]" : ""}`} />
+                  <span className="truncate">{item.label}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      )}
+    </SidebarGroup>
+  );
+}
+
+// ==================== MAIN LAYOUT ====================
 export default function DashboardLayout({
   children,
 }: {
@@ -357,7 +434,7 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const activeMenuItem = allItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -403,7 +480,7 @@ function DashboardLayoutContent({
           className="border-r-0"
           disableTransition={isResizing}
         >
-          <SidebarHeader className="h-16 justify-center">
+          <SidebarHeader className="h-14 justify-center">
             <div className="flex items-center gap-3 px-2 transition-all w-full">
               <button
                 onClick={toggleSidebar}
@@ -425,11 +502,13 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0 overflow-y-auto scrollbar-thin">
             {menuGroups.map((group, gi) => (
-              <SidebarGroup key={gi} className="py-0.5 px-1">
-                <SidebarGroupLabel className="text-[9px] uppercase tracking-widest text-sidebar-foreground/35 px-4 py-0.5 mb-0">
-                  {group.label}
-                </SidebarGroupLabel>
-                <SidebarMenu className="px-1 gap-0.5">
+              <SidebarGroup key={gi} className="py-0">
+                {group.label && (
+                  <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-sidebar-foreground/40 px-4 py-1 h-auto">
+                    {group.label}
+                  </SidebarGroupLabel>
+                )}
+                <SidebarMenu className="px-1 gap-0">
                   {group.items.map(item => {
                     const isActive = location === item.path;
                     return (
@@ -451,10 +530,12 @@ function DashboardLayoutContent({
                 </SidebarMenu>
               </SidebarGroup>
             ))}
+
+            {/* Collapsible Ferramentas submenu */}
+            <FerramentasSubmenu />
           </SidebarContent>
 
           <SidebarFooter className="p-3">
-            {/* Notificações */}
             <div className="flex items-center justify-center mb-2 group-data-[collapsible=icon]:mb-0">
               <NotificacoesPanel />
             </div>

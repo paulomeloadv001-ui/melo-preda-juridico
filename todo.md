@@ -369,3 +369,25 @@
 - [x] AUDITORIA TOTAL: Identificar e corrigir automaticamente todos os erros e falhas (7 correções)
 - [x] AUDITORIA TOTAL: Validar fluxo Upload → Extração → Banco → Análise → Petição → DOCX → Download ✅
 - [x] AUDITORIA TOTAL: Relatório crítico de erros com correções aplicadas ✅
+- [ ] ANEXOS: Criar tabela anexos_peticao no banco para vincular documentos às petições
+- [ ] ANEXOS: Upload de documentos (procuração, contracheque, contratos) vinculados a cada petição
+- [ ] ANEXOS: Armazenamento S3 com metadata no banco
+- [ ] ANEXOS: Download individual de cada anexo
+- [ ] ANEXOS: Interface de upload de anexos na página de Peticionamento e no histórico
+- [ ] CLASSIFICAÇÃO IA: Rota backend para classificar processos automaticamente via LLM
+- [ ] CLASSIFICAÇÃO IA: Botão no Dashboard/Clientes para classificar processos pendentes
+- [ ] CLASSIFICAÇÃO IA: Classificar os ~90 processos "Não classificado" em lote
+- [x] BUG: Sidebar bagunçada novamente - reorganizada em 3 seções com Ferramentas colapsável
+- [ ] AUDITORIA COMPLETA: Navegar por todas as 17+ páginas e documentar problemas
+- [x] AUDITORIA COMPLETA: Corrigir sobreposição na sidebar (3 seções + Ferramentas colapsável)
+- [ ] AUDITORIA COMPLETA: Corrigir todos os erros e falhas encontrados
+- [ ] AUDITORIA COMPLETA: Gerar relatório crítico com correções
+- [x] GESTÃO USUÁRIOS: Analisar tabela users e roles existentes
+- [x] GESTÃO USUÁRIOS: Criar tabela de permissões por funcionalidade (user_permissions, convites, audit_log)
+- [x] GESTÃO USUÁRIOS: Backend - listar, editar, desativar, promover/rebaixar usuários
+- [x] GESTÃO USUÁRIOS: Backend - sistema de convites por email/link
+- [x] GESTÃO USUÁRIOS: Backend - controle de acesso por papel (admin/user/viewer)
+- [x] GESTÃO USUÁRIOS: Frontend - página de Gestão de Usuários e Acessos completa (5 abas: Solicitações, Usuários, Permissões, Convites, Auditoria)
+- [x] GESTÃO USUÁRIOS: Proteger todas as rotas backend com verificação de papel (31 rotas com adminProcedure)
+- [x] GESTÃO USUÁRIOS: Proteger todas as rotas frontend com verificação de papel
+- [x] GESTÃO USUÁRIOS: Testes vitest e validação completa (47 testes, 183 total passando)

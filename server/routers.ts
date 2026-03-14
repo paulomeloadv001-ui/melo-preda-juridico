@@ -1,7 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { TrpcContext } from "./_core/context";
 import { z } from "zod";
@@ -12,7 +12,8 @@ import {
   conhecimentos, cumprimentosSentenca, analiseGeral, relatorios, jobs,
   accessRequests, userProfiles, users, movimentacoesFinanceiras, historicoCorrecoes,
   notificacoes, prazosProcessuais, syncLog,
-  templatesPeticao, peticoesGeradas, agenteIaConfig, agenteIaHistorico
+  templatesPeticao, peticoesGeradas, agenteIaConfig, agenteIaHistorico,
+  anexosPeticao, userPermissions, convites, auditLog
 } from "../drizzle/schema";
 import { eq, like, desc, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -504,11 +505,12 @@ export const appRouter = router({
       }),
 
     // Excluir cliente e todos os dados vinculados
-    delete: protectedProcedure
+    delete: adminProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
+        await db.insert(auditLog).values({ userId: ctx.user.id, acao: 'excluir_cliente', modulo: 'clientes', detalhes: JSON.stringify({ clienteId: input.id }) });
         // Buscar processos do cliente
         const procs = await db.select().from(processos).where(eq(processos.clienteId, input.id));
         for (const p of procs) {
@@ -758,9 +760,9 @@ export const appRouter = router({
 
   // ==================== PROCESSOS (CRUD) ====================
   processosRouter: router({
-    delete: protectedProcedure
+    delete: adminProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
         await db.delete(estrategias).where(eq(estrategias.processoId, input.id));
@@ -793,7 +795,7 @@ export const appRouter = router({
         }
         return db.select().from(conhecimentos).orderBy(desc(conhecimentos.createdAt));
       }),
-    delete: protectedProcedure
+    delete: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const db = await getDb();
@@ -1616,7 +1618,7 @@ ${textoExtraido}`;
     }),
 
     // Normalizar todos os CPFs (remover pontos, traços, barras)
-    normalizarCpfs: protectedProcedure.mutation(async () => {
+    normalizarCpfs: adminProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       const allClientes = await db.select().from(clientes);
@@ -1646,7 +1648,7 @@ ${textoExtraido}`;
     }),
 
     // Merge de clientes duplicados: mantém o mais antigo (menor ID), move processos e dados
-    mergeClientes: protectedProcedure
+    mergeClientes: adminProcedure
       .input(z.object({ manterClienteId: z.number(), removerClienteId: z.number() }))
       .mutation(async ({ input }) => {
         const db = await getDb();
@@ -1693,7 +1695,7 @@ ${textoExtraido}`;
       }),
 
     // Auto-merge: detecta e faz merge automático de todos os duplicados por CPF
-    autoMerge: protectedProcedure.mutation(async () => {
+    autoMerge: adminProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
@@ -2046,7 +2048,7 @@ ${textoExtraido}`;
     }),
 
     // Deduplicar processos por número CNJ (mantém o mais recente)
-    deduplicarProcessos: protectedProcedure.mutation(async () => {
+    deduplicarProcessos: adminProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       const allProcs = await db.select().from(processos).orderBy(desc(processos.updatedAt));
@@ -2097,7 +2099,7 @@ ${textoExtraido}`;
     }),
 
     // Executar todas as correções em sequência
-    executarTodasCorrecoes: protectedProcedure.mutation(async () => {
+    executarTodasCorrecoes: adminProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
@@ -2596,7 +2598,7 @@ ${textoExtraido}`;
     }),
 
     // Excluir relatório
-    delete: protectedProcedure
+    delete: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const db = await getDb();
@@ -3679,59 +3681,45 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
       }))
       .mutation(async ({ input }) => {
         const db = await getDb();
-        if (!db) throw new Error("Banco de dados indisponível");
-
-        // Verificar se já existe solicitação com este CPF
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
         const existente = await db.select().from(accessRequests).where(eq(accessRequests.cpf, input.cpf)).limit(1);
         if (existente.length > 0) {
           const status = existente[0].status;
-          if (status === 'pendente') throw new Error("Já existe uma solicitação pendente com este CPF. Aguarde a aprovação.");
-          if (status === 'aprovado') throw new Error("Este CPF já possui acesso aprovado.");
-          // Se rejeitado, permite nova solicitação
+          if (status === 'pendente') throw new TRPCError({ code: 'CONFLICT', message: 'Já existe uma solicitação pendente com este CPF.' });
+          if (status === 'aprovado') throw new TRPCError({ code: 'CONFLICT', message: 'Este CPF já possui acesso aprovado.' });
           if (status === 'rejeitado') {
             await db.update(accessRequests).set({
-              nomeCompleto: input.nomeCompleto,
-              email: input.email,
-              celular: input.celular,
-              motivo: input.motivo || null,
-              status: 'pendente',
-              aprovadoPor: null,
-              aprovadoEm: null,
-              observacoesAdmin: null,
+              nomeCompleto: input.nomeCompleto, email: input.email, celular: input.celular,
+              motivo: input.motivo || null, status: 'pendente',
+              aprovadoPor: null, aprovadoEm: null, observacoesAdmin: null,
             }).where(eq(accessRequests.id, existente[0].id));
-            return { success: true, message: "Solicitação reenviada com sucesso. Aguarde a aprovação do administrador." };
+            return { success: true, message: 'Solicitação reenviada com sucesso.' };
           }
         }
-
         await db.insert(accessRequests).values({
-          nomeCompleto: input.nomeCompleto,
-          cpf: input.cpf,
-          email: input.email,
-          celular: input.celular,
-          motivo: input.motivo || null,
+          nomeCompleto: input.nomeCompleto, cpf: input.cpf, email: input.email,
+          celular: input.celular, motivo: input.motivo || null,
         });
-
-        return { success: true, message: "Solicitação enviada com sucesso. Aguarde a aprovação do administrador." };
+        return { success: true, message: 'Solicitação enviada com sucesso. Aguarde a aprovação do administrador.' };
       }),
 
-    // Listar solicitações (admin)
-    listar: protectedProcedure
+    // Listar solicitações (admin only)
+    listar: adminProcedure
       .input(z.object({
-        status: z.enum(["pendente", "aprovado", "rejeitado", "todos"]).optional().default("todos"),
+        status: z.enum(['pendente', 'aprovado', 'rejeitado', 'todos']).optional().default('todos'),
       }).optional())
       .query(async ({ input }) => {
         const db = await getDb();
         if (!db) return [];
-        const filtro = input?.status || "todos";
-        if (filtro === "todos") {
+        const filtro = input?.status || 'todos';
+        if (filtro === 'todos') {
           return await db.select().from(accessRequests).orderBy(desc(accessRequests.createdAt));
         }
         return await db.select().from(accessRequests)
-          .where(eq(accessRequests.status, filtro as "pendente" | "aprovado" | "rejeitado"))
+          .where(eq(accessRequests.status, filtro as 'pendente' | 'aprovado' | 'rejeitado'))
           .orderBy(desc(accessRequests.createdAt));
       }),
 
-    // Contar pendentes (admin - para badge)
     contarPendentes: protectedProcedure.query(async () => {
       const db = await getDb();
       if (!db) return { count: 0 };
@@ -3739,71 +3727,67 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
       return { count: result[0]?.count || 0 };
     }),
 
-    // Aprovar solicitação (admin)
-    aprovar: protectedProcedure
-      .input(z.object({
-        id: z.number(),
-        observacoes: z.string().optional(),
-      }))
+    aprovar: adminProcedure
+      .input(z.object({ id: z.number(), observacoes: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
-        if (!db) throw new Error("Banco de dados indisponível");
-
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
         const [solicitacao] = await db.select().from(accessRequests).where(eq(accessRequests.id, input.id)).limit(1);
-        if (!solicitacao) throw new Error("Solicitação não encontrada");
-        if (solicitacao.status !== 'pendente') throw new Error("Esta solicitação já foi processada");
-
+        if (!solicitacao) throw new TRPCError({ code: 'NOT_FOUND', message: 'Solicitação não encontrada' });
+        if (solicitacao.status !== 'pendente') throw new TRPCError({ code: 'BAD_REQUEST', message: 'Esta solicitação já foi processada' });
         await db.update(accessRequests).set({
-          status: 'aprovado',
-          aprovadoPor: ctx.user.id,
-          aprovadoEm: new Date(),
+          status: 'aprovado', aprovadoPor: ctx.user.id, aprovadoEm: new Date(),
           observacoesAdmin: input.observacoes || null,
         }).where(eq(accessRequests.id, input.id));
-
+        // Registrar auditoria
+        await db.insert(auditLog).values({
+          userId: ctx.user.id, acao: 'aprovar_acesso', modulo: 'acessos',
+          detalhes: JSON.stringify({ solicitacaoId: input.id, nome: solicitacao.nomeCompleto }),
+        });
         return { success: true, message: `Acesso aprovado para ${solicitacao.nomeCompleto}` };
       }),
 
-    // Rejeitar solicitação (admin)
-    rejeitar: protectedProcedure
-      .input(z.object({
-        id: z.number(),
-        observacoes: z.string().optional(),
-      }))
+    rejeitar: adminProcedure
+      .input(z.object({ id: z.number(), observacoes: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
-        if (!db) throw new Error("Banco de dados indisponível");
-
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
         const [solicitacao] = await db.select().from(accessRequests).where(eq(accessRequests.id, input.id)).limit(1);
-        if (!solicitacao) throw new Error("Solicitação não encontrada");
-
+        if (!solicitacao) throw new TRPCError({ code: 'NOT_FOUND', message: 'Solicitação não encontrada' });
         await db.update(accessRequests).set({
-          status: 'rejeitado',
-          aprovadoPor: ctx.user.id,
-          aprovadoEm: new Date(),
+          status: 'rejeitado', aprovadoPor: ctx.user.id, aprovadoEm: new Date(),
           observacoesAdmin: input.observacoes || `Acesso negado por ${ctx.user.name}`,
         }).where(eq(accessRequests.id, input.id));
-
+        await db.insert(auditLog).values({
+          userId: ctx.user.id, acao: 'rejeitar_acesso', modulo: 'acessos',
+          detalhes: JSON.stringify({ solicitacaoId: input.id, nome: solicitacao.nomeCompleto }),
+        });
         return { success: true, message: `Solicitação de ${solicitacao.nomeCompleto} rejeitada` };
       }),
 
-    // Excluir solicitação (admin)
-    excluir: protectedProcedure
+    excluir: adminProcedure
       .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
-        if (!db) throw new Error("Banco de dados indisponível");
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
         await db.delete(accessRequests).where(eq(accessRequests.id, input.id));
+        await db.insert(auditLog).values({
+          userId: ctx.user.id, acao: 'excluir_solicitacao', modulo: 'acessos',
+          detalhes: JSON.stringify({ solicitacaoId: input.id }),
+        });
         return { success: true };
       }),
 
-    // Listar usuários do sistema (admin)
-    listarUsuarios: protectedProcedure.query(async () => {
+    // ==================== GESTÃO DE USUÁRIOS (admin only) ====================
+    listarUsuarios: adminProcedure.query(async () => {
       const db = await getDb();
       if (!db) return [];
       const allUsers = await db.select().from(users).orderBy(desc(users.lastSignedIn));
       const profiles = await db.select().from(userProfiles);
+      const perms = await db.select().from(userPermissions);
       return allUsers.map(u => {
         const profile = profiles.find(p => p.userId === u.id);
+        const userPerms = perms.filter(p => p.userId === u.id);
         return {
           ...u,
           cpf: profile?.cpf || null,
@@ -3811,53 +3795,303 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
           cargo: profile?.cargo || null,
           oab: profile?.oab || null,
           ativo: profile?.ativo ?? 1,
+          permissoes: userPerms,
         };
       });
     }),
 
-    // Atualizar perfil de usuário (admin)
-    atualizarPerfil: protectedProcedure
+    atualizarPerfil: adminProcedure
       .input(z.object({
         userId: z.number(),
         cpf: z.string().optional(),
         celular: z.string().optional(),
         cargo: z.string().optional(),
         oab: z.string().optional(),
-        role: z.enum(["user", "admin"]).optional(),
+        role: z.enum(['user', 'admin']).optional(),
         ativo: z.number().optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const db = await getDb();
-        if (!db) throw new Error("Banco de dados indisponível");
-
-        // Atualizar role na tabela users se fornecido
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
         if (input.role) {
           await db.update(users).set({ role: input.role }).where(eq(users.id, input.userId));
         }
-
-        // Atualizar ou criar perfil
         const [existing] = await db.select().from(userProfiles).where(eq(userProfiles.userId, input.userId)).limit(1);
         if (existing) {
           await db.update(userProfiles).set({
-            cpf: input.cpf ?? existing.cpf,
-            celular: input.celular ?? existing.celular,
-            cargo: input.cargo ?? existing.cargo,
-            oab: input.oab ?? existing.oab,
+            cpf: input.cpf ?? existing.cpf, celular: input.celular ?? existing.celular,
+            cargo: input.cargo ?? existing.cargo, oab: input.oab ?? existing.oab,
             ativo: input.ativo ?? existing.ativo,
           }).where(eq(userProfiles.id, existing.id));
         } else {
           await db.insert(userProfiles).values({
-            userId: input.userId,
-            cpf: input.cpf || null,
-            celular: input.celular || null,
-            cargo: input.cargo || null,
-            oab: input.oab || null,
-            ativo: input.ativo ?? 1,
+            userId: input.userId, cpf: input.cpf || null, celular: input.celular || null,
+            cargo: input.cargo || null, oab: input.oab || null, ativo: input.ativo ?? 1,
           });
         }
-
+        await db.insert(auditLog).values({
+          userId: ctx.user.id, acao: 'atualizar_perfil_usuario', modulo: 'acessos',
+          detalhes: JSON.stringify({ targetUserId: input.userId, changes: input }),
+        });
         return { success: true };
       }),
+
+    desativarUsuario: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+        if (input.userId === ctx.user.id) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Você não pode desativar a si mesmo' });
+        const [existing] = await db.select().from(userProfiles).where(eq(userProfiles.userId, input.userId)).limit(1);
+        if (existing) {
+          await db.update(userProfiles).set({ ativo: 0 }).where(eq(userProfiles.id, existing.id));
+        } else {
+          await db.insert(userProfiles).values({ userId: input.userId, ativo: 0 });
+        }
+        await db.insert(auditLog).values({
+          userId: ctx.user.id, acao: 'desativar_usuario', modulo: 'acessos',
+          detalhes: JSON.stringify({ targetUserId: input.userId }),
+        });
+        return { success: true };
+      }),
+
+    reativarUsuario: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+        const [existing] = await db.select().from(userProfiles).where(eq(userProfiles.userId, input.userId)).limit(1);
+        if (existing) {
+          await db.update(userProfiles).set({ ativo: 1 }).where(eq(userProfiles.id, existing.id));
+        } else {
+          await db.insert(userProfiles).values({ userId: input.userId, ativo: 1 });
+        }
+        await db.insert(auditLog).values({
+          userId: ctx.user.id, acao: 'reativar_usuario', modulo: 'acessos',
+          detalhes: JSON.stringify({ targetUserId: input.userId }),
+        });
+        return { success: true };
+      }),
+
+    // ==================== PERMISSÕES GRANULARES ====================
+    listarPermissoes: adminProcedure
+      .input(z.object({ userId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        return await db.select().from(userPermissions).where(eq(userPermissions.userId, input.userId));
+      }),
+
+    definirPermissao: adminProcedure
+      .input(z.object({
+        userId: z.number(),
+        modulo: z.string(),
+        podeVisualizar: z.number().optional(),
+        podeEditar: z.number().optional(),
+        podeExcluir: z.number().optional(),
+        podeExportar: z.number().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+        const [existing] = await db.select().from(userPermissions)
+          .where(sql`${userPermissions.userId} = ${input.userId} AND ${userPermissions.modulo} = ${input.modulo}`).limit(1);
+        if (existing) {
+          await db.update(userPermissions).set({
+            podeVisualizar: input.podeVisualizar ?? existing.podeVisualizar,
+            podeEditar: input.podeEditar ?? existing.podeEditar,
+            podeExcluir: input.podeExcluir ?? existing.podeExcluir,
+            podeExportar: input.podeExportar ?? existing.podeExportar,
+          }).where(eq(userPermissions.id, existing.id));
+        } else {
+          await db.insert(userPermissions).values({
+            userId: input.userId, modulo: input.modulo,
+            podeVisualizar: input.podeVisualizar ?? 1,
+            podeEditar: input.podeEditar ?? 0,
+            podeExcluir: input.podeExcluir ?? 0,
+            podeExportar: input.podeExportar ?? 0,
+          });
+        }
+        await db.insert(auditLog).values({
+          userId: ctx.user.id, acao: 'definir_permissao', modulo: 'acessos',
+          detalhes: JSON.stringify({ targetUserId: input.userId, modulo: input.modulo, perms: input }),
+        });
+        return { success: true };
+      }),
+
+    definirPermissoesLote: adminProcedure
+      .input(z.object({
+        userId: z.number(),
+        permissoes: z.array(z.object({
+          modulo: z.string(),
+          podeVisualizar: z.number(),
+          podeEditar: z.number(),
+          podeExcluir: z.number(),
+          podeExportar: z.number(),
+        })),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+        // Remover permissões existentes e inserir novas
+        await db.delete(userPermissions).where(eq(userPermissions.userId, input.userId));
+        for (const perm of input.permissoes) {
+          await db.insert(userPermissions).values({
+            userId: input.userId, modulo: perm.modulo,
+            podeVisualizar: perm.podeVisualizar, podeEditar: perm.podeEditar,
+            podeExcluir: perm.podeExcluir, podeExportar: perm.podeExportar,
+          });
+        }
+        await db.insert(auditLog).values({
+          userId: ctx.user.id, acao: 'definir_permissoes_lote', modulo: 'acessos',
+          detalhes: JSON.stringify({ targetUserId: input.userId, total: input.permissoes.length }),
+        });
+        return { success: true };
+      }),
+
+    modulosDisponiveis: protectedProcedure.query(async () => {
+      return [
+        { id: 'dashboard', nome: 'Dashboard', descricao: 'Painel principal com estatísticas' },
+        { id: 'clientes', nome: 'Clientes', descricao: 'Gestão de clientes e perfis' },
+        { id: 'processos', nome: 'Processos', descricao: 'Processos judiciais' },
+        { id: 'peticionamento', nome: 'Peticionamento', descricao: 'Geração de petições DOCX' },
+        { id: 'agente_ia', nome: 'Agente IA', descricao: 'Agente jurídico inteligente' },
+        { id: 'conhecimentos', nome: 'Conhecimentos', descricao: 'Base de conhecimentos jurídicos' },
+        { id: 'relatorios', nome: 'Relatórios', descricao: 'Geração e exportação de relatórios' },
+        { id: 'exportacao', nome: 'Exportação', descricao: 'Exportação em massa de dados' },
+        { id: 'upload', nome: 'Upload', descricao: 'Importação de PDFs e documentos' },
+        { id: 'financeiro', nome: 'Financeiro', descricao: 'Movimentações financeiras e honorários' },
+        { id: 'prazos', nome: 'Prazos', descricao: 'Prazos processuais e calendário' },
+        { id: 'correcao', nome: 'Correção', descricao: 'Auditoria e correção de dados' },
+        { id: 'integracao', nome: 'Integração', descricao: 'Integração JUSCONSIG e APIs externas' },
+        { id: 'acessos', nome: 'Gestão de Acessos', descricao: 'Usuários, permissões e convites' },
+        { id: 'metricas', nome: 'Métricas', descricao: 'Métricas de produtividade' },
+        { id: 'api_publica', nome: 'API Pública', descricao: 'API REST para consumo externo' },
+      ];
+    }),
+
+    // Verificar permissão do usuário atual para um módulo
+    verificarPermissao: protectedProcedure
+      .input(z.object({ modulo: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) return { podeVisualizar: 0, podeEditar: 0, podeExcluir: 0, podeExportar: 0 };
+        // Admin tem acesso total
+        if (ctx.user.role === 'admin') {
+          return { podeVisualizar: 1, podeEditar: 1, podeExcluir: 1, podeExportar: 1 };
+        }
+        const [perm] = await db.select().from(userPermissions)
+          .where(sql`${userPermissions.userId} = ${ctx.user.id} AND ${userPermissions.modulo} = ${input.modulo}`).limit(1);
+        if (!perm) return { podeVisualizar: 0, podeEditar: 0, podeExcluir: 0, podeExportar: 0 };
+        return {
+          podeVisualizar: perm.podeVisualizar,
+          podeEditar: perm.podeEditar,
+          podeExcluir: perm.podeExcluir,
+          podeExportar: perm.podeExportar,
+        };
+      }),
+
+    // ==================== CONVITES ====================
+    criarConvite: adminProcedure
+      .input(z.object({
+        email: z.string().email('Email inválido'),
+        nome: z.string().optional(),
+        role: z.enum(['user', 'admin']).optional().default('user'),
+        diasValidade: z.number().optional().default(7),
+        permissoes: z.array(z.object({
+          modulo: z.string(),
+          podeVisualizar: z.number(),
+          podeEditar: z.number(),
+          podeExcluir: z.number(),
+          podeExportar: z.number(),
+        })).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+        // Gerar token único
+        const token = Array.from({ length: 64 }, () => Math.random().toString(36)[2]).join('');
+        const expiraEm = new Date();
+        expiraEm.setDate(expiraEm.getDate() + (input.diasValidade || 7));
+        await db.insert(convites).values({
+          email: input.email, nome: input.nome || null, role: input.role || 'user',
+          token, criadoPor: ctx.user.id, expiraEm,
+          permissoes: input.permissoes ? JSON.stringify(input.permissoes) : null,
+        });
+        await db.insert(auditLog).values({
+          userId: ctx.user.id, acao: 'criar_convite', modulo: 'acessos',
+          detalhes: JSON.stringify({ email: input.email, role: input.role, diasValidade: input.diasValidade }),
+        });
+        return { success: true, token, expiraEm: expiraEm.toISOString() };
+      }),
+
+    listarConvites: adminProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      return await db.select().from(convites).orderBy(desc(convites.createdAt));
+    }),
+
+    revogarConvite: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+        await db.delete(convites).where(eq(convites.id, input.id));
+        await db.insert(auditLog).values({
+          userId: ctx.user.id, acao: 'revogar_convite', modulo: 'acessos',
+          detalhes: JSON.stringify({ conviteId: input.id }),
+        });
+        return { success: true };
+      }),
+
+    validarConvite: publicProcedure
+      .input(z.object({ token: z.string() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { valido: false, motivo: 'DB indisponível' };
+        const [conv] = await db.select().from(convites).where(eq(convites.token, input.token)).limit(1);
+        if (!conv) return { valido: false, motivo: 'Convite não encontrado' };
+        if (conv.usado) return { valido: false, motivo: 'Convite já utilizado' };
+        if (new Date(conv.expiraEm) < new Date()) return { valido: false, motivo: 'Convite expirado' };
+        return { valido: true, email: conv.email, nome: conv.nome, role: conv.role };
+      }),
+
+    // ==================== LOG DE AUDITORIA ====================
+    listarAuditoria: adminProcedure
+      .input(z.object({
+        limite: z.number().optional().default(100),
+        modulo: z.string().optional(),
+      }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const limite = input?.limite || 100;
+        const modulo = input?.modulo;
+        if (modulo) {
+          return await db.select().from(auditLog)
+            .where(eq(auditLog.modulo, modulo))
+            .orderBy(desc(auditLog.createdAt))
+            .limit(limite);
+        }
+        return await db.select().from(auditLog)
+          .orderBy(desc(auditLog.createdAt))
+          .limit(limite);
+      }),
+
+    estatisticasAuditoria: adminProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { total: 0, porModulo: [], porAcao: [] };
+      const [totalResult] = await db.select({ count: sql<number>`COUNT(*)` }).from(auditLog);
+      const porModulo = await db.select({
+        modulo: auditLog.modulo,
+        count: sql<number>`COUNT(*)`,
+      }).from(auditLog).groupBy(auditLog.modulo).orderBy(sql`COUNT(*) DESC`);
+      const porAcao = await db.select({
+        acao: auditLog.acao,
+        count: sql<number>`COUNT(*)`,
+      }).from(auditLog).groupBy(auditLog.acao).orderBy(sql`COUNT(*) DESC`).limit(10);
+      return { total: totalResult?.count || 0, porModulo, porAcao };
+    }),
   }),
 
   // ==================== NOTIFICAÇÕES ====================
@@ -4732,7 +4966,7 @@ IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação M
         return { success: true };
       }),
     // Excluir petição
-    excluirPeticao: protectedProcedure
+    excluirPeticao: adminProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const db = await getDb();
@@ -4817,6 +5051,103 @@ IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação M
         { id: 'alvara_levantamento', nome: 'Alvará de Levantamento', descricao: 'Solicitação de levantamento de valores depositados' },
       ];
     }),
+    // ==================== ANEXOS DE PETIÇÕES ====================
+    uploadAnexo: protectedProcedure
+      .input(z.object({
+        peticaoId: z.number(),
+        nomeArquivo: z.string(),
+        tipoArquivo: z.string().optional(),
+        tamanhoBytes: z.number().optional(),
+        base64Data: z.string(),
+        descricao: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        const buffer = Buffer.from(input.base64Data, 'base64');
+        const suffix = Math.random().toString(36).substring(2, 8);
+        const key = `peticoes/anexos/${input.peticaoId}/${suffix}-${input.nomeArquivo}`;
+        const { url } = await storagePut(key, buffer, input.tipoArquivo || 'application/pdf');
+        const [anexo] = await db.insert(anexosPeticao).values({
+          peticaoId: input.peticaoId,
+          nomeArquivo: input.nomeArquivo,
+          tipoArquivo: input.tipoArquivo || 'application/pdf',
+          tamanhoBytes: input.tamanhoBytes || buffer.length,
+          storageKey: key,
+          storageUrl: url,
+          descricao: input.descricao || null,
+        }).$returningId();
+        return { id: anexo.id, url, nomeArquivo: input.nomeArquivo };
+      }),
+
+    listarAnexos: protectedProcedure
+      .input(z.object({ peticaoId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        return db.select().from(anexosPeticao).where(eq(anexosPeticao.peticaoId, input.peticaoId)).orderBy(desc(anexosPeticao.createdAt));
+      }),
+
+    excluirAnexo: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        await db.delete(anexosPeticao).where(eq(anexosPeticao.id, input.id));
+        return { success: true };
+      }),
+
+    // ==================== CLASSIFICAÇÃO AUTOMÁTICA DE PROCESSOS VIA IA ====================
+    classificarProcessos: adminProcedure
+      .input(z.object({ processoIds: z.array(z.number()).optional() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        let procs;
+        if (input.processoIds && input.processoIds.length > 0) {
+          procs = await db.select().from(processos).where(sql`${processos.id} IN (${sql.raw(input.processoIds.join(','))})`);
+        } else {
+          procs = await db.select().from(processos).where(sql`${processos.tipoAcao} IS NULL OR ${processos.tipoAcao} = '' OR ${processos.tipoAcao} = 'Não classificado'`);
+        }
+        if (procs.length === 0) return { total: 0, classificados: 0, resultados: [] };
+        const resultados: Array<{id: number, numeroCnj: string, tipoAnterior: string | null, tipoNovo: string}> = [];
+        // Processar em lotes de 10
+        for (let i = 0; i < procs.length; i += 10) {
+          const lote = procs.slice(i, i + 10);
+          const descricoes = lote.map((p: any) => `ID:${p.id} CNJ:${p.numeroCnj || 'N/A'} Vara:${p.vara || 'N/A'} Comarca:${p.comarca || 'N/A'} Assunto:${p.assunto || 'N/A'} Valor:${p.valorCausa || 'N/A'}`).join('\n');
+          try {
+            const resp = await invokeLLM({
+              messages: [
+                { role: 'system', content: 'Você é um classificador de processos judiciais. Para cada processo, determine o tipo de ação mais adequado. Responda APENAS em JSON válido, sem markdown.' },
+                { role: 'user', content: `Classifique os seguintes processos judiciais. Para cada um, determine o tipo de ação (ex: Obrigação de Fazer, Cumprimento de Sentença, Execução de Título Extrajudicial, Ação de Indenização, Revisional de Contrato, Consignação em Pagamento, Embargos de Terceiro, Ação Declaratória, etc.):\n\n${descricoes}\n\nResponda em JSON: [{"id": number, "tipoAcao": "string"}]` }
+              ],
+              response_format: { type: 'json_schema', json_schema: { name: 'classificacao', strict: true, schema: { type: 'object', properties: { classificacoes: { type: 'array', items: { type: 'object', properties: { id: { type: 'integer' }, tipoAcao: { type: 'string' } }, required: ['id', 'tipoAcao'], additionalProperties: false } } }, required: ['classificacoes'], additionalProperties: false } } }
+            });
+            const parsed = JSON.parse(resp.choices[0].message.content as string || '{}');
+            const classificacoes = parsed.classificacoes || [];
+            for (const c of classificacoes) {
+              const proc = lote.find((p: any) => p.id === c.id);
+              if (proc && c.tipoAcao) {
+                await db.update(processos).set({ tipoAcao: c.tipoAcao }).where(eq(processos.id, c.id));
+                resultados.push({ id: c.id, numeroCnj: (proc as any).numeroCnj || '', tipoAnterior: (proc as any).tipoAcao, tipoNovo: c.tipoAcao });
+              }
+            }
+          } catch (e: any) {
+            console.error('Erro ao classificar lote:', e.message);
+          }
+        }
+        return { total: procs.length, classificados: resultados.length, resultados };
+      }),
+
+    processosNaoClassificados: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { total: 0, processos: [] };
+      const procs = await db.select({ id: processos.id, numeroCnj: processos.numeroCnj, tipoAcao: processos.tipoAcao, vara: processos.vara, comarca: processos.comarca, assunto: processos.assunto })
+        .from(processos)
+        .where(sql`${processos.tipoAcao} IS NULL OR ${processos.tipoAcao} = '' OR ${processos.tipoAcao} = 'Não classificado'`);
+      return { total: procs.length, processos: procs };
+    }),
+
     analisarProcesso: protectedProcedure
       .input(z.object({
         processoId: z.number(),
@@ -5155,7 +5486,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
       };
     }),
 
-    varreduraDataJud: protectedProcedure.mutation(async () => {
+    varreduraDataJud: adminProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
@@ -5499,7 +5830,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
       }),
 
     // 10. Executar sync manual (registra no log)
-    executarSyncManual: protectedProcedure
+    executarSyncManual: adminProcedure
       .input(z.object({
         tipo: z.enum(['clientes', 'processos', 'movimentacoes', 'conhecimentos', 'estrategias', 'financeiro', 'completa']),
       }))
@@ -5637,7 +5968,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
       }),
 
     // 12. Limpar logs antigos
-    limparLogsAntigos: protectedProcedure
+    limparLogsAntigos: adminProcedure
       .input(z.object({ diasManter: z.number().min(1).max(365).default(90) }))
       .mutation(async ({ input }) => {
         const db = await getDb();

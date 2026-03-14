@@ -562,3 +562,61 @@ export const agenteIaHistorico = mysqlTable("agente_ia_historico", {
 
 export type AgenteIaHistorico = typeof agenteIaHistorico.$inferSelect;
 export type InsertAgenteIaHistorico = typeof agenteIaHistorico.$inferInsert;
+
+// ==================== ANEXOS DE PETIÇÕES ====================
+export const anexosPeticao = mysqlTable("anexos_peticao", {
+  id: int("id").autoincrement().primaryKey(),
+  peticaoId: int("peticao_id").notNull(),
+  nomeArquivo: varchar("nome_arquivo", { length: 500 }).notNull(),
+  tipoArquivo: varchar("tipo_arquivo", { length: 100 }).default("application/pdf"),
+  tamanhoBytes: int("tamanho_bytes").default(0),
+  storageKey: varchar("storage_key", { length: 500 }).notNull(),
+  storageUrl: varchar("storage_url", { length: 1000 }).notNull(),
+  descricao: text("descricao"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type AnexoPeticao = typeof anexosPeticao.$inferSelect;
+export type InsertAnexoPeticao = typeof anexosPeticao.$inferInsert;
+
+// ==================== PERMISSÕES DE USUÁRIO ====================
+export const userPermissions = mysqlTable("user_permissions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  modulo: varchar("modulo", { length: 100 }).notNull(),
+  podeVisualizar: int("pode_visualizar").default(1).notNull(),
+  podeEditar: int("pode_editar").default(0).notNull(),
+  podeExcluir: int("pode_excluir").default(0).notNull(),
+  podeExportar: int("pode_exportar").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type UserPermission = typeof userPermissions.$inferSelect;
+
+// ==================== CONVITES ====================
+export const convites = mysqlTable("convites", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  nome: varchar("nome", { length: 255 }),
+  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  token: varchar("token", { length: 128 }).notNull(),
+  criadoPor: int("criadoPor").notNull(),
+  usado: int("usado").default(0).notNull(),
+  usadoPor: int("usadoPor"),
+  usadoEm: timestamp("usadoEm"),
+  expiraEm: timestamp("expiraEm").notNull(),
+  permissoes: text("permissoes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type Convite = typeof convites.$inferSelect;
+
+// ==================== LOG DE AUDITORIA ====================
+export const auditLog = mysqlTable("audit_log", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  acao: varchar("acao", { length: 255 }).notNull(),
+  modulo: varchar("modulo", { length: 100 }).notNull(),
+  detalhes: text("detalhes"),
+  ip: varchar("ip", { length: 45 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type AuditLogEntry = typeof auditLog.$inferSelect;

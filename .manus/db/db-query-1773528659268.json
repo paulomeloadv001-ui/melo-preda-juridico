@@ -1,0 +1,9 @@
+{
+  "query": "\nCREATE TABLE IF NOT EXISTS anexos_peticao (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  peticao_id INT NOT NULL,\n  nome_arquivo VARCHAR(500) NOT NULL,\n  tipo_arquivo VARCHAR(100) DEFAULT 'application/pdf',\n  tamanho_bytes INT DEFAULT 0,\n  storage_key VARCHAR(500) NOT NULL,\n  storage_url VARCHAR(1000) NOT NULL,\n  descricao TEXT,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (peticao_id) REFERENCES peticoes_geradas(id) ON DELETE CASCADE\n);\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute \nCREATE TABLE IF NOT EXISTS anexos_peticao (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  peticao_id INT NOT NULL,\n  nome_arquivo VARCHAR(500) NOT NULL,\n  tipo_arquivo VARCHAR(100) DEFAULT 'application/pdf',\n  tamanho_bytes INT DEFAULT 0,\n  storage_key VARCHAR(500) NOT NULL,\n  storage_url VARCHAR(1000) NOT NULL,\n  descricao TEXT,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (peticao_id) REFERENCES peticoes_geradas(id) ON DELETE CASCADE\n);\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 544
+}

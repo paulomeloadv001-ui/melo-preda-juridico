@@ -8,7 +8,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
-import { Search, User, ChevronRight, RefreshCw, Trash2, Upload, Download, Filter, ChevronLeft, FilePlus, Bot } from "lucide-react";
+import { Search, User, ChevronRight, RefreshCw, Trash2, Upload, Download, Filter, ChevronLeft, FilePlus, Bot, Zap, Loader2 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -32,6 +32,14 @@ export default function ClientesList() {
     onError: (e) => toast.error(e.message),
   });
   const exportAll = trpc.exportar.todosClientesJson.useQuery(undefined, { enabled: false });
+  const naoClassificados = trpc.agente.processosNaoClassificados.useQuery();
+  const classificarProcessos = trpc.agente.classificarProcessos.useMutation({
+    onSuccess: (data) => {
+      toast.success(`${data.classificados} de ${data.total} processos classificados!`);
+      naoClassificados.refetch();
+    },
+    onError: (e) => toast.error(`Erro: ${e.message}`),
+  });
 
   const handleExportAll = async () => {
     const result = await exportAll.refetch();
@@ -92,6 +100,21 @@ export default function ClientesList() {
             <Download className={`h-4 w-4 mr-1 ${exportAll.isFetching ? "animate-spin" : ""}`} />
             Exportar
           </Button>
+          {(naoClassificados.data?.total ?? 0) > 0 && (
+            <Button
+              size="sm"
+              onClick={() => classificarProcessos.mutate({})}
+              disabled={classificarProcessos.isPending}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {classificarProcessos.isPending ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Zap className="h-4 w-4 mr-1" />
+              )}
+              Classificar {naoClassificados.data?.total} processos
+            </Button>
+          )}
         </div>
       </div>
 

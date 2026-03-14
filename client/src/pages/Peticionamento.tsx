@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import {
   FileText, Download, Plus, Search, Edit, Trash2, Copy,
   CheckCircle, Clock, FileCheck, Archive, Send, RefreshCw,
-  ChevronRight, Loader2, Eye, RotateCcw
+  ChevronRight, Loader2, Eye, RotateCcw, Paperclip, Upload, X
 } from "lucide-react";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
@@ -51,6 +51,9 @@ export default function Peticionamento() {
   const [previewTitulo, setPreviewTitulo] = useState("");
   const [deleteDialog, setDeleteDialog] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [anexosDialog, setAnexosDialog] = useState(false);
+  const [anexosPeticaoId, setAnexosPeticaoId] = useState<number | null>(null);
+  const [uploadingAnexo, setUploadingAnexo] = useState(false);
 
   // Queries
   const { data: tipos } = trpc.agente.tiposPeticao.useQuery();
@@ -125,6 +128,60 @@ export default function Peticionamento() {
       toast.error(`Erro ao exportar: ${err.message}`);
     },
   });
+
+  // Anexos
+  const { data: anexos, refetch: refetchAnexos } = trpc.agente.listarAnexos.useQuery(
+    { peticaoId: anexosPeticaoId! },
+    { enabled: !!anexosPeticaoId }
+  );
+
+  const uploadAnexo = trpc.agente.uploadAnexo.useMutation({
+    onSuccess: () => {
+      refetchAnexos();
+      toast.success("Anexo adicionado!");
+    },
+    onError: (err) => toast.error(`Erro: ${err.message}`),
+  });
+
+  const excluirAnexo = trpc.agente.excluirAnexo.useMutation({
+    onSuccess: () => {
+      refetchAnexos();
+      toast.success("Anexo removido");
+    },
+  });
+
+  const handleUploadAnexo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !anexosPeticaoId) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Arquivo muito grande (máx 10MB)");
+      return;
+    }
+    setUploadingAnexo(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        uploadAnexo.mutate({
+          peticaoId: anexosPeticaoId,
+          nomeArquivo: file.name,
+          tipoArquivo: file.type,
+          tamanhoBytes: file.size,
+          base64Data: base64,
+        }, { onSettled: () => setUploadingAnexo(false) });
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setUploadingAnexo(false);
+      toast.error("Erro ao ler arquivo");
+    }
+    e.target.value = '';
+  };
+
+  const openAnexos = (petId: number) => {
+    setAnexosPeticaoId(petId);
+    setAnexosDialog(true);
+  };
 
   const atualizarStatus = trpc.agente.atualizarStatusPeticao.useMutation({
     onSuccess: () => {
@@ -652,6 +709,15 @@ export default function Peticionamento() {
                               <SelectItem value="arquivado">Arquivado</SelectItem>
                             </SelectContent>
                           </Select>
+                          {/* Anexos */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openAnexos(pet.id)}
+                            title="Anexos"
+                          >
+                            <Paperclip className="h-3.5 w-3.5" />
+                          </Button>
                           {/* Excluir */}
                           <Button
                             variant="outline"
@@ -751,6 +817,87 @@ export default function Peticionamento() {
               <Download className="h-4 w-4 mr-2" />
               Salvar e Gerar DOCX
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Anexos Dialog */}
+      <Dialog open={anexosDialog} onOpenChange={setAnexosDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Paperclip className="h-5 w-5" />
+              Anexos da Petição
+            </DialogTitle>
+            <DialogDescription>Gerencie documentos anexados a esta petição (procuração, contracheque, contratos, etc.)</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Upload */}
+            <div className="flex items-center gap-2">
+              <label className="flex-1">
+                <input
+                  type="file"
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx"
+                  onChange={handleUploadAnexo}
+                  disabled={uploadingAnexo}
+                />
+                <div className="flex items-center justify-center gap-2 border-2 border-dashed rounded-lg p-4 cursor-pointer hover:border-amber-500 hover:bg-amber-50/50 transition-colors">
+                  {uploadingAnexo ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-amber-600" />
+                  ) : (
+                    <Upload className="h-5 w-5 text-muted-foreground" />
+                  )}
+                  <span className="text-sm text-muted-foreground">
+                    {uploadingAnexo ? 'Enviando...' : 'Clique para adicionar anexo (máx 10MB)'}
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            {/* Lista de anexos */}
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              {(!anexos || anexos.length === 0) ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhum anexo adicionado</p>
+              ) : (
+                anexos.map((a: any) => (
+                  <div key={a.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="h-4 w-4 text-amber-600 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{a.nomeArquivo}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {a.tipoArquivo} • {((a.tamanhoBytes || 0) / 1024).toFixed(0)} KB
+                          • {new Date(a.createdAt).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(a.storageUrl, '_blank')}
+                        title="Baixar"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => excluirAnexo.mutate({ id: a.id })}
+                        title="Remover"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAnexosDialog(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
