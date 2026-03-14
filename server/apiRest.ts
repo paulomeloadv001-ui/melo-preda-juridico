@@ -53,7 +53,39 @@ function authMiddleware(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-// Aplicar autenticação em todas as rotas
+// Rota pública de download DOCX (sem autenticação por API Key - usa sessão do usuário)
+apiRouter.get('/download-docx/:peticaoId', async (req: Request, res: Response) => {
+  try {
+    const db = await getDb();
+    if (!db) return res.status(503).json({ error: 'Banco de dados indisponível' });
+
+    const peticaoId = parseInt(req.params.peticaoId);
+    if (!peticaoId) return res.status(400).json({ error: 'ID da petição é obrigatório' });
+
+    const [pet] = await db.select().from(peticoesGeradas).where(eq(peticoesGeradas.id, peticaoId));
+    if (!pet) return res.status(404).json({ error: 'Petição não encontrada' });
+
+    const json = typeof pet.conteudoJson === 'string' ? JSON.parse(pet.conteudoJson as string) : pet.conteudoJson;
+    const docxUrl = (json as any)?.docxUrl;
+    if (!docxUrl) return res.status(404).json({ error: 'DOCX não disponível para esta petição' });
+
+    // Proxy download do S3
+    const response = await fetch(encodeURI(docxUrl));
+    if (!response.ok) return res.status(502).json({ error: 'Erro ao baixar DOCX do storage' });
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const filename = `${(pet.titulo || 'peticao').replace(/[^a-zA-Z0-9\u00C0-\u00FF\s._-]/g, '_')}.docx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+    res.setHeader('Content-Length', buffer.length.toString());
+    res.send(buffer);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Aplicar autenticação em todas as rotas abaixo
 apiRouter.use(authMiddleware);
 
 // ============================================================

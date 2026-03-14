@@ -8,7 +8,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
-import { ArrowLeft, FileText, DollarSign, Scale, Download, ExternalLink, FolderOpen, BookOpen, Lightbulb, RefreshCw, Database, Trash2, Upload, Link2, GitBranch, Banknote, Receipt, ArrowUpCircle, ArrowDownCircle, Clock, CheckCircle2, AlertCircle, TrendingUp, Landmark, Edit, Plus, X, Save, MoreHorizontal } from "lucide-react";
+import { ArrowLeft, FileText, DollarSign, Scale, Download, ExternalLink, FolderOpen, BookOpen, Lightbulb, RefreshCw, Database, Trash2, Upload, Link2, GitBranch, Banknote, Receipt, ArrowUpCircle, ArrowDownCircle, Clock, CheckCircle2, AlertCircle, TrendingUp, Landmark, Edit, Plus, X, Save, MoreHorizontal, Bot, FilePlus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
@@ -149,6 +149,12 @@ export default function ClientePerfil() {
           </Button>
           <Button variant="outline" size="sm" onClick={() => setLocation("/upload")}>
             <Upload className="h-4 w-4 mr-1" /> Importar Processo
+          </Button>
+          <Button variant="default" size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => setLocation(`/peticionamento?clienteId=${clienteId}`)}>
+            <FilePlus className="h-4 w-4 mr-1" /> Gerar Petição
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setLocation(`/agente?clienteId=${clienteId}`)}>
+            <Bot className="h-4 w-4 mr-1" /> Agente IA
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>

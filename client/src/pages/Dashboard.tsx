@@ -861,10 +861,15 @@ export default function Dashboard() {
               <span className="text-sm font-medium">Acompanhamento PJe</span>
               <span className="text-xs text-muted-foreground">Consulta DataJud/CNJ</span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => setLocation("/agente-ia")}>
+            <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => setLocation("/agente")}>
               <Brain className="h-6 w-6 text-emerald-600" />
               <span className="text-sm font-medium">Agente Jurídico IA</span>
               <span className="text-xs text-muted-foreground">Chat e petições inteligentes</span>
+            </Button>
+            <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-800" onClick={() => setLocation("/peticionamento")}>
+              <FileText className="h-6 w-6 text-amber-600" />
+              <span className="text-sm font-medium">Peticionamento</span>
+              <span className="text-xs text-muted-foreground">Gerar petições DOCX com timbrado</span>
             </Button>
             <Button variant="outline" className="h-auto py-4 flex flex-col gap-2" onClick={() => setLocation("/relatorios")}>
               <FileText className="h-6 w-6 text-teal-600" />

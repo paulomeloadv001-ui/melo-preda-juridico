@@ -30,9 +30,13 @@ const modos: { id: ModoChat; label: string; icon: any; desc: string; color: stri
 ];
 
 export default function AgenteJuridico() {
+  // Ler clienteId da URL query param (vindo do perfil do cliente)
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialClienteId = urlParams.get('clienteId') ? Number(urlParams.get('clienteId')) : undefined;
+
   const [mensagem, setMensagem] = useState("");
   const [historico, setHistorico] = useState<ChatMessage[]>([]);
-  const [clienteId, setClienteId] = useState<number | undefined>();
+  const [clienteId, setClienteId] = useState<number | undefined>(initialClienteId);
   const [processoId, setProcessoId] = useState<number | undefined>();
   const [modo, setModo] = useState<ModoChat>("chat");
   const [sessaoId, setSessaoId] = useState<string>(`sessao_${Date.now()}`);
@@ -235,9 +239,9 @@ export default function AgenteJuridico() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
         {/* Chat Principal */}
-        <div className="lg:col-span-2">
+        <div>
           <Card className="h-[650px] flex flex-col">
             <CardHeader className="pb-2 border-b">
               <div className="flex items-center justify-between">
@@ -461,24 +465,25 @@ export default function AgenteJuridico() {
                 <CardContent className="pt-0">
                   <div className="space-y-0.5">
                     {[
-                      "Agravo de Instrumento",
-                      "Cumprimento Provisório de Sentença",
-                      "Cumprimento Definitivo de Sentença",
-                      "Contrarrazões de Apelação",
-                      "Embargos de Declaração",
-                      "Exceção de Pré-Executividade",
-                      "Impugnação ao Cumprimento",
-                      "Querela Nullitatis",
-                      "Obrigação de Fazer",
-                      "Petição Simples",
+                      { short: "Agravo de Instrumento", full: "Agravo de Instrumento" },
+                      { short: "Cumprimento Provisório", full: "Cumprimento Provisório de Sentença" },
+                      { short: "Cumprimento Definitivo", full: "Cumprimento Definitivo de Sentença" },
+                      { short: "Contrarrazões Apelação", full: "Contrarrazões de Apelação" },
+                      { short: "Embargos Declaração", full: "Embargos de Declaração" },
+                      { short: "Exceção Pré-Executividade", full: "Exceção de Pré-Executividade" },
+                      { short: "Impugnação Cumprimento", full: "Impugnação ao Cumprimento" },
+                      { short: "Querela Nullitatis", full: "Querela Nullitatis" },
+                      { short: "Obrigação de Fazer", full: "Obrigação de Fazer" },
+                      { short: "Petição Simples", full: "Petição Simples" },
                     ].map((tipo) => (
                       <button
-                        key={tipo}
-                        onClick={() => { setTipoPeticao(tipo); setShowPeticaoDialog(true); }}
+                        key={tipo.full}
+                        onClick={() => { setTipoPeticao(tipo.full); setShowPeticaoDialog(true); }}
+                        title={tipo.full}
                         className="w-full flex items-center gap-2 text-left text-xs p-1.5 rounded hover:bg-accent transition-colors group"
                       >
                         <FileText className="h-3 w-3 text-amber-600 flex-shrink-0" />
-                        <span className="flex-1">{tipo}</span>
+                        <span className="flex-1 truncate">{tipo.short}</span>
                         <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </button>
                     ))}
@@ -497,11 +502,11 @@ export default function AgenteJuridico() {
                 <CardContent className="pt-0">
                   <div className="space-y-0.5">
                     {[
-                      { icon: BookOpen, label: "Teses centrais do escritório", query: "Liste todas as teses centrais do escritório com fundamentos legais e jurisprudência" },
+                      { icon: BookOpen, label: "Teses centrais", query: "Liste todas as teses centrais do escritório com fundamentos legais e jurisprudência" },
                       { icon: Gavel, label: "Jurisprudência âncora", query: "Quais são as jurisprudências âncora do escritório? Detalhe cada uma com número, relator e ementa" },
                       { icon: Shield, label: "Estratégias avançadas", query: "Descreva todas as 8 estratégias processuais avançadas do escritório com detalhes de quando usar cada uma" },
                       { icon: Scale, label: "Legislação fundamental", query: "Liste toda a legislação fundamental utilizada pelo escritório com artigos específicos" },
-                      { icon: Calculator, label: "Fórmula de cálculo judicial", query: "Explique a fórmula completa de cálculo de débito judicial: IPCA + juros + multa art. 523 + honorários" },
+                      { icon: Calculator, label: "Fórmula de cálculo", query: "Explique a fórmula completa de cálculo de débito judicial: IPCA + juros + multa art. 523 + honorários" },
                       { icon: AlertTriangle, label: "Checklist de análise", query: "Qual o checklist completo para análise técnica de um processo?" },
                     ].map((item, i) => (
                       <button

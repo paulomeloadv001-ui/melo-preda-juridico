@@ -2089,7 +2089,7 @@ ${textoExtraido}`;
       return { processosRemovidos: removidos };
     }),
 
-    // Histórico de correções
+    // Histórico de conversas
     historico: protectedProcedure.query(async () => {
       const db = await getDb();
       if (!db) return [];
@@ -4694,6 +4694,129 @@ IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação M
     }),
 
     // Análise técnica aprofundada de processo
+    // ==================== PETICIONAMENTO COMPLETO ====================
+    // Obter petição por ID
+    obterPeticao: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        const [pet] = await db.select().from(peticoesGeradas).where(eq(peticoesGeradas.id, input.id));
+        if (!pet) throw new Error('Petição não encontrada');
+        return pet;
+      }),
+    // Editar conteúdo da petição
+    editarPeticao: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        conteudoTexto: z.string().optional(),
+        titulo: z.string().optional(),
+        observacoes: z.string().optional(),
+        status: z.string().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        const updateData: any = { updatedAt: new Date() };
+        if (input.conteudoTexto !== undefined) {
+          updateData.conteudoTexto = input.conteudoTexto;
+          updateData.conteudoJson = JSON.stringify({ texto: input.conteudoTexto });
+        }
+        if (input.titulo) updateData.titulo = input.titulo;
+        if (input.observacoes !== undefined) updateData.observacoes = input.observacoes;
+        if (input.status) {
+          updateData.status = input.status;
+          if (input.status === 'revisado') updateData.revisadoPor = ctx.user?.name || 'admin';
+        }
+        await db.update(peticoesGeradas).set(updateData).where(eq(peticoesGeradas.id, input.id));
+        return { success: true };
+      }),
+    // Excluir petição
+    excluirPeticao: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        await db.delete(peticoesGeradas).where(eq(peticoesGeradas.id, input.id));
+        return { success: true };
+      }),
+    // Duplicar petição
+    duplicarPeticao: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        const [original] = await db.select().from(peticoesGeradas).where(eq(peticoesGeradas.id, input.id));
+        if (!original) throw new Error('Petição não encontrada');
+        const [inserted] = await db.insert(peticoesGeradas).values({
+          templateId: original.templateId,
+          processoId: original.processoId,
+          clienteId: original.clienteId,
+          tipo: original.tipo,
+          titulo: `${original.titulo} (Cópia)`,
+          conteudoJson: original.conteudoJson,
+          conteudoTexto: original.conteudoTexto,
+          status: 'rascunho',
+          geradoPor: 'duplicacao',
+          observacoes: `Duplicada da petição #${original.id}`,
+        });
+        return { success: true, id: inserted.insertId };
+      }),
+    // Regenerar DOCX de petição existente (após edição)
+    regenerarDocx: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        const [pet] = await db.select().from(peticoesGeradas).where(eq(peticoesGeradas.id, input.id));
+        if (!pet || !pet.conteudoTexto) throw new Error('Petição sem conteúdo');
+        const docxBuffer = await gerarPeticaoDocx(pet.conteudoTexto, pet.titulo);
+        const timestamp = Date.now();
+        const nomeArquivo = `peticoes/docx_${pet.tipo.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)}_${timestamp}.docx`;
+        const { url: docxUrl } = await storagePut(nomeArquivo, docxBuffer, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        // Atualizar banco com novo URL
+        const json = typeof pet.conteudoJson === 'string' ? JSON.parse(pet.conteudoJson) : (pet.conteudoJson as any) || {};
+        json.docxUrl = docxUrl;
+        await db.update(peticoesGeradas).set({ conteudoJson: JSON.stringify(json) }).where(eq(peticoesGeradas.id, input.id));
+        return { docxUrl, titulo: pet.titulo };
+      }),
+    // Atualizar status da petição
+    atualizarStatusPeticao: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        status: z.enum(['rascunho', 'revisado', 'aprovado', 'protocolado', 'arquivado']),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        const updateData: any = { status: input.status };
+        if (input.status === 'revisado' || input.status === 'aprovado') {
+          updateData.revisadoPor = ctx.user?.name || 'admin';
+        }
+        await db.update(peticoesGeradas).set(updateData).where(eq(peticoesGeradas.id, input.id));
+        return { success: true };
+      }),
+    // Listar todos os tipos de petição disponíveis
+    tiposPeticao: protectedProcedure.query(async () => {
+      return [
+        { id: 'agravo_instrumento', nome: 'Agravo de Instrumento', descricao: 'Recurso contra decisão interlocutória' },
+        { id: 'contrarrazoes_apelacao', nome: 'Contrarrazões à Apelação', descricao: 'Resposta ao recurso de apelação' },
+        { id: 'cumprimento_provisorio', nome: 'Cumprimento Provisório de Sentença', descricao: 'Execução provisória antes do trânsito em julgado' },
+        { id: 'cumprimento_definitivo', nome: 'Cumprimento Definitivo de Sentença', descricao: 'Execução após trânsito em julgado' },
+        { id: 'querela_nullitatis', nome: 'Querela Nullitatis', descricao: 'Ação declaratória de nulidade de sentença' },
+        { id: 'obrigacao_fazer', nome: 'Obrigação de Fazer', descricao: 'Ação para compelir cumprimento de obrigação' },
+        { id: 'embargos_declaracao', nome: 'Embargos de Declaração', descricao: 'Recurso para esclarecer obscuridade, contradição ou omissão' },
+        { id: 'embargos_execucao', nome: 'Embargos à Execução', descricao: 'Defesa do executado na fase de execução' },
+        { id: 'recurso_especial', nome: 'Recurso Especial (REsp)', descricao: 'Recurso ao STJ por violação de lei federal' },
+        { id: 'habeas_corpus', nome: 'Habeas Corpus', descricao: 'Remédio constitucional contra restrição de liberdade' },
+        { id: 'mandado_seguranca', nome: 'Mandado de Segurança', descricao: 'Remédio constitucional contra ato ilegal de autoridade' },
+        { id: 'peticao_simples', nome: 'Petição Simples', descricao: 'Petição intermediária genérica' },
+        { id: 'peticao_juntada', nome: 'Petição de Juntada de Documentos', descricao: 'Juntada de documentos aos autos' },
+        { id: 'impugnacao', nome: 'Impugnação ao Cumprimento de Sentença', descricao: 'Defesa do devedor no cumprimento de sentença' },
+        { id: 'penhora_online', nome: 'Pedido de Penhora Online (SISBAJUD)', descricao: 'Solicitação de bloqueio via sistema bancário' },
+        { id: 'alvara_levantamento', nome: 'Alvará de Levantamento', descricao: 'Solicitação de levantamento de valores depositados' },
+      ];
+    }),
     analisarProcesso: protectedProcedure
       .input(z.object({
         processoId: z.number(),

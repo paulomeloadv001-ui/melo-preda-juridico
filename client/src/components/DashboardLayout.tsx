@@ -51,6 +51,7 @@ const menuGroups = [
     label: "Inteligência",
     items: [
       { icon: Brain, label: "Agente IA", path: "/agente" },
+      { icon: FileText, label: "Peticionamento", path: "/peticionamento" },
       { icon: BookOpen, label: "Base Jurídica", path: "/conhecimentos" },
       { icon: FileBarChart, label: "Relatórios", path: "/relatorios" },
     ]

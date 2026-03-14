@@ -16,6 +16,7 @@ import Relatorios from "./pages/Relatorios";
 import Jobs from "./pages/Jobs";
 import GestaoAcessos, { SolicitarAcesso } from "./pages/GestaoAcessos";
 import AgenteJuridico from "./pages/AgenteJuridico";
+import Peticionamento from "./pages/Peticionamento";
 import PrazosProcessuais from "./pages/PrazosProcessuais";
 import AcompanhamentoPJe from "./pages/AcompanhamentoPJe";
 import Integracao from "./pages/Integracao";
@@ -43,6 +44,7 @@ function Router() {
             <Route path="/correcao" component={Correcao} />
             <Route path="/jobs" component={Jobs} />
             <Route path="/agente" component={AgenteJuridico} />
+            <Route path="/peticionamento" component={Peticionamento} />
             <Route path="/prazos" component={PrazosProcessuais} />
             <Route path="/acompanhamento" component={AcompanhamentoPJe} />
             <Route path="/integracao" component={Integracao} />
