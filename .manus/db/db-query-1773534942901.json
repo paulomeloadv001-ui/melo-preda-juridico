@@ -1,0 +1,50 @@
+{
+  "query": "SELECT chave, LENGTH(valor) as tamanho FROM agente_ia_config WHERE ativo = 1 ORDER BY chave",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT chave, LENGTH(valor) as tamanho FROM agente_ia_config WHERE ativo = 1 ORDER BY chave",
+  "rows": [
+    {
+      "chave": "estilo_redacao",
+      "tamanho": "5173"
+    },
+    {
+      "chave": "estrategias_avancadas",
+      "tamanho": "2253"
+    },
+    {
+      "chave": "identidade_visual",
+      "tamanho": "3949"
+    },
+    {
+      "chave": "instrucoes_agente",
+      "tamanho": "5413"
+    },
+    {
+      "chave": "jurisprudencia_ancora",
+      "tamanho": "662"
+    },
+    {
+      "chave": "legislacao_fundamental",
+      "tamanho": "865"
+    },
+    {
+      "chave": "perfil_escritorio",
+      "tamanho": "393"
+    },
+    {
+      "chave": "system_prompt",
+      "tamanho": "1697"
+    },
+    {
+      "chave": "teses_centrais",
+      "tamanho": "1743"
+    },
+    {
+      "chave": "vocabulario_caracteristico",
+      "tamanho": "456"
+    }
+  ],
+  "messages": [],
+  "stdout": "chave\ttamanho\nestilo_redacao\t5173\nestrategias_avancadas\t2253\nidentidade_visual\t3949\ninstrucoes_agente\t5413\njurisprudencia_ancora\t662\nlegislacao_fundamental\t865\nperfil_escritorio\t393\nsystem_prompt\t1697\nteses_centrais\t1743\nvocabulario_caracteristico\t456\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

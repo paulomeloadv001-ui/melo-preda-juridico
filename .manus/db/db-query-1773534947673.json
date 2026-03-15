@@ -1,0 +1,53 @@
+{
+  "query": "SELECT chave, LEFT(valor, 100) as preview, LENGTH(valor) as tamanho FROM agente_ia_config WHERE ativo = 1 ORDER BY chave",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT chave, LEFT(valor, 100) as preview, LENGTH(valor) as tamanho FROM agente_ia_config WHERE ativo = 1 ORDER BY chave",
+  "rows": [
+    {
+      "chave": "estrategias_avancadas",
+      "preview": "[{\"id\":1,\"nome\":\"Tutela de Urgência Antecedente (Art. 303 CPC)\",\"quando\":\"Risco de consolidação de p",
+      "tamanho": "2253"
+    },
+    {
+      "chave": "jurisprudencia_ancora",
+      "preview": "[{\"tribunal\":\"TJ-GO\",\"processo\":\"Apel. Cível 5407476-85.2022.8.09.0051\",\"tema\":\"Consignações — limit",
+      "tamanho": "662"
+    },
+    {
+      "chave": "legislacao_fundamental",
+      "preview": "[{\"diploma\":\"Lei Est. 16.898/2010\",\"artigo\":\"Art. 5º, §§3º e 5º\",\"aplicacao\":\"Limite 35% consignaçõe",
+      "tamanho": "865"
+    },
+    {
+      "chave": "perfil_escritorio",
+      "preview": "{\"nome\":\"Dr. Paulo Melo\",\"escritorio\":\"Melo & Preda Advogados\",\"especialidade\":\"Direito do Consumido",
+      "tamanho": "393"
+    },
+    {
+      "chave": "teses_centrais",
+      "preview": "[{\"id\":1,\"nome\":\"Abusividade de Consignações\",\"fundamento\":\"Art. 5º da Lei Estadual 16.898/2010 (alt",
+      "tamanho": "1743"
+    },
+    {
+      "chave": "vocabulario_caracteristico",
+      "preview": "[\"Flagrante ilegalidade/abusividade\",\"Comprometimento excessivo da verba alimentar\",\"Confisco de sal",
+      "tamanho": "456"
+    }
+  ],
+  "messages": [
+    "estilo_redacao\t# Guia de Estilo e Redação — Melo & Preda Advogados",
+    "## Princípios Fundamentais",
+    "O Dr. Paulo Melo ad\t5173",
+    "identidade_visual\t# Guia de Identidade Visual — Melo & Preda Advogados",
+    "## Papel Timbrado — Especificações Técnicas",
+    "#\t3949",
+    "instrucoes_agente\t# Instruções Detalhadas para Agentes de IA — Melo & Preda Expert",
+    "## Quando Ativar Esta Skill",
+    "Ativa\t5413",
+    "system_prompt\tVocê é o Agente Jurídico Expert do escritório Melo & Preda Advogados.",
+    "## IDENTIDADE",
+    "- Advogado: Dr.\t1697"
+  ],
+  "stdout": "chave\tpreview\ttamanho\nestilo_redacao\t# Guia de Estilo e Redação — Melo & Preda Advogados\n\n## Princípios Fundamentais\n\nO Dr. Paulo Melo ad\t5173\nestrategias_avancadas\t[{\"id\":1,\"nome\":\"Tutela de Urgência Antecedente (Art. 303 CPC)\",\"quando\":\"Risco de consolidação de p\t2253\nidentidade_visual\t# Guia de Identidade Visual — Melo & Preda Advogados\n\n## Papel Timbrado — Especificações Técnicas\n\n#\t3949\ninstrucoes_agente\t# Instruções Detalhadas para Agentes de IA — Melo & Preda Expert\n\n## Quando Ativar Esta Skill\n\nAtiva\t5413\njurisprudencia_ancora\t[{\"tribunal\":\"TJ-GO\",\"processo\":\"Apel. Cível 5407476-85.2022.8.09.0051\",\"tema\":\"Consignações — limit\t662\nlegislacao_fundamental\t[{\"diploma\":\"Lei Est. 16.898/2010\",\"artigo\":\"Art. 5º, §§3º e 5º\",\"aplicacao\":\"Limite 35% consignaçõe\t865\nperfil_escritorio\t{\"nome\":\"Dr. Paulo Melo\",\"escritorio\":\"Melo & Preda Advogados\",\"especialidade\":\"Direito do Consumido\t393\nsystem_prompt\tVocê é o Agente Jurídico Expert do escritório Melo & Preda Advogados.\n\n## IDENTIDADE\n- Advogado: Dr.\t1697\nteses_centrais\t[{\"id\":1,\"nome\":\"Abusividade de Consignações\",\"fundamento\":\"Art. 5º da Lei Estadual 16.898/2010 (alt\t1743\nvocabulario_caracteristico\t[\"Flagrante ilegalidade/abusividade\",\"Comprometimento excessivo da verba alimentar\",\"Confisco de sal\t456\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}

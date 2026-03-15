@@ -4354,199 +4354,235 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
           config[row.chave] = row.valor;
         }
 
-        // 2. Buscar base de conhecimento completa
+        // 2. CARREGAR TODOS OS DADOS DA PLATAFORMA — PANORAMA GLOBAL COMPLETO
+        // O agente ESTUDOU todos os processos e deve saber tudo
+
+        // 2a. Todos os clientes
+        const todosClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+        // 2b. Todos os processos
+        const todosProcessos = await db.select().from(processos).orderBy(desc(processos.createdAt));
+        // 2c. Todas as estratégias
+        const todasEstrategias = await db.select().from(estrategias);
+        // 2d. Todos os conhecimentos (SEM truncar)
         const todosConhecimentos = await db.select().from(conhecimentos).orderBy(desc(conhecimentos.createdAt));
         const teses = todosConhecimentos.filter(c => c.categoria === 'Tese');
         const jurisprudencias = todosConhecimentos.filter(c => c.categoria === 'Jurisprudencia');
         const estrategiasConhec = todosConhecimentos.filter(c => c.categoria === 'Estrategia');
         const legislacoes = todosConhecimentos.filter(c => c.categoria === 'Legislacao');
         const modelos = todosConhecimentos.filter(c => c.categoria === 'Modelo');
+        // 2e. Dados financeiros e empréstimos
+        const todosDadosFin = await db.select().from(dadosFinanceiros);
+        const todosEmprestimos = await db.select().from(emprestimosConsignados);
+        // 2f. Prazos processuais
+        const todosPrazos = await db.select().from(prazosProcessuais).orderBy(prazosProcessuais.dataVencimento);
+        // 2g. Cumprimentos de sentença
+        const todosCumprimentos = await db.select().from(cumprimentosSentenca);
+        // 2h. Movimentações financeiras
+        const todasMovFin = await db.select().from(movimentacoesFinanceiras);
+        // 2i. Petições geradas
+        const todasPeticoes = await db.select().from(peticoesGeradas).orderBy(desc(peticoesGeradas.createdAt));
 
-        // 3. Buscar contexto específico do cliente/processo
+        // 3. MONTAR PANORAMA GLOBAL DO ESCRITÓRIO (SEMPRE CARREGADO)
+        const totalValorCausas = todosProcessos.reduce((acc, p) => acc + Number(p.valorCausa || 0), 0);
+        const totalHonorarios = todosProcessos.reduce((acc, p) => acc + Number(p.honorariosValor || 0), 0);
+        const prazosUrgentes = todosPrazos.filter(p => !p.status || p.status !== 'cumprido').slice(0, 30);
+        const emprestimosAtivos = todosEmprestimos.filter(e => !e.status || e.status !== 'Quitado');
+        const totalParcelasEmprestimos = emprestimosAtivos.reduce((acc, e) => acc + Number(e.valorParcela || 0), 0);
+
+        const panoramaGlobal = `
+=== PANORAMA COMPLETO DO ESCRITÓRIO MELO & PREDA ===
+Você estudou e conhece TODOS os dados abaixo. Responda qualquer pergunta com base neles.
+
+RESUMO GERAL:
+- ${todosClientes.length} clientes ativos
+- ${todosProcessos.length} processos judiciais
+- ${todasEstrategias.length} estratégias processuais definidas
+- ${todosConhecimentos.length} conhecimentos na base
+- ${todasPeticoes.length} petições geradas
+- Valor total em causas: R$ ${totalValorCausas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+- Honorários totais: R$ ${totalHonorarios.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+- ${emprestimosAtivos.length} empréstimos consignados ativos (total parcelas: R$ ${totalParcelasEmprestimos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês)
+- ${prazosUrgentes.length} prazos pendentes/urgentes
+
+TODOS OS CLIENTES (${todosClientes.length}):
+${todosClientes.map(c => {
+  const procsCliente = todosProcessos.filter(p => p.clienteId === c.id);
+  const finCliente = todosDadosFin.filter(d => d.clienteId === c.id);
+  const empCliente = todosEmprestimos.filter(e => e.clienteId === c.id);
+  const estratsCliente = procsCliente.flatMap(p => todasEstrategias.filter(e => e.processoId === p.id));
+  return `• ${c.nomeCompleto} | CPF: ${c.cpfCnpj || 'N/A'} | ${c.profissao || 'N/A'} | ${c.orgaoEmpregador || 'N/A'} | ${c.cidade || ''}-${c.estado || ''}
+  Processos (${procsCliente.length}): ${procsCliente.map(p => `${p.numeroCnj} (${p.tipoAcao}, R$ ${p.valorCausa}, ${p.faseAtual})`).join('; ')}
+  Financeiro: ${finCliente.map(d => `Bruto R$ ${d.remuneracaoBruta || '?'} | Líq R$ ${d.remuneracaoLiquida || '?'} | Margem R$ ${d.margemConsignavelValor || '?'} (${d.margemConsignavelPerc || '?'}%)`).join('; ') || 'N/A'}
+  Empréstimos (${empCliente.length}): ${empCliente.map(e => `${e.banco}: R$ ${e.valorParcela}/mês, ${e.totalParcelas || '?'} parcelas`).join('; ') || 'Nenhum'}
+  Estratégias: ${estratsCliente.map(e => e.tesePrincipal?.substring(0, 150)).join(' | ') || 'Nenhuma'}`;
+}).join('\n')}
+
+TODOS OS PROCESSOS DETALHADOS (${todosProcessos.length}):
+${todosProcessos.map(p => {
+  const estrats = todasEstrategias.filter(e => e.processoId === p.id);
+  const cumps = todosCumprimentos.filter(c => c.processoId === p.id);
+  const movFin = todasMovFin.filter(m => m.processoId === p.id);
+  return `• ${p.numeroCnj} | ${p.tipoAcao} | ${p.classeProcessual || ''}
+  Polo Ativo: ${p.poloAtivo} | Polo Passivo: ${p.poloPassivo}
+  Vara: ${p.vara}, ${p.comarca} | Tribunal: ${p.tribunal} | Juiz: ${p.juiz || 'N/A'}
+  Valor: R$ ${p.valorCausa} | Fase: ${p.faseAtual} | Status: ${p.statusProcesso}
+  Sentença: ${p.resumoSentenca?.substring(0, 200) || 'N/A'}
+  Condenação: R$ ${p.valorCondenacao || 'N/A'} | Honorários: ${p.honorariosPerc || 'N/A'}% = R$ ${p.honorariosValor || 'N/A'}
+  Tutela: ${p.tutelaTipo || 'N/A'} (${p.tutelaStatus || 'N/A'})
+  Estratégias: ${estrats.map(e => `[${e.tesePrincipal?.substring(0, 120)}] Fund: ${e.fundamentacaoLegal?.substring(0, 100)} | Jurisp: ${e.jurisprudenciaCitada?.substring(0, 80) || 'N/A'} | Fortes: ${e.pontosFortes?.substring(0, 80) || 'N/A'} | Riscos: ${e.riscosIdentificados?.substring(0, 80) || 'N/A'}`).join('\n    ') || 'Nenhuma'}
+  Cumprimentos: ${cumps.map(c => `${c.tipo}: Exec R$ ${c.valorExecucao}, Princ R$ ${c.valorPrincipal}, Juros R$ ${c.valorJuros}, Hon R$ ${c.valorHonorarios}`).join('; ') || 'Nenhum'}
+  Financeiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ') || 'N/A'}`;
+}).join('\n')}
+
+PRAZOS PROCESSUAIS PENDENTES (${prazosUrgentes.length}):
+${prazosUrgentes.map(p => `• ${p.titulo} | Vencimento: ${p.dataVencimento} | Status: ${p.status} | Tipo: ${p.tipo} | Processo: ${p.processoId || 'N/A'}`).join('\n')}
+
+PETIÇÕES GERADAS (${todasPeticoes.length}):
+${todasPeticoes.slice(0, 30).map(p => `• ${p.titulo} | Tipo: ${p.tipo} | Status: ${p.status} | Cliente: ${p.clienteId || 'N/A'}`).join('\n')}
+`;
+
+        // 4. Buscar contexto DETALHADO do cliente/processo selecionado (ALÉM do global)
         let contextoCliente = '';
         let contextoProcesso = '';
-        let dadosEmprestimos = '';
-        let dadosPrazos = '';
         
         if (input.clienteId) {
           const [cliente] = await db.select().from(clientes).where(eq(clientes.id, input.clienteId));
           if (cliente) {
-            const procs = await db.select().from(processos).where(eq(processos.clienteId, cliente.id));
-            const dadosFin = await db.select().from(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, cliente.id));
-            const emprestimos = await db.select().from(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, cliente.id));
-            const estrats = [];
+            const procs = todosProcessos.filter(p => p.clienteId === cliente.id);
+            const dadosFin = todosDadosFin.filter(d => d.clienteId === cliente.id);
+            const emprestimos = todosEmprestimos.filter(e => e.clienteId === cliente.id);
+            const estrats = procs.flatMap(p => todasEstrategias.filter(e => e.processoId === p.id));
             const movs = [];
-            const movFin = [];
             for (const p of procs) {
-              const e = await db.select().from(estrategias).where(eq(estrategias.processoId, p.id));
-              estrats.push(...e);
               const m = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, p.id)).orderBy(desc(movimentacoes.createdAt));
-              movs.push(...m.slice(0, 10));
-              const mf = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, p.id));
-              movFin.push(...mf);
+              movs.push(...m.slice(0, 15));
             }
-            const prazos = await db.select().from(prazosProcessuais).where(eq(prazosProcessuais.clienteId, cliente.id));
+            const prazos = todosPrazos.filter(p => p.clienteId === cliente.id);
             
-            contextoCliente = `\n\n=== CONTEXTO COMPLETO DO CLIENTE ===
-Nome: ${cliente.nomeCompleto}
+            contextoCliente = `\n\n=== FOCO: CLIENTE SELECIONADO — ${cliente.nomeCompleto} ===
 CPF/CNPJ: ${cliente.cpfCnpj}
 Profissão: ${cliente.profissao || 'N/A'}
 Órgão Empregador: ${cliente.orgaoEmpregador || 'N/A'}
 Vínculo: ${cliente.vinculoFuncional || 'N/A'}
 Endereço: ${cliente.endereco || 'N/A'}, ${cliente.cidade || ''} - ${cliente.estado || ''}
 
-DADOS FINANCEIROS:
-${dadosFin.map(d => `- Remuneração Bruta: R$ ${d.remuneracaoBruta || 'N/A'} | Líquida: R$ ${d.remuneracaoLiquida || 'N/A'} | Margem Consignável: R$ ${d.margemConsignavelValor || 'N/A'} | Comprometimento: ${d.margemConsignavelPerc || 'N/A'}%`).join('\n')}
+DADOS FINANCEIROS COMPLETOS:
+${dadosFin.map(d => `- Remuneração Bruta: R$ ${d.remuneracaoBruta || 'N/A'} | Líquida: R$ ${d.remuneracaoLiquida || 'N/A'} | Margem: R$ ${d.margemConsignavelValor || 'N/A'} (${d.margemConsignavelPerc || 'N/A'}%)`).join('\n')}
 
 EMPRÉSTIMOS CONSIGNADOS (${emprestimos.length}):
 ${emprestimos.map(e => `- Banco: ${e.banco} | Contrato: ${e.contrato || 'N/A'} | Parcela: R$ ${e.valorParcela} | Total: R$ ${e.valorTotal || 'N/A'} | Prazo: ${e.totalParcelas || 'N/A'} meses | Status: ${e.status || 'Ativo'}`).join('\n')}
 
 PROCESSOS (${procs.length}):
-${procs.map(p => `- ${p.numeroCnj} | ${p.tipoAcao} | Valor: R$ ${p.valorCausa} | Fase: ${p.faseAtual} | Status: ${p.statusProcesso} | Vara: ${p.vara}, ${p.comarca}`).join('\n')}
+${procs.map(p => `- ${p.numeroCnj} | ${p.tipoAcao} | Valor: R$ ${p.valorCausa} | Fase: ${p.faseAtual} | Status: ${p.statusProcesso}`).join('\n')}
 
-ESTRATÉGIAS PROCESSUAIS:
-${estrats.map(e => `- Tese: ${e.tesePrincipal?.substring(0, 200)}\n  Fundamentação: ${e.fundamentacaoLegal?.substring(0, 150)}\n  Pontos Fortes: ${e.pontosFortes?.substring(0, 100) || 'N/A'}`).join('\n')}
+ESTRATÉGIAS PROCESSUAIS COMPLETAS:
+${estrats.map(e => `--- Estratégia ---\nTese: ${e.tesePrincipal}\nFundamentação: ${e.fundamentacaoLegal}\nJurisprudência: ${e.jurisprudenciaCitada || 'N/A'}\nPontos Fortes: ${e.pontosFortes || 'N/A'}\nRiscos: ${e.riscosIdentificados || 'N/A'}`).join('\n')}
 
 MOVIMENTAÇÕES RECENTES:
-${movs.slice(0, 15).map(m => `- ${m.data}: ${m.evento} — ${m.descricao?.substring(0, 80) || ''}`).join('\n')}
+${movs.slice(0, 20).map(m => `- ${m.data}: ${m.evento} — ${m.descricao || ''}`).join('\n')}
 
-FINANCEIRO:
-${movFin.map(m => `- ${m.tipo}: R$ ${m.valor} (${m.status}) — ${m.descricao?.substring(0, 80) || ''}`).join('\n')}
-
-PRAZOS PROCESSUAIS:
-${prazos.map(p => `- ${p.titulo} | Vencimento: ${p.dataVencimento} | Status: ${p.status} | Tipo: ${p.tipo}`).join('\n')}`;
+PRAZOS:
+${prazos.map(p => `- ${p.titulo} | Vencimento: ${p.dataVencimento} | Status: ${p.status}`).join('\n')}`;
           }
         }
         
         if (input.processoId) {
           const [proc] = await db.select().from(processos).where(eq(processos.id, input.processoId));
           if (proc) {
-            const estrats = await db.select().from(estrategias).where(eq(estrategias.processoId, proc.id));
+            const estrats = todasEstrategias.filter(e => e.processoId === proc.id);
             const movs = await db.select().from(movimentacoes).where(eq(movimentacoes.processoId, proc.id)).orderBy(desc(movimentacoes.createdAt));
-            const movFin = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, proc.id));
+            const movFin = todasMovFin.filter(m => m.processoId === proc.id);
             const partes = await db.select().from(partesProcessuais).where(eq(partesProcessuais.processoId, proc.id));
-            const prazos = await db.select().from(prazosProcessuais).where(eq(prazosProcessuais.processoId, proc.id));
-            const cumprimentos = await db.select().from(cumprimentosSentenca).where(eq(cumprimentosSentenca.processoId, proc.id));
+            const prazos = todosPrazos.filter(p => p.processoId === proc.id);
+            const cumprimentos = todosCumprimentos.filter(c => c.processoId === proc.id);
+            const emprestimos = proc.clienteId ? todosEmprestimos.filter(e => e.clienteId === proc.clienteId) : [];
             
-            // Buscar empréstimos do cliente do processo
-            const emprestimos = proc.clienteId 
-              ? await db.select().from(emprestimosConsignados).where(eq(emprestimosConsignados.clienteId, proc.clienteId))
-              : [];
-            
-            contextoProcesso = `\n\n=== CONTEXTO COMPLETO DO PROCESSO ===
-Número CNJ: ${proc.numeroCnj}
-Tipo de Ação: ${proc.tipoAcao}
-Natureza: ${proc.natureza || 'N/A'}
-Classe Processual: ${proc.classeProcessual || 'N/A'}
-Assunto: ${proc.assunto || 'N/A'}
-Vara: ${proc.vara}
-Comarca: ${proc.comarca}
-Tribunal: ${proc.tribunal}
-Valor da Causa: R$ ${proc.valorCausa}
-Fase Atual: ${proc.faseAtual}
-Status: ${proc.statusProcesso}
-Data Distribuição: ${proc.dataDistribuicao || 'N/A'}
-Juiz: ${proc.juiz || 'N/A'}
+            contextoProcesso = `\n\n=== FOCO: PROCESSO SELECIONADO — ${proc.numeroCnj} ===
+Tipo: ${proc.tipoAcao} | Natureza: ${proc.natureza || 'N/A'} | Classe: ${proc.classeProcessual || 'N/A'}
+Vara: ${proc.vara}, ${proc.comarca}, ${proc.tribunal}
+Valor: R$ ${proc.valorCausa} | Fase: ${proc.faseAtual} | Status: ${proc.statusProcesso}
+Juiz: ${proc.juiz || 'N/A'} | Distribuição: ${proc.dataDistribuicao || 'N/A'}
+Polo Ativo: ${proc.poloAtivo} | Polo Passivo: ${proc.poloPassivo}
+Partes: ${partes.map(p => `${p.tipo}: ${p.nome} (${p.cpfCnpj || 'N/A'})`).join('; ')}
+Sentença: ${proc.resumoSentenca || 'N/A'}
+Condenação: R$ ${proc.valorCondenacao || 'N/A'} | Danos Morais: R$ ${proc.danosMorais || 'N/A'} | Materiais: R$ ${proc.danosMateriais || 'N/A'}
+Restituição: R$ ${proc.restituicao || 'N/A'} | Honorários: ${proc.honorariosPerc || 'N/A'}% = R$ ${proc.honorariosValor || 'N/A'}
+Tutela: ${proc.tutelaTipo || 'N/A'} (${proc.tutelaStatus || 'N/A'}) — ${proc.tutelaDescricao || 'N/A'}
 
-PARTES:
-Polo Ativo: ${proc.poloAtivo}
-Polo Passivo: ${proc.poloPassivo}
-${partes.map(p => `- ${p.tipo}: ${p.nome} (${p.cpfCnpj || 'N/A'})`).join('\n')}
+ESTRATÉGIAS COMPLETAS:
+${estrats.map(e => `Tese: ${e.tesePrincipal}\nFundamentação: ${e.fundamentacaoLegal}\nJurisprudência: ${e.jurisprudenciaCitada || 'N/A'}\nTeses Refutadas: ${e.tesesRefutadas || 'N/A'}\nPontos Fortes: ${e.pontosFortes || 'N/A'}\nRiscos: ${e.riscosIdentificados || 'N/A'}`).join('\n---\n')}
 
-SENTENÇA:
-Resumo: ${proc.resumoSentenca || 'Sem sentença registrada'}
-Valor Condenação: R$ ${proc.valorCondenacao || 'N/A'}
-Danos Morais: R$ ${proc.danosMorais || 'N/A'}
-Danos Materiais: R$ ${proc.danosMateriais || 'N/A'}
-Restituição: R$ ${proc.restituicao || 'N/A'}
-Honorários: ${proc.honorariosPerc || 'N/A'}% = R$ ${proc.honorariosValor || 'N/A'}
-
-TUTELA:
-Tipo: ${proc.tutelaTipo || 'N/A'}
-Status: ${proc.tutelaStatus || 'N/A'}
-Descrição: ${proc.tutelaDescricao || 'N/A'}
-
-ESTRATÉGIAS PROCESSUAIS:
-${estrats.map(e => `--- Estratégia ---
-Tese Principal: ${e.tesePrincipal}
-Fundamentação Legal: ${e.fundamentacaoLegal}
-Jurisprudência Citada: ${e.jurisprudenciaCitada || 'N/A'}
-Teses Refutadas: ${e.tesesRefutadas || 'N/A'}
-Pontos Fortes: ${e.pontosFortes || 'N/A'}
-Riscos Identificados: ${e.riscosIdentificados || 'N/A'}`).join('\n')}
-
-EMPRÉSTIMOS CONSIGNADOS (${emprestimos.length}):
-${emprestimos.map(e => `- Banco: ${e.banco} | Contrato: ${e.contrato || 'N/A'} | Parcela: R$ ${e.valorParcela} | Total: R$ ${e.valorTotal || 'N/A'}`).join('\n')}
-
-CUMPRIMENTOS DE SENTENÇA:
-${cumprimentos.map(c => `- Tipo: ${c.tipo} | Valor Execução: R$ ${c.valorExecucao} | Principal: R$ ${c.valorPrincipal} | Correção: R$ ${c.valorCorrecao} | Juros: R$ ${c.valorJuros} | Honorários: R$ ${c.valorHonorarios}`).join('\n')}
-
-MOVIMENTAÇÕES PROCESSUAIS (últimas 20):
-${movs.slice(0, 20).map(m => `- ${m.data}: ${m.evento} — ${m.descricao?.substring(0, 120) || ''}`).join('\n')}
-
-MOVIMENTAÇÕES FINANCEIRAS:
-${movFin.map(m => `- ${m.tipo}: R$ ${m.valor} (${m.status}) | Banco: ${m.banco || 'N/A'} | ${m.descricao?.substring(0, 100) || ''}`).join('\n')}
-
-PRAZOS PROCESSUAIS:
-${prazos.map(p => `- ${p.titulo} | Vencimento: ${p.dataVencimento} | Status: ${p.status}`).join('\n')}`;
+Empréstimos do cliente (${emprestimos.length}): ${emprestimos.map(e => `${e.banco}: R$ ${e.valorParcela}/mês`).join('; ')}
+Cumprimentos: ${cumprimentos.map(c => `${c.tipo}: Exec R$ ${c.valorExecucao}, Princ R$ ${c.valorPrincipal}, Juros R$ ${c.valorJuros}, Hon R$ ${c.valorHonorarios}`).join('; ')}
+Movimentações (últimas 25): ${movs.slice(0, 25).map(m => `${m.data}: ${m.evento} — ${m.descricao || ''}`).join('\n')}
+Financeiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ')}
+Prazos: ${prazos.map(p => `${p.titulo} | ${p.dataVencimento} | ${p.status}`).join('; ')}`;
           }
         }
 
-        // 4. Montar base de conhecimento estruturada
+        // 5. Montar base de conhecimento COMPLETA (sem truncar)
         const baseConhecimento = `
-=== BASE DE CONHECIMENTO DO ESCRITÓRIO (${todosConhecimentos.length} registros) ===
+=== BASE DE CONHECIMENTO JURÍDICO COMPLETA (${todosConhecimentos.length} registros) ===
 
 TESES CENTRAIS (${teses.length}):
-${teses.map(t => `• ${t.titulo}: ${t.conteudo?.substring(0, 250)}`).join('\n')}
+${teses.map(t => `• ${t.titulo}:\n${t.conteudo || ''}`).join('\n\n')}
 
 JURISPRUDÊNCIA ÂNCORA (${jurisprudencias.length}):
-${jurisprudencias.map(j => `• ${j.titulo}: ${j.conteudo?.substring(0, 200)}`).join('\n')}
+${jurisprudencias.map(j => `• ${j.titulo}:\n${j.conteudo || ''}`).join('\n\n')}
 
 ESTRATÉGIAS PROCESSUAIS (${estrategiasConhec.length}):
-${estrategiasConhec.map(e => `• ${e.titulo}: ${e.conteudo?.substring(0, 250)}`).join('\n')}
+${estrategiasConhec.map(e => `• ${e.titulo}:\n${e.conteudo || ''}`).join('\n\n')}
 
 LEGISLAÇÃO FUNDAMENTAL (${legislacoes.length}):
-${legislacoes.map(l => `• ${l.titulo}: ${l.conteudo?.substring(0, 200)}`).join('\n')}
+${legislacoes.map(l => `• ${l.titulo}:\n${l.conteudo || ''}`).join('\n\n')}
 
 MODELOS E GUIAS (${modelos.length}):
-${modelos.map(m => `• ${m.titulo}: ${m.conteudo?.substring(0, 150) || ''}`).join('\n')}
+${modelos.map(m => `• ${m.titulo}:\n${m.conteudo || ''}`).join('\n\n')}
 `;
 
-        // 5. Buscar estratégias avançadas e teses centrais do config
-        let tesesCentrais = '';
-        let estrategiasAvancadas = '';
-        let vocabulario = '';
+        // 5. Buscar TODAS as configurações de expertise do agente
+        let configExpertise = '';
         try {
-          if (config.teses_centrais) tesesCentrais = `\n\nTESES CENTRAIS DO ESCRITÓRIO:\n${config.teses_centrais}`;
-          if (config.estrategias_avancadas) estrategiasAvancadas = `\n\nESTRATÉGIAS PROCESSUAIS AVANÇADAS:\n${config.estrategias_avancadas}`;
-          if (config.vocabulario_caracteristico) vocabulario = `\n\nVOCABULÁRIO CARACTERÍSTICO (use estas expressões):\n${config.vocabulario_caracteristico}`;
+          if (config.teses_centrais) configExpertise += `\n\nTESES CENTRAIS DO ESCRITÓRIO:\n${config.teses_centrais}`;
+          if (config.estrategias_avancadas) configExpertise += `\n\nESTRATÉGIAS PROCESSUAIS AVANÇADAS:\n${config.estrategias_avancadas}`;
+          if (config.vocabulario_caracteristico) configExpertise += `\n\nVOCABULÁRIO CARACTERÍSTICO (use estas expressões):\n${config.vocabulario_caracteristico}`;
+          if (config.estilo_redacao) configExpertise += `\n\nESTILO DE REDAÇÃO DO ESCRITÓRIO:\n${config.estilo_redacao}`;
+          if (config.instrucoes_agente) configExpertise += `\n\nINSTRUÇÕES DETALHADAS DO AGENTE:\n${config.instrucoes_agente}`;
+          if (config.identidade_visual) configExpertise += `\n\nIDENTIDADE VISUAL:\n${config.identidade_visual}`;
         } catch {}
 
-        // 6. System prompt expert com todo o contexto
-        const modoInstrucao = {
-          chat: 'Responda como consultor jurídico expert. Fundamente todas as respostas com legislação, jurisprudência e doutrina.',
-          analise: 'Realize uma ANÁLISE TÉCNICA APROFUNDADA do caso. Identifique: (1) Teses aplicáveis, (2) Jurisprudência relevante, (3) Estratégia recomendada, (4) Riscos e pontos fracos, (5) Próximos passos processuais, (6) Cálculos quando aplicável.',
-          peticao: 'Gere uma PETIÇÃO COMPLETA no padrão do escritório. Siga rigorosamente a estrutura: Endereçamento → Qualificação → Fatos → Direito (com artigos, doutrina e jurisprudência) → Pedidos numerados → Valor da Causa → Fecho. Use tom assertivo e combativo.',
-          estrategia: 'Elabore uma ESTRATÉGIA PROCESSUAL COMPLETA. Analise: (1) Fase atual e próximas etapas, (2) Teses a serem sustentadas, (3) Teses adversárias a refutar, (4) Jurisprudência de apoio, (5) Riscos e mitigações, (6) Cronograma de ações.',
-          calculo: 'Realize CÁLCULOS JURÍDICOS precisos. Use: Valor Principal × (1 + IPCA acumulado) para correção monetária, 1% ao mês para juros moratórios, 10% para multa do art. 523 CPC, e 10% para honorários de execução. Apresente memória de cálculo detalhada.',
+        // 6. System prompt expert com TODOS os dados da plataforma
+        const modoInstrucao: Record<string, string> = {
+          chat: 'Responda como consultor jurídico expert. Fundamente todas as respostas com legislação, jurisprudência e doutrina. Você ESTUDOU todos os processos do escritório e conhece cada detalhe.',
+          analise: 'Realize uma ANÁLISE TÉCNICA APROFUNDADA do caso. Identifique: (1) Teses aplicáveis, (2) Jurisprudência relevante, (3) Estratégia recomendada, (4) Riscos e pontos fracos, (5) Próximos passos processuais, (6) Cálculos quando aplicável. Use os dados reais dos processos que você estudou.',
+          peticao: 'Gere uma PETIÇÃO COMPLETA no padrão do escritório. Siga rigorosamente a estrutura: Endereçamento → Qualificação → Fatos → Direito (com artigos, doutrina e jurisprudência) → Pedidos numerados → Valor da Causa → Fecho. Use tom assertivo e combativo. Use os dados reais do cliente/processo.',
+          estrategia: 'Elabore uma ESTRATÉGIA PROCESSUAL COMPLETA. Analise: (1) Fase atual e próximas etapas, (2) Teses a serem sustentadas, (3) Teses adversárias a refutar, (4) Jurisprudência de apoio, (5) Riscos e mitigações, (6) Cronograma de ações. Use dados reais dos processos.',
+          calculo: 'Realize CÁLCULOS JURÍDICOS precisos. Use: Valor Principal × (1 + IPCA acumulado) para correção monetária, 1% ao mês para juros moratórios, 10% para multa do art. 523 CPC, e 10% para honorários de execução. Apresente memória de cálculo detalhada. Use valores reais dos processos.',
         };
 
         const systemPrompt = `${config.system_prompt || 'Você é o Agente Jurídico Expert do escritório Melo & Preda Advogados.'}
 
+VOCÊ ESTUDOU TODOS OS PROCESSOS DO ESCRITÓRIO. Você conhece cada cliente, cada processo, cada valor, cada estratégia, cada prazo, cada empréstimo. Responda qualquer pergunta com base nos dados reais que você estudou.
+
 MODO ATUAL: ${input.modo?.toUpperCase() || 'CHAT'}
 ${modoInstrucao[input.modo || 'chat']}
 
-${baseConhecimento}${tesesCentrais}${estrategiasAvancadas}${vocabulario}${contextoCliente}${contextoProcesso}
+${panoramaGlobal}
+
+${baseConhecimento}${configExpertise}${contextoCliente}${contextoProcesso}
 
 REGRAS ABSOLUTAS:
-1. SEMPRE fundamentar com artigos de lei específicos
-2. SEMPRE citar jurisprudência quando aplicável (preferencialmente TJ-GO e STJ)
-3. NUNCA prometer resultados específicos ao cliente
-4. SEMPRE verificar prazos processuais antes de recomendar ações
-5. SEMPRE usar o vocabulário característico do escritório
-6. Responder em português brasileiro com linguagem técnica jurídica
-7. Quando gerar petições, seguir RIGOROSAMENTE a estrutura padrão do escritório
-8. Em análises, ser EXAUSTIVO e DETALHADO — cobrir todos os aspectos relevantes`;
+1. SEMPRE usar os dados REAIS dos processos que você estudou — nunca inventar dados
+2. SEMPRE fundamentar com artigos de lei específicos
+3. SEMPRE citar jurisprudência quando aplicável (preferencialmente TJ-GO e STJ)
+4. NUNCA prometer resultados específicos ao cliente
+5. SEMPRE verificar prazos processuais antes de recomendar ações
+6. SEMPRE usar o vocabulário característico do escritório
+7. Responder em português brasileiro com linguagem técnica jurídica
+8. Quando gerar petições, seguir RIGOROSAMENTE a estrutura padrão do escritório
+9. Em análises, ser EXAUSTIVO e DETALHADO — cobrir todos os aspectos relevantes
+10. Quando perguntarem sobre um cliente ou processo específico, buscar nos dados acima e responder com TODOS os detalhes disponíveis
+11. Quando perguntarem sobre totais, métricas ou estatísticas, calcular com base nos dados reais acima`;
 
         // 7. Montar mensagens
         const messages: Array<{role: 'system' | 'user' | 'assistant', content: string}> = [

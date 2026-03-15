@@ -1,0 +1,25 @@
+{
+  "query": "SELECT \n  (SELECT COUNT(*) FROM clientes) as clientes,\n  (SELECT COUNT(*) FROM processos) as processos,\n  (SELECT COUNT(*) FROM estrategias) as estrategias,\n  (SELECT COUNT(*) FROM conhecimentos) as conhecimentos,\n  (SELECT COUNT(*) FROM movimentacoes) as movimentacoes,\n  (SELECT COUNT(*) FROM dados_financeiros) as dados_financeiros,\n  (SELECT COUNT(*) FROM emprestimos_consignados) as emprestimos,\n  (SELECT COUNT(*) FROM movimentacoes_financeiras) as mov_financeiras,\n  (SELECT COUNT(*) FROM prazos_processuais) as prazos,\n  (SELECT COUNT(*) FROM peticoes_geradas) as peticoes,\n  (SELECT COUNT(*) FROM partes_processuais) as partes,\n  (SELECT COUNT(*) FROM cumprimentos_sentenca) as cumprimentos,\n  (SELECT COUNT(*) FROM analise_geral) as analise_geral",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT \n  (SELECT COUNT(*) FROM clientes) as clientes,\n  (SELECT COUNT(*) FROM processos) as processos,\n  (SELECT COUNT(*) FROM estrategias) as estrategias,\n  (SELECT COUNT(*) FROM conhecimentos) as conhecimentos,\n  (SELECT COUNT(*) FROM movimentacoes) as movimentacoes,\n  (SELECT COUNT(*) FROM dados_financeiros) as dados_financeiros,\n  (SELECT COUNT(*) FROM emprestimos_consignados) as emprestimos,\n  (SELECT COUNT(*) FROM movimentacoes_financeiras) as mov_financeiras,\n  (SELECT COUNT(*) FROM prazos_processuais) as prazos,\n  (SELECT COUNT(*) FROM peticoes_geradas) as peticoes,\n  (SELECT COUNT(*) FROM partes_processuais) as partes,\n  (SELECT COUNT(*) FROM cumprimentos_sentenca) as cumprimentos,\n  (SELECT COUNT(*) FROM analise_geral) as analise_geral",
+  "rows": [
+    {
+      "clientes": "78",
+      "processos": "109",
+      "estrategias": "87",
+      "conhecimentos": "96",
+      "movimentacoes": "816",
+      "dados_financeiros": "32",
+      "emprestimos": "75",
+      "mov_financeiras": "116",
+      "prazos": "318",
+      "peticoes": "5",
+      "partes": "36",
+      "cumprimentos": "0",
+      "analise_geral": "10"
+    }
+  ],
+  "messages": [],
+  "stdout": "clientes\tprocessos\testrategias\tconhecimentos\tmovimentacoes\tdados_financeiros\temprestimos\tmov_financeiras\tprazos\tpeticoes\tpartes\tcumprimentos\tanalise_geral\n78\t109\t87\t96\t816\t32\t75\t116\t318\t5\t36\t0\t10\n",
+  "stderr": "",
+  "execution_time_ms": 137
+}

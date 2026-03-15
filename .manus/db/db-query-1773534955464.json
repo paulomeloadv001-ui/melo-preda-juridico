@@ -1,0 +1,60 @@
+{
+  "query": "SELECT id, chave, LENGTH(valor) as tamanho_bytes FROM agente_ia_config",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, chave, LENGTH(valor) as tamanho_bytes FROM agente_ia_config",
+  "rows": [
+    {
+      "id": "1",
+      "chave": "system_prompt",
+      "tamanho_bytes": "1697"
+    },
+    {
+      "id": "2",
+      "chave": "estilo_redacao",
+      "tamanho_bytes": "5173"
+    },
+    {
+      "id": "3",
+      "chave": "identidade_visual",
+      "tamanho_bytes": "3949"
+    },
+    {
+      "id": "4",
+      "chave": "instrucoes_agente",
+      "tamanho_bytes": "5413"
+    },
+    {
+      "id": "5",
+      "chave": "teses_centrais",
+      "tamanho_bytes": "1743"
+    },
+    {
+      "id": "6",
+      "chave": "estrategias_avancadas",
+      "tamanho_bytes": "2253"
+    },
+    {
+      "id": "7",
+      "chave": "legislacao_fundamental",
+      "tamanho_bytes": "865"
+    },
+    {
+      "id": "8",
+      "chave": "jurisprudencia_ancora",
+      "tamanho_bytes": "662"
+    },
+    {
+      "id": "9",
+      "chave": "vocabulario_caracteristico",
+      "tamanho_bytes": "456"
+    },
+    {
+      "id": "10",
+      "chave": "perfil_escritorio",
+      "tamanho_bytes": "393"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tchave\ttamanho_bytes\n1\tsystem_prompt\t1697\n2\testilo_redacao\t5173\n3\tidentidade_visual\t3949\n4\tinstrucoes_agente\t5413\n5\tteses_centrais\t1743\n6\testrategias_avancadas\t2253\n7\tlegislacao_fundamental\t865\n8\tjurisprudencia_ancora\t662\n9\tvocabulario_caracteristico\t456\n10\tperfil_escritorio\t393\n",
+  "stderr": "",
+  "execution_time_ms": 54
+}
