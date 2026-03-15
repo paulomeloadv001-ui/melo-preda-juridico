@@ -407,3 +407,6 @@
 - [x] AGENTE IA TOTAL: System prompt com expertise total - ESTUDOU cada processo a fundo (panoramaGlobal + baseConhecimento + configExpertise)
 - [x] AGENTE IA TOTAL: Responder qualquer pergunta sobre qualquer cliente, processo, valor, tese, prazo (testado: 78 clientes, R$ 79.868.923,30)
 - [x] AGENTE IA TOTAL: Testar com perguntas reais que exigem conhecimento profundo (resposta com dados reais confirmada)
+- [x] PREENCHIMENTO BD: Gerar estratégias para os 28 processos sem estratégia via IA (28/28 geradas, total 115)
+- [x] PREENCHIMENTO BD: Verificar que todas as estratégias foram inseridas corretamente (100% Estratégias, 0 pendentes)
+- [x] PREENCHIMENTO BD: Confirmar que o Agente IA agora tem acesso às novas estratégias (panoramaGlobal atualizado)
