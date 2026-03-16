@@ -512,3 +512,11 @@
 - [x] HISTÓRICO VERSÕES PETIÇÃO: Frontend timeline de versões no RefinamentoPanel com diff visual (adições/remoções)
 - [x] HISTÓRICO VERSÕES PETIÇÃO: Botão para restaurar versão anterior
 - [x] HISTÓRICO VERSÕES PETIÇÃO: Comparação lado a lado entre versões
+- [x] REVISÃO PONTA A PONTA: Mapear todas as páginas, rotas, tabelas e funcionalidades do sistema
+- [x] REVISÃO PONTA A PONTA: Revisar frontend (navegação, páginas, componentes, fluxos)
+- [x] REVISÃO PONTA A PONTA: Revisar backend (routers, banco, integrações, lógica)
+- [x] REVISÃO PONTA A PONTA: Identificar e corrigir problemas encontrados (195/195 testes OK)
+- [x] DOCUMENTAÇÃO EQUIPE: Gerar manual completo de explicações de todas as funcionalidades para usuários da equipe
+- [x] BUG FIX: Erro 10002 permissão na página /correcao para usuários com role "user"
+- [x] BUG FIX: Erro 10002 permissão na página /clientes para usuários com role "user"
+- [x] BUG FIX: Auditar todas as rotas adminProcedure e corrigir as que devem ser protectedProcedure (18 rotas migradas)

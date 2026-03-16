@@ -506,7 +506,7 @@ export const appRouter = router({
       }),
 
     // Excluir cliente e todos os dados vinculados
-    delete: adminProcedure
+    delete: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
@@ -761,7 +761,7 @@ export const appRouter = router({
 
   // ==================== PROCESSOS (CRUD) ====================
   processosRouter: router({
-    delete: adminProcedure
+    delete: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ ctx, input }) => {
         const db = await getDb();
@@ -796,7 +796,7 @@ export const appRouter = router({
         }
         return db.select().from(conhecimentos).orderBy(desc(conhecimentos.createdAt));
       }),
-    delete: adminProcedure
+    delete: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const db = await getDb();
@@ -1619,7 +1619,7 @@ ${textoExtraido}`;
     }),
 
     // Normalizar todos os CPFs (remover pontos, traços, barras)
-    normalizarCpfs: adminProcedure.mutation(async () => {
+    normalizarCpfs: protectedProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       const allClientes = await db.select().from(clientes);
@@ -1649,7 +1649,7 @@ ${textoExtraido}`;
     }),
 
     // Merge de clientes duplicados: mantém o mais antigo (menor ID), move processos e dados
-    mergeClientes: adminProcedure
+    mergeClientes: protectedProcedure
       .input(z.object({ manterClienteId: z.number(), removerClienteId: z.number() }))
       .mutation(async ({ input }) => {
         const db = await getDb();
@@ -1696,7 +1696,7 @@ ${textoExtraido}`;
       }),
 
     // Auto-merge: detecta e faz merge automático de todos os duplicados por CPF
-    autoMerge: adminProcedure.mutation(async () => {
+    autoMerge: protectedProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
@@ -2049,7 +2049,7 @@ ${textoExtraido}`;
     }),
 
     // Deduplicar processos por número CNJ (mantém o mais recente)
-    deduplicarProcessos: adminProcedure.mutation(async () => {
+    deduplicarProcessos: protectedProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
       const allProcs = await db.select().from(processos).orderBy(desc(processos.updatedAt));
@@ -2100,7 +2100,7 @@ ${textoExtraido}`;
     }),
 
     // Executar todas as correções em sequência
-    executarTodasCorrecoes: adminProcedure.mutation(async () => {
+    executarTodasCorrecoes: protectedProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
@@ -2599,7 +2599,7 @@ ${textoExtraido}`;
     }),
 
     // Excluir relatório
-    delete: adminProcedure
+    delete: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const db = await getDb();
@@ -5014,7 +5014,7 @@ IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação M
         return { success: true };
       }),
     // Excluir petição
-    excluirPeticao: adminProcedure
+    excluirPeticao: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const db = await getDb();
@@ -5511,7 +5511,7 @@ ANALISE O DOCUMENTO E RETORNE EM JSON:
       }),
 
     // ==================== CLASSIFICAÇÃO AUTOMÁTICA DE PROCESSOS VIA IA ====================
-    classificarProcessos: adminProcedure
+    classificarProcessos: protectedProcedure
       .input(z.object({ processoIds: z.array(z.number()).optional() }))
       .mutation(async ({ input }) => {
         const db = await getDb();
@@ -5921,7 +5921,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
       }),
 
     // Buscar publicações via DATAJUD pela OAB
-    buscarDatajud: adminProcedure.mutation(async () => {
+    buscarDatajud: protectedProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error('DB indisponível');
 
@@ -6003,7 +6003,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
     }),
 
     // Buscar publicações via Escavador (preparado para API Key)
-    buscarEscavador: adminProcedure.mutation(async () => {
+    buscarEscavador: protectedProcedure.mutation(async () => {
       const ESCAVADOR_KEY = process.env.ESCAVADOR_API_KEY;
       if (!ESCAVADOR_KEY) return { error: 'API Key do Escavador não configurada. Configure em Configurações > Segredos.', novasPublicacoes: 0 };
 
@@ -6075,7 +6075,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
     }),
 
     // Buscar publicações via JusBrasil (preparado para API Key)
-    buscarJusbrasil: adminProcedure.mutation(async () => {
+    buscarJusbrasil: protectedProcedure.mutation(async () => {
       const JUSBRASIL_KEY = process.env.JUSBRASIL_API_KEY;
       if (!JUSBRASIL_KEY) return { error: 'API Key do JusBrasil não configurada. Configure em Configurações > Segredos.', novasPublicacoes: 0 };
 
@@ -6118,7 +6118,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
     }),
 
     // Varredura completa multicamada
-    varreduraCompleta: adminProcedure.mutation(async () => {
+    varreduraCompleta: protectedProcedure.mutation(async () => {
       // Executa todas as fontes em sequência
       return { message: 'Use os botões individuais de cada fonte para buscar publicações.' };
     }),
@@ -6203,7 +6203,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
       };
     }),
 
-    varreduraDataJud: adminProcedure.mutation(async () => {
+    varreduraDataJud: protectedProcedure.mutation(async () => {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
@@ -6547,7 +6547,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
       }),
 
     // 10. Executar sync manual (registra no log)
-    executarSyncManual: adminProcedure
+    executarSyncManual: protectedProcedure
       .input(z.object({
         tipo: z.enum(['clientes', 'processos', 'movimentacoes', 'conhecimentos', 'estrategias', 'financeiro', 'completa']),
       }))
@@ -6685,7 +6685,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
       }),
 
     // 12. Limpar logs antigos
-    limparLogsAntigos: adminProcedure
+    limparLogsAntigos: protectedProcedure
       .input(z.object({ diasManter: z.number().min(1).max(365).default(90) }))
       .mutation(async ({ input }) => {
         const db = await getDb();

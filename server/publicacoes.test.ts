@@ -171,9 +171,21 @@ describe("access control", () => {
     expect(typeof result.total).toBe("number");
   });
 
-  it("publicacoesRouter.buscarDatajud requires admin", async () => {
+  it("publicacoesRouter.buscarDatajud é protectedProcedure (não adminProcedure)", async () => {
+    // Verify the route is accessible to regular users by checking it doesn't
+    // immediately throw FORBIDDEN. We use Promise.race with a short timer
+    // since the actual API call takes too long for tests.
     const ctx = createUserContext();
     const caller = appRouter.createCaller(ctx);
-    await expect(caller.publicacoesRouter.buscarDatajud()).rejects.toThrow();
-  });
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT_OK")), 2000));
+    try {
+      await Promise.race([caller.publicacoesRouter.buscarDatajud(), timeout]);
+    } catch (e: any) {
+      // TIMEOUT_OK means the route started executing (no FORBIDDEN)
+      // Any other non-FORBIDDEN error is also acceptable
+      if (e.message !== "TIMEOUT_OK") {
+        expect(e.code).not.toBe("FORBIDDEN");
+      }
+    }
+  }, 10000);
 });

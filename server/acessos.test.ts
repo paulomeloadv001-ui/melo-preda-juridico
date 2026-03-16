@@ -229,53 +229,87 @@ describe("Gestão de Acessos - Validação de Schemas", () => {
 });
 
 describe("Gestão de Acessos - Controle de Acesso por Papel", () => {
-  describe("adminProcedure - Proteção de rotas sensíveis", () => {
-    it("deve bloquear usuário não-admin em rotas de exclusão de cliente", async () => {
+  describe("protectedProcedure - Rotas operacionais acessíveis por qualquer usuário autenticado", () => {
+    it("deve permitir usuário autenticado excluir cliente (protectedProcedure)", async () => {
       const ctx = createUserContext();
       const caller = appRouter.createCaller(ctx);
-      await expect(caller.clientes.delete({ id: 999 })).rejects.toThrow();
+      // Route is now protectedProcedure - should not throw FORBIDDEN
+      // May throw other errors (e.g. not found) but not permission error
+      try {
+        await caller.clientes.delete({ id: 999 });
+      } catch (e: any) {
+        expect(e.code).not.toBe("FORBIDDEN");
+      }
     });
 
-    it("deve bloquear usuário não-admin em rotas de exclusão de processo", async () => {
+    it("deve permitir usuário autenticado excluir processo (protectedProcedure)", async () => {
       const ctx = createUserContext();
       const caller = appRouter.createCaller(ctx);
-      await expect(caller.processosRouter.delete({ id: 999 })).rejects.toThrow();
+      try {
+        await caller.processosRouter.delete({ id: 999 });
+      } catch (e: any) {
+        expect(e.code).not.toBe("FORBIDDEN");
+      }
     });
 
-    it("deve bloquear usuário não-admin em rotas de exclusão de conhecimento", async () => {
+    it("deve permitir usuário autenticado excluir conhecimento (protectedProcedure)", async () => {
       const ctx = createUserContext();
       const caller = appRouter.createCaller(ctx);
-      await expect(caller.conhecimentosRouter.delete({ id: 999 })).rejects.toThrow();
+      try {
+        await caller.conhecimentosRouter.delete({ id: 999 });
+      } catch (e: any) {
+        expect(e.code).not.toBe("FORBIDDEN");
+      }
     });
 
-    it("deve bloquear usuário não-admin em normalização de CPFs", async () => {
+    it("deve permitir usuário autenticado normalizar CPFs (protectedProcedure)", async () => {
       const ctx = createUserContext();
       const caller = appRouter.createCaller(ctx);
-      await expect(caller.correcao.normalizarCpfs()).rejects.toThrow();
+      try {
+        await caller.correcao.normalizarCpfs();
+      } catch (e: any) {
+        expect(e.code).not.toBe("FORBIDDEN");
+      }
     });
 
-    it("deve bloquear usuário não-admin em auto-merge", async () => {
+    it("deve permitir usuário autenticado auto-merge (protectedProcedure)", async () => {
       const ctx = createUserContext();
       const caller = appRouter.createCaller(ctx);
-      await expect(caller.correcao.autoMerge()).rejects.toThrow();
+      try {
+        await caller.correcao.autoMerge();
+      } catch (e: any) {
+        expect(e.code).not.toBe("FORBIDDEN");
+      }
     });
 
-    it("deve bloquear usuário não-admin em deduplicação de processos", async () => {
+    it("deve permitir usuário autenticado deduplicar processos (protectedProcedure)", async () => {
       const ctx = createUserContext();
       const caller = appRouter.createCaller(ctx);
-      await expect(caller.correcao.deduplicarProcessos()).rejects.toThrow();
+      try {
+        await caller.correcao.deduplicarProcessos();
+      } catch (e: any) {
+        expect(e.code).not.toBe("FORBIDDEN");
+      }
     });
 
-    it("deve bloquear usuário não-admin em execução de todas as correções", async () => {
+    it("deve permitir usuário autenticado executar todas as correções (protectedProcedure)", async () => {
       const ctx = createUserContext();
       const caller = appRouter.createCaller(ctx);
-      await expect(caller.correcao.executarTodasCorrecoes()).rejects.toThrow();
+      try {
+        await caller.correcao.executarTodasCorrecoes();
+      } catch (e: any) {
+        expect(e.code).not.toBe("FORBIDDEN");
+      }
     });
 
-    it("deve bloquear usuário não-admin em exclusão de petição", async () => {
+    it("deve permitir usuário autenticado excluir petição (protectedProcedure)", async () => {
       const ctx = createUserContext();
       const caller = appRouter.createCaller(ctx);
-      await expect(caller.peticionamento.excluirPeticao({ id: 999 })).rejects.toThrow();
+      try {
+        await caller.peticionamento.excluirPeticao({ id: 999 });
+      } catch (e: any) {
+        expect(e.code).not.toBe("FORBIDDEN");
+      }
     });
 
     it("deve bloquear usuário não-autenticado em rotas protegidas", async () => {
