@@ -524,3 +524,7 @@
 - [x] COMPRESSÃO PDF: Criar utilitário de compressão de PDF no frontend (browser-side) (pdf-lib + Canvas API)
 - [x] COMPRESSÃO PDF: Integrar compressão nos 3 componentes de upload (Individual, Contracheque, Lote)
 - [x] COMPRESSÃO PDF: Feedback visual de compressão (tamanho original → comprimido, % economia)
+- [x] GESTÃO USUÁRIOS: Promover Paulo Filho (id=7) a role admin no banco
+- [x] GESTÃO USUÁRIOS: Ao aprovar solicitação de acesso, conceder acesso total a todas as funcionalidades automaticamente (15 módulos)
+- [x] GESTÃO USUÁRIOS: Ocultar menu "Gestão de Acessos" na sidebar para usuários não-admin
+- [x] GESTÃO USUÁRIOS: Mostrar mensagem amigável se não-admin tentar acessar /acessos diretamente (menu oculto + rota protegida)

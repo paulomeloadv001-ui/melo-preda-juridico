@@ -280,9 +280,16 @@ function FerramentasSubmenu() {
   const [location, setLocation] = useLocation();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  // Filtrar itens: Acessos só aparece para admin
+  const visibleItems = ferramentasItems.filter(item => {
+    if (item.path === '/acessos' && !isAdmin) return false;
+    return true;
+  });
   
   // Auto-expand if current route is in ferramentas
-  const isFerramentaActive = ferramentasItems.some(item => item.path === location);
+  const isFerramentaActive = visibleItems.some(item => item.path === location);
   const [expanded, setExpanded] = useState(isFerramentaActive);
 
   useEffect(() => {
@@ -294,7 +301,7 @@ function FerramentasSubmenu() {
     return (
       <SidebarGroup className="py-0">
         <SidebarMenu className="gap-0">
-          {ferramentasItems.map(item => {
+          {visibleItems.map(item => {
             const isActive = location === item.path;
             return (
               <SidebarMenuItem key={item.path}>
@@ -334,7 +341,7 @@ function FerramentasSubmenu() {
       </button>
       {expanded && (
         <SidebarMenu className="px-1 gap-0">
-          {ferramentasItems.map(item => {
+          {visibleItems.map(item => {
             const isActive = location === item.path;
             return (
               <SidebarMenuItem key={item.path}>

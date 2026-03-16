@@ -3740,12 +3740,37 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
           status: 'aprovado', aprovadoPor: ctx.user.id, aprovadoEm: new Date(),
           observacoesAdmin: input.observacoes || null,
         }).where(eq(accessRequests.id, input.id));
+
+        // Conceder acesso total automaticamente a TODOS os módulos
+        // Buscar usuário pelo email da solicitação
+        const [userMatch] = await db.select().from(users).where(eq(users.email, solicitacao.email)).limit(1);
+        if (userMatch) {
+          const todosModulos = [
+            'dashboard', 'clientes', 'processos', 'peticionamento', 'agente_ia',
+            'conhecimentos', 'relatorios', 'exportacao', 'upload', 'financeiro',
+            'prazos', 'correcao', 'integracao', 'metricas', 'api_publica',
+          ];
+          // Limpar permissões antigas
+          await db.delete(userPermissions).where(eq(userPermissions.userId, userMatch.id));
+          // Inserir acesso total para cada módulo
+          for (const modulo of todosModulos) {
+            await db.insert(userPermissions).values({
+              userId: userMatch.id,
+              modulo,
+              podeVisualizar: 1,
+              podeEditar: 1,
+              podeExcluir: 1,
+              podeExportar: 1,
+            });
+          }
+        }
+
         // Registrar auditoria
         await db.insert(auditLog).values({
           userId: ctx.user.id, acao: 'aprovar_acesso', modulo: 'acessos',
-          detalhes: JSON.stringify({ solicitacaoId: input.id, nome: solicitacao.nomeCompleto }),
+          detalhes: JSON.stringify({ solicitacaoId: input.id, nome: solicitacao.nomeCompleto, permissoesConceidas: 'acesso_total_todos_modulos' }),
         });
-        return { success: true, message: `Acesso aprovado para ${solicitacao.nomeCompleto}` };
+        return { success: true, message: `Acesso aprovado para ${solicitacao.nomeCompleto} com permissões totais em todos os módulos` };
       }),
 
     rejeitar: adminProcedure
