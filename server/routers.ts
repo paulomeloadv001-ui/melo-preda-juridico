@@ -14,9 +14,9 @@ import {
   notificacoes, prazosProcessuais, syncLog,
   templatesPeticao, peticoesGeradas, agenteIaConfig, agenteIaHistorico,
   anexosPeticao, userPermissions, convites, auditLog,
-  publicacoes, monitoramentoConfig
+  publicacoes, monitoramentoConfig, peticaoVersoes
 } from "../drizzle/schema";
-import { eq, like, desc, sql } from "drizzle-orm";
+import { eq, like, desc, asc, and, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
 import { storagePut, storageGet } from "./storage";
 import { gerarPeticaoDocx } from "./docxGenerator";
@@ -5149,15 +5149,38 @@ IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação M
     refinarPeticao: protectedProcedure
       .input(z.object({
         peticaoId: z.number(),
-        instrucoes: z.string().min(5), // Instruções do advogado sobre o que melhorar
+        instrucoes: z.string().min(5),
       }))
       .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new Error('DB indisponível');
 
-        // Buscar petição atual
         const [pet] = await db.select().from(peticoesGeradas).where(eq(peticoesGeradas.id, input.peticaoId));
         if (!pet) throw new Error('Petição não encontrada');
+
+        const conteudoAnterior = pet.conteudoTexto || '';
+
+        // Verificar versão atual — se nenhuma versão existe, salvar a original como v1
+        const versoesExistentes = await db.select().from(peticaoVersoes)
+          .where(eq(peticaoVersoes.peticaoId, input.peticaoId))
+          .orderBy(desc(peticaoVersoes.versao));
+        
+        if (versoesExistentes.length === 0) {
+          // Salvar versão original (v1) antes do primeiro refinamento
+          const jsonOriginal = typeof pet.conteudoJson === 'string' ? JSON.parse(pet.conteudoJson) : (pet.conteudoJson as any) || {};
+          await db.insert(peticaoVersoes).values({
+            peticaoId: input.peticaoId,
+            versao: 1,
+            conteudoTexto: conteudoAnterior,
+            instrucoes: null,
+            diff: null,
+            docxUrl: jsonOriginal.docxUrl || pet.storageUrl || null,
+            criadoPor: pet.geradoPor || 'agente_ia',
+          });
+        }
+
+        const versaoAtual = versoesExistentes.length > 0 ? versoesExistentes[0].versao : 1;
+        const novaVersao = versaoAtual + 1;
 
         // Buscar dados do processo e cliente para contexto
         let contextoProcesso = '';
@@ -5170,7 +5193,6 @@ IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação M
           if (cli) contextoProcesso += `\nCliente: ${cli.nomeCompleto}`;
         }
 
-        // Buscar conhecimentos relevantes para enriquecer
         const todosConhecimentos = await db.select().from(conhecimentos);
         const conhecimentosRelevantes = todosConhecimentos
           .filter(c => {
@@ -5182,7 +5204,6 @@ IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação M
           .map(c => `[${c.categoria}] ${c.titulo}: ${c.conteudo?.substring(0, 500)}`)
           .join('\n');
 
-        // Buscar configuração de expertise
         const configRows = await db.select().from(agenteIaConfig);
         const configExpertise = configRows.find(c => c.chave === 'expertise_juridica');
         const configEstilo = configRows.find(c => c.chave === 'estilo_redacao');
@@ -5209,7 +5230,7 @@ Você DEVE:
 ${contextoProcesso}
 
 --- INÍCIO DA PETIÇÃO ---
-${pet.conteudoTexto || 'Sem conteúdo'}
+${conteudoAnterior}
 --- FIM DA PETIÇÃO ---
 
 INSTRUÇÕES DO ADVOGADO PARA REFINAMENTO:
@@ -5225,15 +5246,41 @@ Refine a petição aplicando as instruções acima. Retorne a petição COMPLETA
         });
 
         const conteudoRefinado = typeof result.choices?.[0]?.message?.content === 'string'
-          ? result.choices[0].message.content : pet.conteudoTexto || '';
+          ? result.choices[0].message.content : conteudoAnterior;
 
-        // Salvar versão refinada
+        // Calcular diff entre versões (parágrafos adicionados/removidos/modificados)
+        const linhasAnterior = conteudoAnterior.split('\n').filter(l => l.trim());
+        const linhasNovo = conteudoRefinado.split('\n').filter(l => l.trim());
+        const diffResult: Array<{ tipo: 'adicionado' | 'removido' | 'mantido'; texto: string }> = [];
+        const setAnterior = new Set(linhasAnterior);
+        const setNovo = new Set(linhasNovo);
+        for (const linha of linhasNovo) {
+          if (!setAnterior.has(linha)) {
+            diffResult.push({ tipo: 'adicionado', texto: linha });
+          } else {
+            diffResult.push({ tipo: 'mantido', texto: linha });
+          }
+        }
+        for (const linha of linhasAnterior) {
+          if (!setNovo.has(linha)) {
+            diffResult.push({ tipo: 'removido', texto: linha });
+          }
+        }
+        const resumoDiff = {
+          adicionados: diffResult.filter(d => d.tipo === 'adicionado').length,
+          removidos: diffResult.filter(d => d.tipo === 'removido').length,
+          mantidos: diffResult.filter(d => d.tipo === 'mantido').length,
+          detalhes: diffResult,
+        };
+
+        // Salvar versão no conteudoJson da petição
         const jsonAtual = typeof pet.conteudoJson === 'string' ? JSON.parse(pet.conteudoJson) : (pet.conteudoJson as any) || {};
         if (!jsonAtual.historicoRefinamentos) jsonAtual.historicoRefinamentos = [];
         jsonAtual.historicoRefinamentos.push({
           data: new Date().toISOString(),
           instrucoes: input.instrucoes,
           por: ctx.user?.name || 'advogado',
+          versao: novaVersao,
         });
 
         await db.update(peticoesGeradas).set({
@@ -5246,16 +5293,101 @@ Refine a petição aplicando as instruções acima. Retorne a petição COMPLETA
         // Gerar novo DOCX
         const docxBuffer = await gerarPeticaoDocx(conteudoRefinado, pet.titulo);
         const timestamp = Date.now();
-        const nomeArquivo = `peticoes/refinado_${pet.tipo.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)}_${timestamp}.docx`;
+        const nomeArquivo = `peticoes/refinado_v${novaVersao}_${pet.tipo.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)}_${timestamp}.docx`;
         const { url: docxUrl } = await storagePut(nomeArquivo, docxBuffer, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
         jsonAtual.docxUrl = docxUrl;
         await db.update(peticoesGeradas).set({ conteudoJson: JSON.stringify(jsonAtual) }).where(eq(peticoesGeradas.id, input.peticaoId));
+
+        // Salvar nova versão na tabela peticao_versoes
+        await db.insert(peticaoVersoes).values({
+          peticaoId: input.peticaoId,
+          versao: novaVersao,
+          conteudoTexto: conteudoRefinado,
+          instrucoes: input.instrucoes,
+          diff: JSON.stringify(resumoDiff),
+          docxUrl,
+          criadoPor: ctx.user?.name || 'advogado',
+        });
 
         return {
           success: true,
           conteudoRefinado,
           docxUrl,
+          versao: novaVersao,
           totalRefinamentos: jsonAtual.historicoRefinamentos.length,
+          diff: resumoDiff,
+        };
+      }),
+
+    // ==================== LISTAR VERSÕES DE UMA PETIÇÃO ====================
+    listarVersoes: protectedProcedure
+      .input(z.object({ peticaoId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        const versoes = await db.select().from(peticaoVersoes)
+          .where(eq(peticaoVersoes.peticaoId, input.peticaoId))
+          .orderBy(asc(peticaoVersoes.versao));
+        return versoes.map(v => ({
+          ...v,
+          diff: v.diff ? JSON.parse(v.diff) : null,
+        }));
+      }),
+
+    // ==================== RESTAURAR VERSÃO ANTERIOR ====================
+    restaurarVersao: protectedProcedure
+      .input(z.object({ peticaoId: z.number(), versaoId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+
+        const [versao] = await db.select().from(peticaoVersoes)
+          .where(and(eq(peticaoVersoes.peticaoId, input.peticaoId), eq(peticaoVersoes.id, input.versaoId)));
+        if (!versao) throw new Error('Versão não encontrada');
+
+        const [pet] = await db.select().from(peticoesGeradas).where(eq(peticoesGeradas.id, input.peticaoId));
+        if (!pet) throw new Error('Petição não encontrada');
+
+        // Salvar estado atual como nova versão antes de restaurar
+        const versoesExistentes = await db.select().from(peticaoVersoes)
+          .where(eq(peticaoVersoes.peticaoId, input.peticaoId))
+          .orderBy(desc(peticaoVersoes.versao));
+        const ultimaVersao = versoesExistentes.length > 0 ? versoesExistentes[0].versao : 1;
+
+        // Restaurar conteúdo da versão selecionada
+        const jsonAtual = typeof pet.conteudoJson === 'string' ? JSON.parse(pet.conteudoJson) : (pet.conteudoJson as any) || {};
+        if (!jsonAtual.historicoRefinamentos) jsonAtual.historicoRefinamentos = [];
+        jsonAtual.historicoRefinamentos.push({
+          data: new Date().toISOString(),
+          instrucoes: `Restaurada versão ${versao.versao}`,
+          por: ctx.user?.name || 'advogado',
+          versao: ultimaVersao + 1,
+          restauracao: true,
+        });
+
+        await db.update(peticoesGeradas).set({
+          conteudoTexto: versao.conteudoTexto,
+          conteudoJson: JSON.stringify(jsonAtual),
+          status: 'rascunho',
+          revisadoPor: ctx.user?.name || 'advogado',
+        }).where(eq(peticoesGeradas.id, input.peticaoId));
+
+        // Registrar restauração como nova versão
+        await db.insert(peticaoVersoes).values({
+          peticaoId: input.peticaoId,
+          versao: ultimaVersao + 1,
+          conteudoTexto: versao.conteudoTexto,
+          instrucoes: `Restauração da versão ${versao.versao}`,
+          diff: JSON.stringify({ restauracao: true, versaoOrigem: versao.versao }),
+          docxUrl: versao.docxUrl,
+          criadoPor: ctx.user?.name || 'advogado',
+        });
+
+        return {
+          success: true,
+          versaoRestaurada: versao.versao,
+          novaVersao: ultimaVersao + 1,
+          conteudo: versao.conteudoTexto,
         };
       }),
 

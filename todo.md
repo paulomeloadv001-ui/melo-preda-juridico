@@ -506,3 +506,9 @@
 - [x] ANÁLISE DOCUMENTO CLIENTE: Frontend DocumentosSection com botão Upload + Análise IA no perfil do cliente
 - [x] ANÁLISE DOCUMENTO CLIENTE: Resultado da análise exibido inline com tipo, resumo, dados extraídos e recomendações
 - [x] TESTES: 12 novos testes para publicacoes, refinarPeticao e analisarDocumentoCliente (193/193 passando)
+- [x] HISTÓRICO VERSÕES PETIÇÃO: Criar tabela peticao_versoes no banco (peticaoId, versao, conteudo, instrucoes, diff, timestamp)
+- [x] HISTÓRICO VERSÕES PETIÇÃO: Backend rota listarVersoes para retornar todas as versões de uma petição
+- [x] HISTÓRICO VERSÕES PETIÇÃO: Backend salvar cada refinamento como nova versão com diff calculado
+- [x] HISTÓRICO VERSÕES PETIÇÃO: Frontend timeline de versões no RefinamentoPanel com diff visual (adições/remoções)
+- [x] HISTÓRICO VERSÕES PETIÇÃO: Botão para restaurar versão anterior
+- [x] HISTÓRICO VERSÕES PETIÇÃO: Comparação lado a lado entre versões

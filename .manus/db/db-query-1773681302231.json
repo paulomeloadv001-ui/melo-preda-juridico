@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `peticao_versoes` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`peticaoId` int NOT NULL,\n\t`versao` int NOT NULL,\n\t`conteudoVersao` text NOT NULL,\n\t`instrucoesVersao` text,\n\t`diffVersao` text,\n\t`docxUrlVersao` text,\n\t`criadoPorVersao` varchar(255),\n\t`createdAtVersao` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `peticao_versoes_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute CREATE TABLE `peticao_versoes` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`peticaoId` int NOT NULL,\n\t`versao` int NOT NULL,\n\t`conteudoVersao` text NOT NULL,\n\t`instrucoesVersao` text,\n\t`diffVersao` text,\n\t`docxUrlVersao` text,\n\t`criadoPorVersao` varchar(255),\n\t`createdAtVersao` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `peticao_versoes_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 258
+}

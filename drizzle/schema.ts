@@ -664,3 +664,19 @@ export const monitoramentoConfig = mysqlTable("monitoramento_config", {
   createdAt: timestamp("createdAtMon").defaultNow().notNull(),
 });
 export type MonitoramentoConfig = typeof monitoramentoConfig.$inferSelect;
+
+
+// ==================== VERSÕES DE PETIÇÃO (HISTÓRICO DE REFINAMENTOS) ====================
+export const peticaoVersoes = mysqlTable("peticao_versoes", {
+  id: int("id").autoincrement().primaryKey(),
+  peticaoId: int("peticaoId").notNull(),
+  versao: int("versao").notNull(), // 1 = original, 2 = 1º refinamento, etc.
+  conteudoTexto: text("conteudoVersao").notNull(),
+  instrucoes: text("instrucoesVersao"), // null para versão original
+  diff: text("diffVersao"), // JSON com alterações (adições/remoções)
+  docxUrl: text("docxUrlVersao"),
+  criadoPor: varchar("criadoPorVersao", { length: 255 }),
+  createdAt: timestamp("createdAtVersao").defaultNow().notNull(),
+});
+export type PeticaoVersao = typeof peticaoVersoes.$inferSelect;
+export type InsertPeticaoVersao = typeof peticaoVersoes.$inferInsert;

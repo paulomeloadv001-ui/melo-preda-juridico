@@ -141,6 +141,26 @@ describe("agente.analisarDocumentoCliente", () => {
   });
 });
 
+describe("agente.listarVersoes", () => {
+  it("returns empty array for petition with no versions", async () => {
+    const ctx = createAdminContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.agente.listarVersoes({ peticaoId: 999999 });
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBe(0);
+  });
+});
+
+describe("agente.restaurarVersao", () => {
+  it("throws for non-existent version", async () => {
+    const ctx = createAdminContext();
+    const caller = appRouter.createCaller(ctx);
+    await expect(
+      caller.agente.restaurarVersao({ peticaoId: 999999, versaoId: 999999 })
+    ).rejects.toThrow();
+  });
+});
+
 describe("access control", () => {
   it("publicacoesRouter.stats is accessible to authenticated users", async () => {
     const ctx = createUserContext();

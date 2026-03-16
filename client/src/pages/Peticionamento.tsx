@@ -12,7 +12,8 @@ import { toast } from "sonner";
 import {
   FileText, Download, Plus, Search, Edit, Trash2, Copy,
   CheckCircle, Clock, FileCheck, Archive, Send, RefreshCw,
-  ChevronRight, Loader2, Eye, RotateCcw, Paperclip, Upload, X
+  ChevronRight, Loader2, Eye, RotateCcw, Paperclip, Upload, X,
+  History, GitBranch, ArrowLeft, ChevronDown, ChevronUp, Diff
 } from "lucide-react";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
@@ -937,67 +938,341 @@ export default function Peticionamento() {
   );
 }
 
-// ==================== COMPONENTE: REFINAMENTO ITERATIVO ====================
+// ==================== COMPONENTE: REFINAMENTO ITERATIVO COM HISTÓRICO DE VERSÕES ====================
 function RefinamentoPanel({ peticaoId, onRefined }: { peticaoId: number; onRefined: (data: any) => void }) {
   const [instrucoes, setInstrucoes] = useState("");
-  const [historico, setHistorico] = useState<Array<{ instrucoes: string; data: string }>>([]);
+  const [abaAtiva, setAbaAtiva] = useState<'refinar' | 'versoes'>('refinar');
+  const [versaoExpandida, setVersaoExpandida] = useState<number | null>(null);
+  const [versaoComparando, setVersaoComparando] = useState<number | null>(null);
+
+  // Buscar versões do banco
+  const versoesQuery = trpc.agente.listarVersoes.useQuery({ peticaoId });
+  const versoes = versoesQuery.data || [];
 
   const refinar = trpc.agente.refinarPeticao.useMutation({
-    onSuccess: (data) => {
-      toast.success(`Petição refinada! (${data.totalRefinamentos}º refinamento)`);
-      setHistorico(prev => [...prev, { instrucoes, data: new Date().toISOString() }]);
+    onSuccess: (data: any) => {
+      toast.success(`Petição refinada! Versão ${data.versao} criada (${data.diff?.adicionados || 0} adições, ${data.diff?.removidos || 0} remoções)`);
       setInstrucoes("");
+      versoesQuery.refetch();
       onRefined(data);
     },
     onError: (e) => toast.error(`Erro ao refinar: ${e.message}`),
   });
 
+  const restaurar = trpc.agente.restaurarVersao.useMutation({
+    onSuccess: (data: any) => {
+      toast.success(`Versão ${data.versaoRestaurada} restaurada com sucesso!`);
+      versoesQuery.refetch();
+      onRefined({ conteudoRefinado: data.conteudo });
+    },
+    onError: (e) => toast.error(`Erro ao restaurar: ${e.message}`),
+  });
+
   return (
     <Card className="border-amber-200 bg-amber-50/30 dark:bg-amber-950/10">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200 text-lg">
-          <Edit className="h-5 w-5" />
-          Refinamento Iterativo
-        </CardTitle>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200 text-lg">
+            <Edit className="h-5 w-5" />
+            Refinamento Iterativo
+          </CardTitle>
+          <div className="flex gap-1 bg-amber-100 dark:bg-amber-900/30 rounded-lg p-0.5">
+            <button
+              onClick={() => setAbaAtiva('refinar')}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                abaAtiva === 'refinar'
+                  ? 'bg-white dark:bg-amber-800 text-amber-800 dark:text-amber-100 shadow-sm'
+                  : 'text-amber-600 dark:text-amber-300 hover:text-amber-800'
+              }`}
+            >
+              <RefreshCw className="h-3 w-3 inline mr-1" />Refinar
+            </button>
+            <button
+              onClick={() => setAbaAtiva('versoes')}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                abaAtiva === 'versoes'
+                  ? 'bg-white dark:bg-amber-800 text-amber-800 dark:text-amber-100 shadow-sm'
+                  : 'text-amber-600 dark:text-amber-300 hover:text-amber-800'
+              }`}
+            >
+              <History className="h-3 w-3 inline mr-1" />Versões ({versoes.length})
+            </button>
+          </div>
+        </div>
         <CardDescription>
-          Instrua a IA sobre o que melhorar na petição. O processo é iterativo: gere → instrua → refine → repita até ficar perfeito.
+          {abaAtiva === 'refinar'
+            ? 'Instrua a IA sobre o que melhorar. Cada refinamento gera uma nova versão rastreável.'
+            : 'Histórico completo de todas as versões com alterações detalhadas.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {historico.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">Histórico de refinamentos:</p>
-            {historico.map((h, i) => (
-              <div key={i} className="text-xs border rounded p-2 bg-background">
-                <span className="font-medium">#{i + 1}</span> — {h.instrucoes.substring(0, 100)}{h.instrucoes.length > 100 ? '...' : ''}
-                <span className="text-muted-foreground ml-2">{new Date(h.data).toLocaleTimeString('pt-BR')}</span>
+        {/* ==================== ABA REFINAR ==================== */}
+        {abaAtiva === 'refinar' && (
+          <>
+            {versoes.length > 0 && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-background rounded-lg px-3 py-2 border">
+                <GitBranch className="h-3.5 w-3.5" />
+                <span>Versão atual: <strong className="text-foreground">v{versoes[versoes.length - 1]?.versao || 1}</strong></span>
+                <span className="mx-1">·</span>
+                <span>{versoes.length} versão(ões) no histórico</span>
+                {versoes.length > 1 && (
+                  <>
+                    <span className="mx-1">·</span>
+                    <button onClick={() => setAbaAtiva('versoes')} className="text-amber-600 hover:underline font-medium">
+                      Ver histórico
+                    </button>
+                  </>
+                )}
               </div>
-            ))}
+            )}
+            <Textarea
+              placeholder="Ex: Reforce a fundamentação sobre abusividade das consignações, adicione jurisprudência do STJ sobre margem consignável, melhore a conclusão pedindo tutela de urgência..."
+              value={instrucoes}
+              onChange={(e) => setInstrucoes(e.target.value)}
+              rows={4}
+              className="resize-none"
+            />
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                {versoes.length > 1 ? `${versoes.length - 1} refinamento(s) realizado(s)` : 'Nenhum refinamento ainda'}
+              </p>
+              <Button
+                onClick={() => refinar.mutate({ peticaoId, instrucoes })}
+                disabled={refinar.isPending || instrucoes.length < 5}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {refinar.isPending ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Refinando...</>
+                ) : (
+                  <><RefreshCw className="h-4 w-4 mr-2" /> Refinar Petição</>
+                )}
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* ==================== ABA VERSÕES ==================== */}
+        {abaAtiva === 'versoes' && (
+          <div className="space-y-3">
+            {versoesQuery.isLoading ? (
+              <div className="flex items-center justify-center py-8 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando versões...
+              </div>
+            ) : versoes.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <History className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                <p className="text-sm">Nenhuma versão registrada ainda.</p>
+                <p className="text-xs">Refine a petição para criar o histórico de versões.</p>
+              </div>
+            ) : (
+              <>
+                {/* Timeline de versões */}
+                <div className="relative">
+                  {/* Linha vertical da timeline */}
+                  <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-amber-200 dark:bg-amber-800" />
+                  
+                  {versoes.map((v: any, idx: number) => {
+                    const isExpanded = versaoExpandida === v.id;
+                    const isOriginal = v.versao === 1;
+                    const isLatest = idx === versoes.length - 1;
+                    const isRestauracao = v.diff?.restauracao;
+                    const diff = v.diff || {};
+
+                    return (
+                      <div key={v.id} className="relative pl-10 pb-4">
+                        {/* Marcador da timeline */}
+                        <div className={`absolute left-2 w-5 h-5 rounded-full border-2 flex items-center justify-center text-[9px] font-bold ${
+                          isLatest
+                            ? 'bg-amber-500 border-amber-600 text-white'
+                            : isOriginal
+                            ? 'bg-blue-500 border-blue-600 text-white'
+                            : isRestauracao
+                            ? 'bg-purple-500 border-purple-600 text-white'
+                            : 'bg-white dark:bg-gray-800 border-amber-300 text-amber-700'
+                        }`}>
+                          {v.versao}
+                        </div>
+
+                        {/* Card da versão */}
+                        <div className={`border rounded-lg overflow-hidden transition-all ${
+                          isLatest ? 'border-amber-300 bg-amber-50/50 dark:bg-amber-950/20' : 'bg-background'
+                        }`}>
+                          {/* Header da versão */}
+                          <button
+                            onClick={() => setVersaoExpandida(isExpanded ? null : v.id)}
+                            className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-muted/30 transition-colors"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-semibold text-sm">v{v.versao}</span>
+                              {isOriginal && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-300 text-blue-600">Original</Badge>}
+                              {isLatest && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-400 text-amber-700">Atual</Badge>}
+                              {isRestauracao && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-purple-300 text-purple-600">Restauração</Badge>}
+                              {!isOriginal && !isRestauracao && diff.adicionados !== undefined && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  <span className="text-green-600">+{diff.adicionados}</span>
+                                  <span className="mx-0.5">/</span>
+                                  <span className="text-red-500">-{diff.removidos}</span>
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[10px] text-muted-foreground">
+                                {new Date(v.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                            </div>
+                          </button>
+
+                          {/* Conteúdo expandido */}
+                          {isExpanded && (
+                            <div className="border-t px-3 py-3 space-y-3">
+                              {/* Instruções do refinamento */}
+                              {v.instrucoes && (
+                                <div className="bg-muted/40 rounded-md px-3 py-2">
+                                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Instrução do advogado</p>
+                                  <p className="text-sm">{v.instrucoes}</p>
+                                </div>
+                              )}
+
+                              {/* Diff visual */}
+                              {diff.detalhes && Array.isArray(diff.detalhes) && diff.detalhes.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Alterações nesta versão</p>
+                                  <div className="border rounded-md overflow-hidden max-h-60 overflow-y-auto text-xs font-mono">
+                                    {diff.detalhes.slice(0, 50).map((d: any, i: number) => (
+                                      <div
+                                        key={i}
+                                        className={`px-3 py-1 border-b last:border-b-0 ${
+                                          d.tipo === 'adicionado'
+                                            ? 'bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-300'
+                                            : d.tipo === 'removido'
+                                            ? 'bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 line-through'
+                                            : 'text-muted-foreground'
+                                        }`}
+                                      >
+                                        <span className="select-none mr-2 opacity-60">
+                                          {d.tipo === 'adicionado' ? '+' : d.tipo === 'removido' ? '-' : ' '}
+                                        </span>
+                                        {d.texto.substring(0, 200)}{d.texto.length > 200 ? '...' : ''}
+                                      </div>
+                                    ))}
+                                    {diff.detalhes.length > 50 && (
+                                      <div className="px-3 py-1 text-center text-muted-foreground bg-muted/20">
+                                        ... e mais {diff.detalhes.length - 50} linhas
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-3 mt-1.5 text-[10px] text-muted-foreground">
+                                    <span className="text-green-600">+{diff.adicionados} adicionadas</span>
+                                    <span className="text-red-500">-{diff.removidos} removidas</span>
+                                    <span>{diff.mantidos} mantidas</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Preview do conteúdo */}
+                              <div>
+                                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">Conteúdo da versão</p>
+                                <div className="border rounded-md bg-muted/20 px-3 py-2 max-h-40 overflow-y-auto">
+                                  <pre className="text-xs whitespace-pre-wrap font-sans">
+                                    {v.conteudoTexto?.substring(0, 1000)}{(v.conteudoTexto?.length || 0) > 1000 ? '\n\n[... conteúdo completo disponível ao restaurar]' : ''}
+                                  </pre>
+                                </div>
+                              </div>
+
+                              {/* Ações */}
+                              <div className="flex items-center gap-2 pt-1">
+                                {!isLatest && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      if (confirm(`Restaurar versão ${v.versao}? O conteúdo atual será salvo como nova versão antes da restauração.`)) {
+                                        restaurar.mutate({ peticaoId, versaoId: v.id });
+                                      }
+                                    }}
+                                    disabled={restaurar.isPending}
+                                    className="text-xs h-7"
+                                  >
+                                    {restaurar.isPending ? (
+                                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                    ) : (
+                                      <RotateCcw className="h-3 w-3 mr-1" />
+                                    )}
+                                    Restaurar v{v.versao}
+                                  </Button>
+                                )}
+                                {v.docxUrl && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => window.open(v.docxUrl, '_blank')}
+                                    className="text-xs h-7"
+                                  >
+                                    <Download className="h-3 w-3 mr-1" /> DOCX v{v.versao}
+                                  </Button>
+                                )}
+                                {versoes.length > 1 && idx > 0 && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setVersaoComparando(versaoComparando === v.id ? null : v.id)}
+                                    className="text-xs h-7"
+                                  >
+                                    <Eye className="h-3 w-3 mr-1" /> Comparar com v{versoes[idx - 1]?.versao}
+                                  </Button>
+                                )}
+                              </div>
+
+                              {/* Comparação lado a lado */}
+                              {versaoComparando === v.id && idx > 0 && (
+                                <div className="border-t pt-3">
+                                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                                    Comparação: v{versoes[idx - 1]?.versao} → v{v.versao}
+                                  </p>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="border rounded-md bg-red-50/30 dark:bg-red-950/10">
+                                      <div className="px-2 py-1 border-b bg-red-100/50 dark:bg-red-900/20 text-[10px] font-medium text-red-700 dark:text-red-300">
+                                        v{versoes[idx - 1]?.versao} (anterior)
+                                      </div>
+                                      <div className="px-2 py-1.5 max-h-32 overflow-y-auto">
+                                        <pre className="text-[10px] whitespace-pre-wrap font-sans text-muted-foreground">
+                                          {versoes[idx - 1]?.conteudoTexto?.substring(0, 500) || 'Sem conteúdo'}
+                                        </pre>
+                                      </div>
+                                    </div>
+                                    <div className="border rounded-md bg-green-50/30 dark:bg-green-950/10">
+                                      <div className="px-2 py-1 border-b bg-green-100/50 dark:bg-green-900/20 text-[10px] font-medium text-green-700 dark:text-green-300">
+                                        v{v.versao} (nova)
+                                      </div>
+                                      <div className="px-2 py-1.5 max-h-32 overflow-y-auto">
+                                        <pre className="text-[10px] whitespace-pre-wrap font-sans text-muted-foreground">
+                                          {v.conteudoTexto?.substring(0, 500) || 'Sem conteúdo'}
+                                        </pre>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Resumo */}
+                <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-3">
+                  <span>{versoes.length} versão(ões) · Criada em {versoes[0] ? new Date(versoes[0].createdAt).toLocaleDateString('pt-BR') : '-'}</span>
+                  <Button size="sm" variant="ghost" onClick={() => versoesQuery.refetch()} className="h-7 text-xs">
+                    <RefreshCw className="h-3 w-3 mr-1" /> Atualizar
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         )}
-        <Textarea
-          placeholder="Ex: Reforce a fundamentação sobre abusividade das consignações, adicione jurisprudência do STJ sobre margem consignável, melhore a conclusão pedindo tutela de urgência..."
-          value={instrucoes}
-          onChange={(e) => setInstrucoes(e.target.value)}
-          rows={4}
-          className="resize-none"
-        />
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
-            {historico.length > 0 ? `${historico.length} refinamento(s) realizado(s)` : 'Nenhum refinamento ainda'}
-          </p>
-          <Button
-            onClick={() => refinar.mutate({ peticaoId, instrucoes })}
-            disabled={refinar.isPending || instrucoes.length < 5}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
-          >
-            {refinar.isPending ? (
-              <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Refinando...</>
-            ) : (
-              <><RefreshCw className="h-4 w-4 mr-2" /> Refinar Petição</>
-            )}
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );
