@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE processos SET clienteId = 6 WHERE clienteId = 150034;\nUPDATE documentos SET clienteId = 6 WHERE clienteId = 150034;\nDELETE FROM clientes WHERE id = 150034;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute UPDATE processos SET clienteId = 6 WHERE clienteId = 150034;\nUPDATE documentos SET clienteId = 6 WHERE clienteId = 150034;\nDELETE FROM clientes WHERE id = 150034;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 79
+}

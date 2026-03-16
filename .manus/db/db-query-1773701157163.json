@@ -1,0 +1,24 @@
+{
+  "query": "SELECT id, nomeCompleto, cpfCnpj, createdAt, updatedAt FROM clientes WHERE LOWER(nomeCompleto) LIKE '%maeve%' ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, nomeCompleto, cpfCnpj, createdAt, updatedAt FROM clientes WHERE LOWER(nomeCompleto) LIKE '%maeve%' ORDER BY id;",
+  "rows": [
+    {
+      "id": "6",
+      "nomeCompleto": "MAEVE PRODUTOS HOSPITALARES LTDA",
+      "cpfCnpj": "09034672000192",
+      "createdAt": "2026-03-11 04:38:40",
+      "updatedAt": "2026-03-11 05:04:51"
+    },
+    {
+      "id": "150034",
+      "nomeCompleto": "MAEVE PRODUTOS HOSPITALARES LTDA EPP",
+      "cpfCnpj": "PEND9d5822c6dd3",
+      "createdAt": "2026-03-13 08:55:07",
+      "updatedAt": "2026-03-13 11:35:52"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tnomeCompleto\tcpfCnpj\tcreatedAt\tupdatedAt\n6\tMAEVE PRODUTOS HOSPITALARES LTDA\t09034672000192\t2026-03-11 04:38:40\t2026-03-11 05:04:51\n150034\tMAEVE PRODUTOS HOSPITALARES LTDA EPP\tPEND9d5822c6dd3\t2026-03-13 08:55:07\t2026-03-13 11:35:52\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

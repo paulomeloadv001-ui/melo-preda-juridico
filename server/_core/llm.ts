@@ -136,7 +136,7 @@ const normalizeContentPart = (
   throw new Error("Unsupported message content part");
 };
 
-const normalizeMessage = (message: Message) => {
+const normalizeMessage = (message: Message & { tool_calls?: ToolCall[] }) => {
   const { role, name, tool_call_id } = message;
 
   if (role === "tool" || role === "function") {
@@ -156,18 +156,27 @@ const normalizeMessage = (message: Message) => {
 
   // If there's only text content, collapse to a single string for compatibility
   if (contentParts.length === 1 && contentParts[0].type === "text") {
-    return {
+    const result: Record<string, unknown> = {
       role,
       name,
       content: contentParts[0].text,
     };
+    // Pass through tool_calls for assistant messages
+    if ((message as any).tool_calls) {
+      result.tool_calls = (message as any).tool_calls;
+    }
+    return result;
   }
 
-  return {
+  const result: Record<string, unknown> = {
     role,
     name,
     content: contentParts,
   };
+  if ((message as any).tool_calls) {
+    result.tool_calls = (message as any).tool_calls;
+  }
+  return result;
 };
 
 const normalizeToolChoice = (

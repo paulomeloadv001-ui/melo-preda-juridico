@@ -8,18 +8,116 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Send, Bot, User, Scale, BookOpen, Gavel, FileText, Search, Sparkles, Brain, RefreshCw, Trash2, Download, FilePlus, Copy, Check, MessageSquare, Zap, Target, Calculator, ClipboardList, ChevronRight, History, AlertTriangle, Shield } from "lucide-react";
+import { Loader2, Send, Bot, User, Scale, BookOpen, Gavel, FileText, Search, Sparkles, Brain, RefreshCw, Trash2, Download, FilePlus, Copy, Check, MessageSquare, Zap, Target, Calculator, ClipboardList, ChevronRight, History, AlertTriangle, Shield, Wrench, CheckCircle2, XCircle, Activity, Database, Users, GitMerge, Eraser, Globe, BarChart3 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
 
+type ToolAction = {
+  tool: string;
+  args: any;
+  resultado: string;
+  sucesso: boolean;
+};
+
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
+  acoesExecutadas?: ToolAction[];
+  totalTools?: number;
 };
 
 type ModoChat = "chat" | "analise" | "peticao" | "estrategia" | "calculo";
+
+// Tool name to display info mapping
+const TOOL_INFO: Record<string, { label: string; icon: any; color: string }> = {
+  buscar_cliente: { label: "Buscar Cliente", icon: Users, color: "text-blue-600" },
+  buscar_processo: { label: "Buscar Processo", icon: FileText, color: "text-purple-600" },
+  diagnosticar_banco: { label: "Diagnosticar Banco", icon: Database, color: "text-orange-600" },
+  listar_duplicados: { label: "Listar Duplicados", icon: Activity, color: "text-red-600" },
+  merge_clientes: { label: "Merge Clientes", icon: GitMerge, color: "text-green-600" },
+  remover_registro: { label: "Remover Registro", icon: Eraser, color: "text-red-600" },
+  completar_movimentacoes: { label: "Completar Movimentações", icon: Globe, color: "text-cyan-600" },
+  analisar_processo_tecnico: { label: "Análise Técnica", icon: Target, color: "text-purple-600" },
+  gerar_peticao: { label: "Gerar Petição", icon: FileText, color: "text-amber-600" },
+  atualizar_dados_cliente: { label: "Atualizar Cliente", icon: Users, color: "text-blue-600" },
+  atualizar_dados_processo: { label: "Atualizar Processo", icon: Gavel, color: "text-purple-600" },
+  consultar_estatisticas: { label: "Estatísticas", icon: BarChart3, color: "text-green-600" },
+};
+
+function ToolActionsPanel({ acoes }: { acoes: ToolAction[] }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!acoes || acoes.length === 0) return null;
+
+  return (
+    <div className="mt-2 border border-amber-200 dark:border-amber-800 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Wrench className="h-3.5 w-3.5 text-amber-600" />
+          <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+            {acoes.length} ação(es) executada(s)
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {acoes.map((a, i) => {
+            const info = TOOL_INFO[a.tool];
+            const Icon = info?.icon || Wrench;
+            return (
+              <span key={i} title={`${info?.label || a.tool}: ${a.sucesso ? 'Sucesso' : 'Erro'}`}>
+                {a.sucesso ? (
+                  <CheckCircle2 className="h-3 w-3 text-green-500" />
+                ) : (
+                  <XCircle className="h-3 w-3 text-red-500" />
+                )}
+              </span>
+            );
+          })}
+          <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${expanded ? 'rotate-90' : ''}`} />
+        </div>
+      </button>
+      {expanded && (
+        <div className="px-3 py-2 space-y-1.5 bg-background">
+          {acoes.map((acao, i) => {
+            const info = TOOL_INFO[acao.tool];
+            const Icon = info?.icon || Wrench;
+            let resumoResultado = '';
+            try {
+              const parsed = JSON.parse(acao.resultado);
+              if (parsed.erro) resumoResultado = `Erro: ${parsed.erro}`;
+              else if (parsed.sucesso) resumoResultado = parsed.mensagem || parsed.resultado || 'Sucesso';
+              else if (parsed.encontrados !== undefined) resumoResultado = `${parsed.encontrados} resultado(s)`;
+              else resumoResultado = Object.keys(parsed).slice(0, 3).join(', ');
+            } catch {
+              resumoResultado = acao.resultado.substring(0, 100);
+            }
+            return (
+              <div key={i} className="flex items-start gap-2 text-xs">
+                <div className={`flex-shrink-0 mt-0.5 ${info?.color || 'text-muted-foreground'}`}>
+                  <Icon className="h-3.5 w-3.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium">{info?.label || acao.tool}</span>
+                    {acao.sucesso ? (
+                      <Badge variant="outline" className="h-4 text-[9px] px-1 border-green-300 text-green-600">OK</Badge>
+                    ) : (
+                      <Badge variant="outline" className="h-4 text-[9px] px-1 border-red-300 text-red-600">ERRO</Badge>
+                    )}
+                  </div>
+                  <p className="text-muted-foreground truncate">{resumoResultado}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const modos: { id: ModoChat; label: string; icon: any; desc: string; color: string }[] = [
   { id: "chat", label: "Consulta", icon: MessageSquare, desc: "Consulta jurídica geral", color: "text-blue-600" },
@@ -101,14 +199,23 @@ export default function AgenteJuridico() {
     try {
       const result = await chatMutation.mutateAsync({
         mensagem: mensagem,
-        historico: historico,
+        historico: historico.map(h => ({ role: h.role, content: h.content })),
         clienteId,
         processoId,
         modo,
         sessaoId,
       });
-      setHistorico([...novoHistorico, { role: "assistant", content: result.resposta }]);
+      const assistantMsg: ChatMessage = {
+        role: "assistant",
+        content: result.resposta,
+        acoesExecutadas: (result as any).acoesExecutadas || [],
+        totalTools: (result as any).totalTools || 0,
+      };
+      setHistorico([...novoHistorico, assistantMsg]);
       if (result.sessaoId) setSessaoId(result.sessaoId);
+      if ((result as any).totalTools > 0) {
+        toast.success(`Agente executou ${(result as any).totalTools} ações no sistema`);
+      }
     } catch (error: any) {
       setHistorico([
         ...novoHistorico,
@@ -141,22 +248,22 @@ export default function AgenteJuridico() {
 
   const sugestoesPorModo: Record<ModoChat, string[]> = useMemo(() => ({
     chat: [
-      "Qual a melhor estratégia para cumprimento provisório de honorários?",
-      "Analise a tese de abusividade de consignações para servidor público",
+      "Faça um diagnóstico completo do banco de dados",
+      "Busque e corrija todos os clientes duplicados",
+      "Complete as movimentações de todos os processos via DataJud",
       "Qual a jurisprudência do TJ-GO sobre limite de 35%?",
-      "Como funciona a coisa julgada progressiva em honorários?",
     ],
     analise: [
       "Faça uma análise técnica completa deste processo",
       "Identifique os pontos fortes e fracos do caso",
-      "Quais as chances de êxito nesta demanda?",
       "Analise a viabilidade de recurso neste caso",
+      "Busque este processo no DataJud e complete as movimentações",
     ],
     peticao: [
-      "Elabore um cumprimento provisório de sentença para este caso",
+      "Gere um cumprimento provisório de sentença para este caso",
       "Gere um agravo de instrumento contra o indeferimento da tutela",
-      "Redija embargos de declaração com efeitos infringentes",
-      "Prepare uma exceção de pré-executividade",
+      "Gere embargos de declaração com efeitos infringentes",
+      "Gere uma exceção de pré-executividade",
     ],
     estrategia: [
       "Monte uma estratégia completa para este processo",
@@ -183,9 +290,9 @@ export default function AgenteJuridico() {
             <Brain className="h-7 w-7 text-amber-700 dark:text-amber-400" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Agente Jurídico Expert</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Agente Jurídico Executor</h1>
             <p className="text-sm text-muted-foreground">
-              Sistema inteligente com expertise completa do escritório Melo & Preda
+              Executa ações reais: buscar, analisar, corrigir, gerar petições, merge, DataJud
             </p>
           </div>
         </div>
@@ -361,9 +468,14 @@ export default function AgenteJuridico() {
                           }`}
                         >
                           {msg.role === "assistant" ? (
-                            <div className="prose prose-sm dark:prose-invert max-w-none">
-                              <Streamdown>{msg.content}</Streamdown>
-                            </div>
+                            <>
+                              {msg.acoesExecutadas && msg.acoesExecutadas.length > 0 && (
+                                <ToolActionsPanel acoes={msg.acoesExecutadas} />
+                              )}
+                              <div className="prose prose-sm dark:prose-invert max-w-none mt-1">
+                                <Streamdown>{msg.content}</Streamdown>
+                              </div>
+                            </>
                           ) : (
                             <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                           )}
@@ -381,13 +493,15 @@ export default function AgenteJuridico() {
                           <Scale className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
                         </div>
                         <div className="bg-muted rounded-lg p-3">
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            {modo === "analise" ? "Analisando processo..." :
-                             modo === "peticao" ? "Elaborando petição..." :
-                             modo === "estrategia" ? "Montando estratégia..." :
-                             modo === "calculo" ? "Calculando valores..." :
-                             "Consultando base de conhecimento..."}
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <span>Processando...</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                              <Wrench className="h-3 w-3" />
+                              <span>O agente pode executar ações no sistema (buscar, analisar, corrigir, gerar petições...)</span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -491,7 +605,40 @@ export default function AgenteJuridico() {
                 </CardContent>
               </Card>
 
-              {/* Atalhos por Modo */}
+              {/* Ações do Executor */}
+              <Card className="border-green-200 dark:border-green-800">
+                <CardHeader className="pb-2 pt-3">
+                  <div className="flex items-center gap-2">
+                    <Wrench className="h-4 w-4 text-green-600" />
+                    <CardTitle className="text-sm">Ações do Executor</CardTitle>
+                  </div>
+                  <CardDescription className="text-[10px]">O agente executa ações reais no sistema</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-0.5">
+                    {[
+                      { icon: Database, label: "Diagnóstico completo", query: "Faça um diagnóstico completo do banco de dados: identifique duplicados, dados incompletos, processos sem movimentações e CPFs pendentes", color: "text-orange-600" },
+                      { icon: GitMerge, label: "Corrigir duplicados", query: "Identifique todos os clientes duplicados e faça o merge automático mantendo o registro mais completo", color: "text-green-600" },
+                      { icon: Globe, label: "Completar via DataJud", query: "Consulte o DataJud e complete as movimentações de todos os processos que estão desatualizados", color: "text-cyan-600" },
+                      { icon: Target, label: "Analisar processo", query: "Faça uma análise técnica aprofundada do processo selecionado com teses, jurisprudência e estratégia", color: "text-purple-600" },
+                      { icon: BarChart3, label: "Estatísticas gerais", query: "Mostre as estatísticas completas do escritório: clientes, processos, valores, prazos", color: "text-blue-600" },
+                      { icon: Eraser, label: "Limpar dados incorretos", query: "Identifique e remova registros incorretos, duplicados ou inválidos do banco de dados", color: "text-red-600" },
+                    ].map((item, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { setMensagem(item.query); setActiveTab("chat"); }}
+                        className="w-full flex items-center gap-2 text-left text-xs p-1.5 rounded hover:bg-accent transition-colors group"
+                      >
+                        <item.icon className={`h-3 w-3 ${item.color} flex-shrink-0`} />
+                        <span className="flex-1">{item.label}</span>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Atalhos Expert */}
               <Card>
                 <CardHeader className="pb-2 pt-3">
                   <div className="flex items-center gap-2">
@@ -503,11 +650,9 @@ export default function AgenteJuridico() {
                   <div className="space-y-0.5">
                     {[
                       { icon: BookOpen, label: "Teses centrais", query: "Liste todas as teses centrais do escritório com fundamentos legais e jurisprudência" },
-                      { icon: Gavel, label: "Jurisprudência âncora", query: "Quais são as jurisprudências âncora do escritório? Detalhe cada uma com número, relator e ementa" },
-                      { icon: Shield, label: "Estratégias avançadas", query: "Descreva todas as 8 estratégias processuais avançadas do escritório com detalhes de quando usar cada uma" },
-                      { icon: Scale, label: "Legislação fundamental", query: "Liste toda a legislação fundamental utilizada pelo escritório com artigos específicos" },
-                      { icon: Calculator, label: "Fórmula de cálculo", query: "Explique a fórmula completa de cálculo de débito judicial: IPCA + juros + multa art. 523 + honorários" },
-                      { icon: AlertTriangle, label: "Checklist de análise", query: "Qual o checklist completo para análise técnica de um processo?" },
+                      { icon: Gavel, label: "Jurisprudência âncora", query: "Quais são as jurisprudências âncora do escritório?" },
+                      { icon: Shield, label: "Estratégias avançadas", query: "Descreva todas as estratégias processuais avançadas do escritório" },
+                      { icon: Calculator, label: "Fórmula de cálculo", query: "Explique a fórmula completa de cálculo de débito judicial" },
                     ].map((item, i) => (
                       <button
                         key={i}

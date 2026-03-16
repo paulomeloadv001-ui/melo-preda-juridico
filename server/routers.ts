@@ -20,6 +20,7 @@ import { eq, like, desc, asc, and, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
 import { storagePut, storageGet } from "./storage";
 import { gerarPeticaoDocx } from "./docxGenerator";
+import { executarAgenteCompleto } from "./agenteExecutor";
 
 // Helper: sanitize name for folder path
 function sanitizeName(name: string): string {
@@ -4465,7 +4466,7 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
 
   // ==================== AGENTE IA JURÍDICO EXPERT ====================
   agente: router({
-    // Chat principal do agente expert com contexto completo
+    // Chat principal do agente expert com contexto completo — EXECUTOR COM TOOLS
     chat: protectedProcedure
       .input(z.object({
         mensagem: z.string().min(1),
@@ -4719,19 +4720,21 @@ REGRAS ABSOLUTAS:
 10. Quando perguntarem sobre um cliente ou processo específico, buscar nos dados acima e responder com TODOS os detalhes disponíveis
 11. Quando perguntarem sobre totais, métricas ou estatísticas, calcular com base nos dados reais acima`;
 
-        // 7. Montar mensagens
-        const messages: Array<{role: 'system' | 'user' | 'assistant', content: string}> = [
-          { role: 'system', content: systemPrompt },
-          ...input.historico.map(h => ({ role: h.role as 'user' | 'assistant', content: h.content })),
-          { role: 'user' as const, content: input.mensagem }
-        ];
+        // 7. EXECUTAR AGENTE COM TOOLS (loop de execução)
+        const executorResult = await executarAgenteCompleto({
+          mensagem: input.mensagem,
+          historico: input.historico,
+          clienteId: input.clienteId,
+          processoId: input.processoId,
+          modo: input.modo,
+          panoramaGlobal,
+          baseConhecimento,
+          configExpertise,
+          contextoCliente,
+          contextoProcesso,
+        });
 
-        // 8. Invocar LLM
-        const result = await invokeLLM({ messages });
-        const rawContent = result.choices?.[0]?.message?.content;
-        const resposta = typeof rawContent === 'string' ? rawContent : 'Desculpe, não consegui processar sua solicitação.';
-
-        // 9. Salvar no histórico
+        // 8. Salvar no histórico
         const sessaoId = input.sessaoId || `sessao_${Date.now()}`;
         try {
           await db.insert(agenteIaHistorico).values({
@@ -4745,14 +4748,19 @@ REGRAS ABSOLUTAS:
             sessaoId,
             userId: ctx.user?.id || null,
             role: 'assistant',
-            conteudo: resposta,
-            contextoUsado: null,
+            conteudo: executorResult.resposta,
+            contextoUsado: JSON.stringify({ acoesExecutadas: executorResult.acoesExecutadas.map(a => ({ tool: a.tool, sucesso: a.sucesso })), totalTools: executorResult.totalTools }),
           });
         } catch (e) {
           console.error('Erro ao salvar histórico:', e);
         }
 
-        return { resposta, sessaoId };
+        return {
+          resposta: executorResult.resposta,
+          sessaoId,
+          acoesExecutadas: executorResult.acoesExecutadas,
+          totalTools: executorResult.totalTools,
+        };
       }),
 
     // Buscar conhecimento na base

@@ -541,3 +541,14 @@
 - [x] UPLOAD REWRITE: Corrigir todas as mensagens de erro sobre tamanho
 - [x] UPLOAD REWRITE: Barra de progresso real por arquivo (% enviado)
 - [x] UPLOAD REWRITE: Aplicar em ProcessoUpload, ContrachequeUpload e ImportacaoLote
+- [ ] BUG MAEVE: Diagnosticar duplicidades e dados bagunçados da cliente Maeve após upload
+- [ ] BUG MAEVE: Merge de registros duplicados, manter o mais recente e organizar dados
+- [x] AGENTE IA AÇÕES: Corrigir agente para executar ações de análise, remoção de duplicados e organização
+- [x] AGENTE IA AÇÕES: Implementar tool_choice com funções executáveis (analisar, remover duplicado, organizar, merge)
+- [ ] DIAGNÓSTICO BANCO: Identificar todos os clientes/processos duplicados
+- [ ] DIAGNÓSTICO BANCO: Identificar processos sem dados extraídos (sem movimentações, sem partes, sem estratégias)
+- [ ] DIAGNÓSTICO BANCO: Identificar processos sem última movimentação atualizada
+- [ ] CORREÇÃO BANCO: Merge de todos os duplicados mantendo o registro mais recente/completo
+- [ ] CORREÇÃO BANCO: Completar dados faltantes de processos não estudados
+- [x] AGENTE IA COMPLETO: Reescrever com tool_choice e funções executáveis (analisar, deduplicar, organizar, completar movimentações, gerar petições, merge clientes)
+- [x] AGENTE IA COMPLETO: Agente deve usar todo o conhecimento do banco para executar qualquer ação requisitada

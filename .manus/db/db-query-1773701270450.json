@@ -1,0 +1,9 @@
+{
+  "query": "SELECT cpfCnpj, COUNT(*) as cnt, GROUP_CONCAT(id) as ids, GROUP_CONCAT(nomeCompleto SEPARATOR ' | ') as nomes FROM clientes GROUP BY cpfCnpj HAVING cnt > 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT cpfCnpj, COUNT(*) as cnt, GROUP_CONCAT(id) as ids, GROUP_CONCAT(nomeCompleto SEPARATOR ' | ') as nomes FROM clientes GROUP BY cpfCnpj HAVING cnt > 1;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 47
+}

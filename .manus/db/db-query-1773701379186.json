@@ -1,0 +1,9 @@
+{
+  "query": "DELETE FROM estrategias WHERE processoId IN (SELECT id FROM processos WHERE numeroCnj LIKE 'SEM_%');\nDELETE FROM movimentacoes WHERE processoId IN (SELECT id FROM processos WHERE numeroCnj LIKE 'SEM_%');\nDELETE FROM partes_processuais WHERE processoId IN (SELECT id FROM processos WHERE numeroCnj LIKE 'SEM_%');\nDELETE FROM processos WHERE numeroCnj LIKE 'SEM_%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute DELETE FROM estrategias WHERE processoId IN (SELECT id FROM processos WHERE numeroCnj LIKE 'SEM_%');\nDELETE FROM movimentacoes WHERE processoId IN (SELECT id FROM processos WHERE numeroCnj LIKE 'SEM_%');\nDELETE FROM partes_processuais WHERE processoId IN (SELECT id FROM processos WHERE numeroCnj LIKE 'SEM_%');\nDELETE FROM processos WHERE numeroCnj LIKE 'SEM_%';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 93
+}
