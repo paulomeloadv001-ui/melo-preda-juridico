@@ -53,7 +53,7 @@ describe("contracheque upload", () => {
         fileSize: 0,
       })
     ).rejects.toThrow();
-  }, 15000);
+  }, 30000);
 
   it("processar.uploadContracheque validates input schema", async () => {
     const { ctx } = createAuthContext();

@@ -52,7 +52,7 @@ const trpcClient = trpc.createClient({
         if (!response.ok && contentType.includes('text/html')) {
           let errorMsg = 'Erro no servidor';
           if (response.status === 413) {
-            errorMsg = 'O arquivo é grande demais para envio. O limite máximo é de 100 MB por arquivo. Reduza o tamanho do PDF e tente novamente.';
+            errorMsg = 'O arquivo é grande demais para envio direto. O sistema tentará enviar em partes. Se o erro persistir, tente novamente.';
           } else if (response.status === 502 || response.status === 504) {
             errorMsg = 'O servidor demorou para responder. Tente novamente em alguns instantes.';
           } else {

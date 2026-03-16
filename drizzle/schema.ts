@@ -680,3 +680,19 @@ export const peticaoVersoes = mysqlTable("peticao_versoes", {
 });
 export type PeticaoVersao = typeof peticaoVersoes.$inferSelect;
 export type InsertPeticaoVersao = typeof peticaoVersoes.$inferInsert;
+
+// ==================== PERFIS DE ACESSO (Templates de Permissões) ====================
+export const perfisAcesso = mysqlTable("perfis_acesso", {
+  id: int("id").autoincrement().primaryKey(),
+  nome: varchar("nome", { length: 100 }).notNull().unique(),
+  descricao: text("descricao"),
+  cor: varchar("cor", { length: 20 }).default("blue"),
+  icone: varchar("icone", { length: 50 }).default("User"),
+  permissoes: text("permissoes").notNull(), // JSON: { modulo: { podeVisualizar, podeEditar, podeExcluir, podeExportar } }
+  padrao: int("padrao").default(0).notNull(),
+  criadoPor: int("criadoPor"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type PerfilAcesso = typeof perfisAcesso.$inferSelect;
+export type InsertPerfilAcesso = typeof perfisAcesso.$inferInsert;

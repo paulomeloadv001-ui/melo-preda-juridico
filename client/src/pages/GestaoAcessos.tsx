@@ -12,7 +12,8 @@ import {
   ShieldCheck, UserPlus, Clock, CheckCircle, XCircle,
   Users, Search, Trash2, Mail, Phone, Shield, Key,
   Link2, Copy, History, AlertTriangle, Eye, Edit, Download,
-  RefreshCw, ChevronDown, ChevronUp, UserCog, Send
+  RefreshCw, ChevronDown, ChevronUp, UserCog, Send, Crown,
+  GraduationCap, Scale, ClipboardList, Banknote, Plus, Save, Palette
 } from "lucide-react";
 
 // ==================== FORMULÁRIO PÚBLICO DE SOLICITAÇÃO ====================
@@ -127,7 +128,7 @@ export function SolicitarAcesso() {
 }
 
 // ==================== PAINEL DE GESTÃO DE ACESSOS (ADMIN) ====================
-type AbaType = "solicitacoes" | "usuarios" | "permissoes" | "convites" | "auditoria";
+type AbaType = "solicitacoes" | "usuarios" | "permissoes" | "perfis" | "convites" | "auditoria";
 
 export default function GestaoAcessos() {
   const { user } = useAuth();
@@ -137,6 +138,7 @@ export default function GestaoAcessos() {
     { id: "solicitacoes", label: "Solicitações", icon: <UserPlus className="h-4 w-4" /> },
     { id: "usuarios", label: "Usuários", icon: <Users className="h-4 w-4" /> },
     { id: "permissoes", label: "Permissões", icon: <Shield className="h-4 w-4" /> },
+    { id: "perfis", label: "Perfis de Acesso", icon: <Crown className="h-4 w-4" /> },
     { id: "convites", label: "Convites", icon: <Send className="h-4 w-4" /> },
     { id: "auditoria", label: "Auditoria", icon: <History className="h-4 w-4" /> },
   ];
@@ -189,6 +191,7 @@ export default function GestaoAcessos() {
       {abaAtiva === "solicitacoes" && <TabSolicitacoes />}
       {abaAtiva === "usuarios" && <TabUsuarios currentUserId={user?.id} />}
       {abaAtiva === "permissoes" && <TabPermissoes />}
+      {abaAtiva === "perfis" && <TabPerfis />}
       {abaAtiva === "convites" && <TabConvites />}
       {abaAtiva === "auditoria" && <TabAuditoria />}
     </div>
@@ -550,7 +553,8 @@ function TabPermissoes() {
               <CardTitle className="text-base">
                 Permissões de {selectedUserData.name || "Usuário"}
               </CardTitle>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                <AplicarPerfilDropdown userId={selectedUser} onApplied={() => { refetchPerms(); setLocalPerms({}); }} />
                 <Button size="sm" variant="outline" onClick={() => marcarTodos("podeVisualizar", 1)} className="text-xs">
                   <Eye className="h-3 w-3 mr-1" /> Liberar Visualização
                 </Button>
@@ -607,6 +611,364 @@ function TabPermissoes() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ==================== COMPONENTE: APLICAR PERFIL DROPDOWN ====================
+function AplicarPerfilDropdown({ userId, onApplied }: { userId: number; onApplied: () => void }) {
+  const { data: perfis } = trpc.acessos.listarPerfis.useQuery();
+  const aplicar = trpc.acessos.aplicarPerfil.useMutation({
+    onSuccess: (data) => { toast.success(data.message); onApplied(); },
+    onError: (err) => toast.error(err.message),
+  });
+  const [open, setOpen] = useState(false);
+
+  const iconMap: Record<string, React.ReactNode> = {
+    Crown: <Crown className="h-3.5 w-3.5" />,
+    Scale: <Scale className="h-3.5 w-3.5" />,
+    GraduationCap: <GraduationCap className="h-3.5 w-3.5" />,
+    ClipboardList: <ClipboardList className="h-3.5 w-3.5" />,
+    Banknote: <Banknote className="h-3.5 w-3.5" />,
+    User: <UserCog className="h-3.5 w-3.5" />,
+  };
+
+  const corMap: Record<string, string> = {
+    amber: "bg-amber-100 text-amber-800",
+    blue: "bg-blue-100 text-blue-800",
+    green: "bg-green-100 text-green-800",
+    purple: "bg-purple-100 text-purple-800",
+    emerald: "bg-emerald-100 text-emerald-800",
+  };
+
+  return (
+    <div className="relative">
+      <Button size="sm" variant="outline" className="text-xs" onClick={() => setOpen(!open)}>
+        <Crown className="h-3 w-3 mr-1" /> Aplicar Perfil
+        <ChevronDown className="h-3 w-3 ml-1" />
+      </Button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-50 bg-popover border rounded-md shadow-lg min-w-[240px] p-1">
+          {perfis?.map((p: any) => (
+            <button
+              key={p.id}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted rounded-sm text-left"
+              onClick={() => { aplicar.mutate({ userId, perfilId: p.id }); setOpen(false); }}
+            >
+              <span className={`p-1 rounded ${corMap[p.cor] || "bg-gray-100 text-gray-800"}`}>
+                {iconMap[p.icone || "User"] || <UserCog className="h-3.5 w-3.5" />}
+              </span>
+              <div>
+                <div className="font-medium">{p.nome}</div>
+                <div className="text-[10px] text-muted-foreground">{p.descricao?.substring(0, 50)}</div>
+              </div>
+            </button>
+          ))}
+          {(!perfis || perfis.length === 0) && (
+            <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum perfil cadastrado</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== ABA: PERFIS DE ACESSO ====================
+function TabPerfis() {
+  const { data: perfis, isLoading, refetch } = trpc.acessos.listarPerfis.useQuery();
+  const { data: modulos } = trpc.acessos.modulosDisponiveis.useQuery();
+  const [editando, setEditando] = useState<number | null>(null);
+  const [criando, setCriando] = useState(false);
+  const [form, setForm] = useState({ nome: "", descricao: "", cor: "blue", icone: "User" });
+  const [permsEdit, setPermsEdit] = useState<Record<string, { podeVisualizar: number; podeEditar: number; podeExcluir: number; podeExportar: number }>>({});
+
+  const criar = trpc.acessos.criarPerfil.useMutation({
+    onSuccess: (data) => { toast.success(data.message); refetch(); setCriando(false); resetForm(); },
+    onError: (err) => toast.error(err.message),
+  });
+  const editar = trpc.acessos.editarPerfil.useMutation({
+    onSuccess: () => { toast.success("Perfil atualizado"); refetch(); setEditando(null); },
+    onError: (err) => toast.error(err.message),
+  });
+  const excluir = trpc.acessos.excluirPerfil.useMutation({
+    onSuccess: (data) => { toast.success(data.message); refetch(); },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const cores = [
+    { id: "amber", label: "Dourado", cls: "bg-amber-500" },
+    { id: "blue", label: "Azul", cls: "bg-blue-500" },
+    { id: "green", label: "Verde", cls: "bg-green-500" },
+    { id: "purple", label: "Roxo", cls: "bg-purple-500" },
+    { id: "emerald", label: "Esmeralda", cls: "bg-emerald-500" },
+    { id: "red", label: "Vermelho", cls: "bg-red-500" },
+    { id: "slate", label: "Cinza", cls: "bg-slate-500" },
+  ];
+
+  const icones = [
+    { id: "Crown", label: "Coroa", icon: <Crown className="h-4 w-4" /> },
+    { id: "Scale", label: "Balança", icon: <Scale className="h-4 w-4" /> },
+    { id: "GraduationCap", label: "Formatura", icon: <GraduationCap className="h-4 w-4" /> },
+    { id: "ClipboardList", label: "Prancheta", icon: <ClipboardList className="h-4 w-4" /> },
+    { id: "Banknote", label: "Dinheiro", icon: <Banknote className="h-4 w-4" /> },
+    { id: "Shield", label: "Escudo", icon: <Shield className="h-4 w-4" /> },
+    { id: "UserCog", label: "Usuário", icon: <UserCog className="h-4 w-4" /> },
+  ];
+
+  const iconMap: Record<string, React.ReactNode> = Object.fromEntries(icones.map(i => [i.id, i.icon]));
+  const corMap: Record<string, string> = {
+    amber: "bg-amber-100 text-amber-800 border-amber-300",
+    blue: "bg-blue-100 text-blue-800 border-blue-300",
+    green: "bg-green-100 text-green-800 border-green-300",
+    purple: "bg-purple-100 text-purple-800 border-purple-300",
+    emerald: "bg-emerald-100 text-emerald-800 border-emerald-300",
+    red: "bg-red-100 text-red-800 border-red-300",
+    slate: "bg-slate-100 text-slate-800 border-slate-300",
+  };
+
+  function resetForm() {
+    setForm({ nome: "", descricao: "", cor: "blue", icone: "User" });
+    setPermsEdit({});
+  }
+
+  function iniciarEdicao(perfil: any) {
+    setEditando(perfil.id);
+    setForm({ nome: perfil.nome, descricao: perfil.descricao || "", cor: perfil.cor || "blue", icone: perfil.icone || "User" });
+    try {
+      setPermsEdit(JSON.parse(perfil.permissoes));
+    } catch {
+      setPermsEdit({});
+    }
+  }
+
+  function iniciarCriacao() {
+    setCriando(true);
+    resetForm();
+    // Inicializar todas as permissões como desligadas
+    if (modulos) {
+      const p: Record<string, any> = {};
+      for (const m of modulos) p[m.id] = { podeVisualizar: 0, podeEditar: 0, podeExcluir: 0, podeExportar: 0 };
+      setPermsEdit(p);
+    }
+  }
+
+  function togglePermEdit(modulo: string, campo: string) {
+    const current = permsEdit[modulo] || { podeVisualizar: 0, podeEditar: 0, podeExcluir: 0, podeExportar: 0 };
+    setPermsEdit({ ...permsEdit, [modulo]: { ...current, [campo]: current[campo as keyof typeof current] ? 0 : 1 } });
+  }
+
+  function salvarPerfil() {
+    const permStr = JSON.stringify(permsEdit);
+    if (editando) {
+      editar.mutate({ id: editando, nome: form.nome, descricao: form.descricao, cor: form.cor, icone: form.icone, permissoes: permStr });
+    } else {
+      criar.mutate({ nome: form.nome, descricao: form.descricao, cor: form.cor, icone: form.icone, permissoes: permStr });
+    }
+  }
+
+  function marcarTodosEdit(campo: string, valor: number) {
+    if (!modulos) return;
+    const newPerms = { ...permsEdit };
+    for (const m of modulos) {
+      const current = newPerms[m.id] || { podeVisualizar: 0, podeEditar: 0, podeExcluir: 0, podeExportar: 0 };
+      newPerms[m.id] = { ...current, [campo]: valor };
+    }
+    setPermsEdit(newPerms);
+  }
+
+  function contarPermissoes(permsJson: string): { total: number; ativos: number } {
+    try {
+      const p = JSON.parse(permsJson);
+      let total = 0, ativos = 0;
+      for (const mod of Object.values(p) as any[]) {
+        for (const v of Object.values(mod) as number[]) {
+          total++;
+          if (v) ativos++;
+        }
+      }
+      return { total, ativos };
+    } catch { return { total: 0, ativos: 0 }; }
+  }
+
+  const isEditing = editando !== null || criando;
+
+  return (
+    <div className="space-y-4">
+      {/* Lista de perfis */}
+      {!isEditing && (
+        <>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Crown className="h-5 w-5 text-amber-700" /> Perfis de Acesso
+              </h3>
+              <p className="text-sm text-muted-foreground">Templates de permissões reutilizáveis para configurar acessos rapidamente.</p>
+            </div>
+            <Button onClick={iniciarCriacao} className="bg-amber-700 hover:bg-amber-800">
+              <Plus className="h-4 w-4 mr-1" /> Novo Perfil
+            </Button>
+          </div>
+
+          {isLoading && <div className="text-center py-8 text-muted-foreground">Carregando perfis...</div>}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {perfis?.map((perfil: any) => {
+              const { total, ativos } = contarPermissoes(perfil.permissoes);
+              const pct = total > 0 ? Math.round((ativos / total) * 100) : 0;
+              return (
+                <Card key={perfil.id} className="relative overflow-hidden">
+                  <div className={`absolute top-0 left-0 right-0 h-1 ${cores.find(c => c.id === perfil.cor)?.cls || "bg-blue-500"}`} />
+                  <CardHeader className="pb-2 pt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`p-1.5 rounded ${corMap[perfil.cor] || "bg-gray-100 text-gray-800 border-gray-300"} border`}>
+                          {iconMap[perfil.icone] || <UserCog className="h-4 w-4" />}
+                        </span>
+                        <div>
+                          <CardTitle className="text-sm">{perfil.nome}</CardTitle>
+                          {perfil.padrao === 1 && <Badge variant="outline" className="text-[9px] mt-0.5">Padrão</Badge>}
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => iniciarEdicao(perfil)}>
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        {perfil.padrao !== 1 && (
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
+                            onClick={() => { if (confirm(`Excluir perfil "${perfil.nome}"?`)) excluir.mutate({ id: perfil.id }); }}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-3">
+                    <p className="text-xs text-muted-foreground mb-3">{perfil.descricao || "Sem descrição"}</p>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${cores.find(c => c.id === perfil.cor)?.cls || "bg-blue-500"}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-xs font-medium text-muted-foreground">{ativos}/{total}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">{pct}% das permissões ativas</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Editor de perfil */}
+      {isEditing && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                {editando ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                {editando ? "Editar Perfil" : "Novo Perfil de Acesso"}
+              </CardTitle>
+              <Button variant="ghost" size="sm" onClick={() => { setEditando(null); setCriando(false); resetForm(); }}>
+                <XCircle className="h-4 w-4 mr-1" /> Cancelar
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Dados do perfil */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Nome do Perfil *</label>
+                <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Ex: Advogado Sênior" />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Descrição</label>
+                <Input value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Breve descrição do perfil" />
+              </div>
+            </div>
+
+            {/* Cor e Ícone */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block flex items-center gap-1"><Palette className="h-3.5 w-3.5" /> Cor</label>
+                <div className="flex gap-2 flex-wrap">
+                  {cores.map((c) => (
+                    <button key={c.id} onClick={() => setForm({ ...form, cor: c.id })}
+                      className={`w-8 h-8 rounded-full ${c.cls} border-2 transition-all ${
+                        form.cor === c.id ? "border-foreground scale-110 ring-2 ring-offset-2 ring-foreground/20" : "border-transparent hover:scale-105"
+                      }`} title={c.label} />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Ícone</label>
+                <div className="flex gap-2 flex-wrap">
+                  {icones.map((i) => (
+                    <button key={i.id} onClick={() => setForm({ ...form, icone: i.id })}
+                      className={`p-2 rounded border transition-all ${
+                        form.icone === i.id ? "border-amber-700 bg-amber-50 text-amber-800" : "border-muted hover:border-foreground/30"
+                      }`} title={i.label}>
+                      {i.icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Tabela de permissões */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium">Permissões por Módulo</label>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={() => marcarTodosEdit("podeVisualizar", 1)}>Todos Visualizar</Button>
+                  <Button size="sm" variant="outline" className="text-[10px] h-6 px-2" onClick={() => marcarTodosEdit("podeEditar", 1)}>Todos Editar</Button>
+                  <Button size="sm" variant="outline" className="text-[10px] h-6 px-2 text-red-600" onClick={() => {
+                    if (modulos) {
+                      const p: Record<string, any> = {};
+                      for (const m of modulos) p[m.id] = { podeVisualizar: 0, podeEditar: 0, podeExcluir: 0, podeExportar: 0 };
+                      setPermsEdit(p);
+                    }
+                  }}>Limpar Tudo</Button>
+                </div>
+              </div>
+              <div className="overflow-x-auto border rounded-md">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/30">
+                      <th className="text-left py-2 px-3 font-medium">Módulo</th>
+                      <th className="text-center py-2 px-2 font-medium w-20"><div className="flex flex-col items-center"><Eye className="h-3 w-3 mb-0.5" /><span className="text-[9px]">Ver</span></div></th>
+                      <th className="text-center py-2 px-2 font-medium w-20"><div className="flex flex-col items-center"><Edit className="h-3 w-3 mb-0.5" /><span className="text-[9px]">Editar</span></div></th>
+                      <th className="text-center py-2 px-2 font-medium w-20"><div className="flex flex-col items-center"><Trash2 className="h-3 w-3 mb-0.5" /><span className="text-[9px]">Excluir</span></div></th>
+                      <th className="text-center py-2 px-2 font-medium w-20"><div className="flex flex-col items-center"><Download className="h-3 w-3 mb-0.5" /><span className="text-[9px]">Exportar</span></div></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {modulos?.map((m: any) => (
+                      <tr key={m.id} className="border-b hover:bg-muted/20">
+                        <td className="py-1.5 px-3">
+                          <div className="font-medium text-xs">{m.nome}</div>
+                          <div className="text-[10px] text-muted-foreground">{m.descricao}</div>
+                        </td>
+                        <td className="text-center py-1.5 px-2"><Switch checked={!!(permsEdit[m.id]?.podeVisualizar)} onCheckedChange={() => togglePermEdit(m.id, "podeVisualizar")} /></td>
+                        <td className="text-center py-1.5 px-2"><Switch checked={!!(permsEdit[m.id]?.podeEditar)} onCheckedChange={() => togglePermEdit(m.id, "podeEditar")} /></td>
+                        <td className="text-center py-1.5 px-2"><Switch checked={!!(permsEdit[m.id]?.podeExcluir)} onCheckedChange={() => togglePermEdit(m.id, "podeExcluir")} /></td>
+                        <td className="text-center py-1.5 px-2"><Switch checked={!!(permsEdit[m.id]?.podeExportar)} onCheckedChange={() => togglePermEdit(m.id, "podeExportar")} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => { setEditando(null); setCriando(false); resetForm(); }}>Cancelar</Button>
+              <Button className="bg-amber-700 hover:bg-amber-800" onClick={salvarPerfil}
+                disabled={!form.nome || criar.isPending || editar.isPending}>
+                <Save className="h-4 w-4 mr-1" /> {editando ? "Salvar Alterações" : "Criar Perfil"}
+              </Button>
             </div>
           </CardContent>
         </Card>

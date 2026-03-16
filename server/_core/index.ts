@@ -8,6 +8,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { apiRouter } from "../apiRest";
+import { uploadChunkedRouter } from "../uploadChunked";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -38,6 +39,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   // API REST pública do Agente IA
   app.use('/api/v1', apiRouter);
+  // Upload chunked (multipart, sem limite de tamanho)
+  app.use('/api/upload', uploadChunkedRouter);
   // tRPC API
   app.use(
     "/api/trpc",

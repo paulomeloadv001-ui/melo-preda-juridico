@@ -14,7 +14,7 @@ import {
   notificacoes, prazosProcessuais, syncLog,
   templatesPeticao, peticoesGeradas, agenteIaConfig, agenteIaHistorico,
   anexosPeticao, userPermissions, convites, auditLog,
-  publicacoes, monitoramentoConfig, peticaoVersoes
+  publicacoes, monitoramentoConfig, peticaoVersoes, perfisAcesso
 } from "../drizzle/schema";
 import { eq, like, desc, asc, and, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -4118,6 +4118,115 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
       }).from(auditLog).groupBy(auditLog.acao).orderBy(sql`COUNT(*) DESC`).limit(10);
       return { total: totalResult?.count || 0, porModulo, porAcao };
     }),
+
+    // ==================== PERFIS DE ACESSO ====================
+    listarPerfis: adminProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      return await db.select().from(perfisAcesso).orderBy(asc(perfisAcesso.nome));
+    }),
+
+    criarPerfil: adminProcedure
+      .input(z.object({
+        nome: z.string().min(2),
+        descricao: z.string().optional(),
+        cor: z.string().optional(),
+        icone: z.string().optional(),
+        permissoes: z.string(), // JSON string
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+        await db.insert(perfisAcesso).values({
+          nome: input.nome,
+          descricao: input.descricao || null,
+          cor: input.cor || 'blue',
+          icone: input.icone || 'User',
+          permissoes: input.permissoes,
+          padrao: 0,
+          criadoPor: ctx.user.id,
+        });
+        await db.insert(auditLog).values({
+          userId: ctx.user.id, acao: 'criar_perfil', modulo: 'acessos',
+          detalhes: JSON.stringify({ nome: input.nome }),
+        });
+        return { success: true, message: `Perfil "${input.nome}" criado com sucesso` };
+      }),
+
+    editarPerfil: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        nome: z.string().min(2).optional(),
+        descricao: z.string().optional(),
+        cor: z.string().optional(),
+        icone: z.string().optional(),
+        permissoes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+        const updates: any = {};
+        if (input.nome) updates.nome = input.nome;
+        if (input.descricao !== undefined) updates.descricao = input.descricao;
+        if (input.cor) updates.cor = input.cor;
+        if (input.icone) updates.icone = input.icone;
+        if (input.permissoes) updates.permissoes = input.permissoes;
+        await db.update(perfisAcesso).set(updates).where(eq(perfisAcesso.id, input.id));
+        await db.insert(auditLog).values({
+          userId: ctx.user.id, acao: 'editar_perfil', modulo: 'acessos',
+          detalhes: JSON.stringify({ perfilId: input.id, campos: Object.keys(updates) }),
+        });
+        return { success: true };
+      }),
+
+    excluirPerfil: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+        const [perfil] = await db.select().from(perfisAcesso).where(eq(perfisAcesso.id, input.id)).limit(1);
+        if (!perfil) throw new TRPCError({ code: 'NOT_FOUND', message: 'Perfil não encontrado' });
+        if (perfil.padrao === 1) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Perfis padrão não podem ser excluídos' });
+        await db.delete(perfisAcesso).where(eq(perfisAcesso.id, input.id));
+        await db.insert(auditLog).values({
+          userId: ctx.user.id, acao: 'excluir_perfil', modulo: 'acessos',
+          detalhes: JSON.stringify({ perfilId: input.id, nome: perfil.nome }),
+        });
+        return { success: true, message: `Perfil "${perfil.nome}" excluído` };
+      }),
+
+    aplicarPerfil: adminProcedure
+      .input(z.object({ userId: z.number(), perfilId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+        const [perfil] = await db.select().from(perfisAcesso).where(eq(perfisAcesso.id, input.perfilId)).limit(1);
+        if (!perfil) throw new TRPCError({ code: 'NOT_FOUND', message: 'Perfil não encontrado' });
+        let perms: Record<string, { podeVisualizar: number; podeEditar: number; podeExcluir: number; podeExportar: number }>;
+        try { perms = JSON.parse(perfil.permissoes); } catch { throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Permissões do perfil inválidas' }); }
+        // Limpar permissões existentes
+        await db.delete(userPermissions).where(eq(userPermissions.userId, input.userId));
+        // Inserir permissões do perfil
+        for (const [modulo, perm] of Object.entries(perms)) {
+          await db.insert(userPermissions).values({
+            userId: input.userId, modulo,
+            podeVisualizar: perm.podeVisualizar, podeEditar: perm.podeEditar,
+            podeExcluir: perm.podeExcluir, podeExportar: perm.podeExportar,
+          });
+        }
+        // Atualizar cargo no perfil do usuário
+        const [existingProfile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, input.userId)).limit(1);
+        if (existingProfile) {
+          await db.update(userProfiles).set({ cargo: perfil.nome }).where(eq(userProfiles.userId, input.userId));
+        } else {
+          await db.insert(userProfiles).values({ userId: input.userId, cargo: perfil.nome });
+        }
+        await db.insert(auditLog).values({
+          userId: ctx.user.id, acao: 'aplicar_perfil', modulo: 'acessos',
+          detalhes: JSON.stringify({ targetUserId: input.userId, perfilId: input.perfilId, perfilNome: perfil.nome }),
+        });
+        return { success: true, message: `Perfil "${perfil.nome}" aplicado com sucesso` };
+      }),
   }),
 
   // ==================== NOTIFICAÇÕES ====================

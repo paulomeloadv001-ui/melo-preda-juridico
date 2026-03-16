@@ -17,10 +17,12 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { compressPdf, formatBytes, type CompressionResult } from "@/lib/pdfCompressor";
+import { uploadFileChunked, needsChunkedUpload, fileToBase64, formatFileSize } from "@/lib/chunkedUpload";
 
 type FileItem = {
   file: File;
   status: "pending" | "compressing" | "uploading" | "extracting" | "done" | "error";
+  uploadProgress?: number;
   result?: any;
   error?: string;
   compression?: CompressionResult;
@@ -41,7 +43,6 @@ function ProcessoUpload() {
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
 
-  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
   const handleFileSelect = useCallback((selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
@@ -50,14 +51,8 @@ function ProcessoUpload() {
       toast.error("Selecione apenas arquivos PDF");
       return;
     }
-    const oversized = pdfFiles.filter(f => f.size > MAX_FILE_SIZE);
-    const valid = pdfFiles.filter(f => f.size <= MAX_FILE_SIZE);
-    if (oversized.length > 0) {
-      toast.error(`${oversized.length} arquivo(s) excedem o limite de 100 MB: ${oversized.map(f => f.name).join(', ')}`);
-    }
-    if (valid.length > 0) {
-      setFiles(prev => [...prev, ...valid.map(f => ({ file: f, status: "pending" as const }))]);
-    }
+    // Sem limite de tamanho - upload chunked suporta qualquer tamanho
+    setFiles(prev => [...prev, ...pdfFiles.map(f => ({ file: f, status: "pending" as const }))]);
   }, []);
 
   const removeFile = (index: number) => {
@@ -75,10 +70,6 @@ function ProcessoUpload() {
       setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "compressing", compressionProgress: 0 } : f));
 
       try {
-        if (fileItem.file.size > MAX_FILE_SIZE) {
-          throw new Error(`Arquivo ${fileItem.file.name} excede o limite de 100 MB`);
-        }
-
         // Comprimir PDF antes do envio
         const compression = await compressPdf(fileItem.file, {
           imageQuality: 0.65,
@@ -92,24 +83,40 @@ function ProcessoUpload() {
           toast.info(`${fileItem.file.name}: comprimido de ${formatBytes(compression.originalSize)} para ${formatBytes(compression.compressedSize)} (-${compression.savedPercent}%)`);
         }
 
-        setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "uploading", compression } : f));
+        setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "uploading", compression, uploadProgress: 0 } : f));
 
-        const base64 = compression.compressedBase64;
+        let base64: string;
+        let finalSize: number;
+
+        // Arquivos >5MB: upload chunked (sem limite de tamanho)
+        if (needsChunkedUpload(compression.compressedFile)) {
+          const chunkedResult = await uploadFileChunked(compression.compressedFile, {
+            tipo: 'processo',
+            onProgress: (p) => {
+              setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, uploadProgress: p } : f));
+            },
+          });
+          base64 = chunkedResult.fileBase64;
+          finalSize = chunkedResult.fileSize;
+        } else {
+          base64 = compression.compressedBase64;
+          finalSize = compression.compressedSize;
+        }
 
         setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "extracting" } : f));
 
         const result = await uploadMutation.mutateAsync({
           fileName: fileItem.file.name,
           fileBase64: base64,
-          fileSize: compression.compressedSize,
+          fileSize: finalSize,
         });
 
         setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "done", result } : f));
         toast.success(`${fileItem.file.name} processado com sucesso`);
       } catch (error: any) {
         let friendlyError = error.message || "Erro desconhecido";
-        if (friendlyError.includes("grande demais") || friendlyError.includes("100 MB") || friendlyError.includes("413")) {
-          friendlyError = "O arquivo é grande demais. O limite máximo é de 100 MB por arquivo.";
+        if (friendlyError.includes("grande demais") || friendlyError.includes("413")) {
+          friendlyError = "Erro no envio do arquivo. Tente novamente.";
         } else if (friendlyError.includes("Data too long")) {
           friendlyError = "Dados extraídos excedem limite do campo. Tente novamente.";
         } else if (friendlyError.includes("Duplicate entry")) {
@@ -158,7 +165,7 @@ function ProcessoUpload() {
         <CardContent className="flex flex-col items-center justify-center py-10">
           <Upload className="h-10 w-10 text-muted-foreground/50 mb-3" />
           <h3 className="font-semibold text-base">Arraste PDFs de processos aqui ou clique para selecionar</h3>
-          <p className="text-muted-foreground text-sm mt-1">Aceita múltiplos arquivos PDF simultaneamente</p>
+          <p className="text-muted-foreground text-sm mt-1">Aceita múltiplos arquivos PDF de qualquer tamanho</p>
           <input
             ref={fileInputRef}
             type="file"
@@ -199,9 +206,13 @@ function ProcessoUpload() {
                       <p className="text-xs text-muted-foreground">
                         {formatBytes(item.file.size)}
                         {item.status === "compressing" && ` — Comprimindo PDF... ${item.compressionProgress || 0}%`}
-                        {item.status === "uploading" && (item.compression && item.compression.savedPercent > 0
-                          ? ` — Enviando (${formatBytes(item.compression.compressedSize)}, -${item.compression.savedPercent}%)...`
-                          : " — Enviando...")}
+                        {item.status === "uploading" && (
+                          item.uploadProgress != null && item.uploadProgress < 100
+                            ? ` — Enviando... ${item.uploadProgress}%`
+                            : item.compression && item.compression.savedPercent > 0
+                              ? ` — Enviando (${formatBytes(item.compression.compressedSize)}, -${item.compression.savedPercent}%)...`
+                              : " — Enviando..."
+                        )}
                         {item.status === "extracting" && " — Extraindo dados via IA..."}
                         {item.status === "done" && item.result && (
                           <>{` — ${item.result.clienteNome} (${item.result.cpf})`}{item.compression && item.compression.savedPercent > 0 && <span className="text-green-600 font-medium ml-1">(-{item.compression.savedPercent}%)</span>}</>
@@ -313,7 +324,6 @@ function ContrachequeUpload() {
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
 
-  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
   const handleFileSelect = useCallback((selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
@@ -322,14 +332,8 @@ function ContrachequeUpload() {
       toast.error("Selecione apenas arquivos PDF");
       return;
     }
-    const oversized = pdfFiles.filter(f => f.size > MAX_FILE_SIZE);
-    const valid = pdfFiles.filter(f => f.size <= MAX_FILE_SIZE);
-    if (oversized.length > 0) {
-      toast.error(`${oversized.length} arquivo(s) excedem o limite de 100 MB: ${oversized.map(f => f.name).join(', ')}`);
-    }
-    if (valid.length > 0) {
-      setFiles(prev => [...prev, ...valid.map(f => ({ file: f, status: "pending" as const }))]);
-    }
+    // Sem limite de tamanho - upload chunked suporta qualquer tamanho
+    setFiles(prev => [...prev, ...pdfFiles.map(f => ({ file: f, status: "pending" as const }))]);
   }, []);
 
   const removeFile = (index: number) => {
@@ -347,10 +351,6 @@ function ContrachequeUpload() {
       setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "compressing", compressionProgress: 0 } : f));
 
       try {
-        if (fileItem.file.size > MAX_FILE_SIZE) {
-          throw new Error(`Arquivo ${fileItem.file.name} excede o limite de 100 MB`);
-        }
-
         // Comprimir PDF antes do envio
         const compression = await compressPdf(fileItem.file, {
           imageQuality: 0.65,
@@ -364,24 +364,40 @@ function ContrachequeUpload() {
           toast.info(`${fileItem.file.name}: comprimido de ${formatBytes(compression.originalSize)} para ${formatBytes(compression.compressedSize)} (-${compression.savedPercent}%)`);
         }
 
-        setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "uploading", compression } : f));
+        setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "uploading", compression, uploadProgress: 0 } : f));
 
-        const base64 = compression.compressedBase64;
+        let base64: string;
+        let finalSize: number;
+
+        // Arquivos >5MB: upload chunked (sem limite de tamanho)
+        if (needsChunkedUpload(compression.compressedFile)) {
+          const chunkedResult = await uploadFileChunked(compression.compressedFile, {
+            tipo: 'contracheque',
+            onProgress: (p) => {
+              setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, uploadProgress: p } : f));
+            },
+          });
+          base64 = chunkedResult.fileBase64;
+          finalSize = chunkedResult.fileSize;
+        } else {
+          base64 = compression.compressedBase64;
+          finalSize = compression.compressedSize;
+        }
 
         setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "extracting" } : f));
 
         const result = await uploadMutation.mutateAsync({
           fileName: fileItem.file.name,
           fileBase64: base64,
-          fileSize: compression.compressedSize,
+          fileSize: finalSize,
         });
 
         setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "done", result } : f));
         toast.success(`Contracheque de ${result.clienteNome} processado com sucesso`);
       } catch (error: any) {
         let friendlyError = error.message || "Erro desconhecido";
-        if (friendlyError.includes("grande demais") || friendlyError.includes("100 MB") || friendlyError.includes("413")) {
-          friendlyError = "O arquivo é grande demais. O limite máximo é de 100 MB por arquivo.";
+        if (friendlyError.includes("grande demais") || friendlyError.includes("413")) {
+          friendlyError = "Erro no envio. Tente novamente.";
         } else if (friendlyError.includes("identificar o CPF")) {
           friendlyError = "Não foi possível identificar o CPF do servidor no contracheque.";
         } else if (friendlyError.includes("Data too long")) {
@@ -707,7 +723,6 @@ function ImportacaoLote() {
     }
   }, [statusLote?.master?.status]);
 
-  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
   const handleFileSelect = useCallback((selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
@@ -716,20 +731,14 @@ function ImportacaoLote() {
       toast.error('Selecione apenas arquivos PDF');
       return;
     }
-    const oversized = pdfFiles.filter(f => f.size > MAX_FILE_SIZE);
-    const valid = pdfFiles.filter(f => f.size <= MAX_FILE_SIZE);
-    if (oversized.length > 0) {
-      toast.error(`${oversized.length} arquivo(s) excedem o limite de 100 MB e foram ignorados: ${oversized.map(f => f.name).join(', ')}`);
-    }
-    if (valid.length > 0) {
-      const newFiles: LoteFileItem[] = valid.map(f => ({
-        file: f,
-        tipoDetectado: detectarTipoDocumento(f.name),
-        status: 'pending' as const,
-      }));
-      setFiles(prev => [...prev, ...newFiles]);
-      toast.success(`${valid.length} arquivo(s) adicionado(s) à fila`);
-    }
+    // Sem limite de tamanho - upload chunked suporta qualquer tamanho
+    const newFiles: LoteFileItem[] = pdfFiles.map(f => ({
+      file: f,
+      tipoDetectado: detectarTipoDocumento(f.name),
+      status: 'pending' as const,
+    }));
+    setFiles(prev => [...prev, ...newFiles]);
+    toast.success(`${pdfFiles.length} arquivo(s) adicionado(s) à fila`);
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -763,12 +772,6 @@ function ImportacaoLote() {
       const arquivosNomes: string[] = [];
       for (let i = 0; i < pendingFiles.length; i++) {
         const item = pendingFiles[i];
-        // Validar tamanho antes de enviar
-        if (item.file.size > MAX_FILE_SIZE) {
-          setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'error' as const, erro: `Arquivo excede o limite de 100 MB (${(item.file.size / (1024*1024)).toFixed(1)} MB)` } : f));
-          toast.error(`${item.file.name} excede o limite de 100 MB e foi ignorado`);
-          continue;
-        }
         setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'compressing' as const } : f));
         toast.info(`Comprimindo ${i + 1}/${pendingFiles.length}: ${item.file.name}`);
 
@@ -782,15 +785,31 @@ function ImportacaoLote() {
           toast.info(`${item.file.name}: comprimido -${compression.savedPercent}% (${formatBytes(compression.originalSize)} → ${formatBytes(compression.compressedSize)})`);
         }
 
-        setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'uploading' } : f));
+        setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'uploading' as const } : f));
 
-        const base64 = compression.compressedBase64;
+        let base64: string;
+        let finalSize: number;
+
+        // Arquivos >5MB: upload chunked (sem limite de tamanho)
+        if (needsChunkedUpload(compression.compressedFile)) {
+          const chunkedResult = await uploadFileChunked(compression.compressedFile, {
+            tipo: (item.tipoManual || item.tipoDetectado) as any || 'processo',
+            onProgress: (p) => {
+              setFiles(prev => prev.map(f => f.file === item.file ? { ...f, uploadProgress: p } : f));
+            },
+          });
+          base64 = chunkedResult.fileBase64;
+          finalSize = chunkedResult.fileSize;
+        } else {
+          base64 = compression.compressedBase64;
+          finalSize = compression.compressedSize;
+        }
 
         try {
           const result = await uploadArquivoMutation.mutateAsync({
             fileName: item.file.name,
             fileBase64: base64,
-            fileSize: compression.compressedSize,
+            fileSize: finalSize,
             tipoDocumento: (item.tipoManual || item.tipoDetectado) as 'processo' | 'contracheque' | 'auto',
             loteId: newLoteId,
             masterJobId: 0,
@@ -804,8 +823,8 @@ function ImportacaoLote() {
           setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'queued' } : f));
         } catch (uploadError: any) {
           const msg = uploadError.message || 'Erro desconhecido';
-          const friendlyMsg = msg.includes('grande demais') || msg.includes('16 MB') || msg.includes('413')
-            ? 'Arquivo grande demais para envio (limite: 16 MB)'
+          const friendlyMsg = msg.includes('grande demais') || msg.includes('413')
+            ? 'Arquivo grande demais para envio. Tente comprimir o PDF.'
             : msg.length > 80 ? msg.substring(0, 80) + '...' : msg;
           setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'error' as const, erro: friendlyMsg } : f));
           toast.error(`Erro ao enviar ${item.file.name}: ${friendlyMsg}`);
@@ -814,7 +833,7 @@ function ImportacaoLote() {
 
       // Verificar se pelo menos 1 arquivo foi enviado com sucesso
       if (jobIds.length === 0) {
-        toast.error('Nenhum arquivo foi enviado com sucesso. Verifique os tamanhos dos arquivos (máx. 16 MB).');
+        toast.error('Nenhum arquivo foi enviado com sucesso. Verifique os arquivos e tente novamente.');
         setIsProcessing(false);
         return;
       }

@@ -528,3 +528,16 @@
 - [x] GESTÃO USUÁRIOS: Ao aprovar solicitação de acesso, conceder acesso total a todas as funcionalidades automaticamente (15 módulos)
 - [x] GESTÃO USUÁRIOS: Ocultar menu "Gestão de Acessos" na sidebar para usuários não-admin
 - [x] GESTÃO USUÁRIOS: Mostrar mensagem amigável se não-admin tentar acessar /acessos diretamente (menu oculto + rota protegida)
+- [x] DIAGNÓSTICO: Verificar servidor, erros TS, logs do browser e console (0 erros TS, servidor OK)
+- [x] CORREÇÃO: Corrigir todos os erros encontrados na plataforma (ECONNRESET tratado, permissões OK)
+- [ ] PERMISSÕES GRANULARES: Criar tipos de usuário (admin, advogado, estagiário, secretária)
+- [ ] PERMISSÕES GRANULARES: UI para definir permissões por módulo para cada tipo de usuário
+- [ ] PERMISSÕES GRANULARES: Backend para aplicar permissões granulares em cada rota
+- [ ] PERMISSÕES GRANULARES: Tela de gestão com matriz módulo x permissão por tipo de usuário
+- [x] UPLOAD REWRITE: Implementar upload chunked no backend (receber partes de 4MB e montar no servidor)
+- [x] UPLOAD REWRITE: Criar rota iniciarUploadChunked + enviarChunk + finalizarUpload no backend (REST API /api/upload/)
+- [x] UPLOAD REWRITE: Reescrever frontend para enviar arquivo em chunks de 4MB com progresso real
+- [x] UPLOAD REWRITE: Sem limite de tamanho - aceitar qualquer tamanho via chunked
+- [x] UPLOAD REWRITE: Corrigir todas as mensagens de erro sobre tamanho
+- [x] UPLOAD REWRITE: Barra de progresso real por arquivo (% enviado)
+- [x] UPLOAD REWRITE: Aplicar em ProcessoUpload, ContrachequeUpload e ImportacaoLote

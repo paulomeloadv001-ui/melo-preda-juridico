@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `perfis_acesso` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`nome` varchar(100) NOT NULL,\n\t`descricao` text,\n\t`cor` varchar(20) DEFAULT 'blue',\n\t`icone` varchar(50) DEFAULT 'User',\n\t`permissoes` text NOT NULL,\n\t`padrao` int NOT NULL DEFAULT 0,\n\t`criadoPor` int,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `perfis_acesso_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `perfis_acesso_nome_unique` UNIQUE(`nome`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute CREATE TABLE `perfis_acesso` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`nome` varchar(100) NOT NULL,\n\t`descricao` text,\n\t`cor` varchar(20) DEFAULT 'blue',\n\t`icone` varchar(50) DEFAULT 'User',\n\t`permissoes` text NOT NULL,\n\t`padrao` int NOT NULL DEFAULT 0,\n\t`criadoPor` int,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `perfis_acesso_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `perfis_acesso_nome_unique` UNIQUE(`nome`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 637
+}
