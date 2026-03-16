@@ -16,12 +16,15 @@ import {
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import { compressPdf, formatBytes, type CompressionResult } from "@/lib/pdfCompressor";
 
 type FileItem = {
   file: File;
-  status: "pending" | "uploading" | "extracting" | "done" | "error";
+  status: "pending" | "compressing" | "uploading" | "extracting" | "done" | "error";
   result?: any;
   error?: string;
+  compression?: CompressionResult;
+  compressionProgress?: number;
 };
 
 function formatCurrency(value: number | null | undefined): string {
@@ -69,23 +72,36 @@ function ProcessoUpload() {
       const fileItem = pendingFiles[i];
       const fileIndex = files.findIndex(f => f === fileItem);
 
-      setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "uploading" } : f));
+      setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "compressing", compressionProgress: 0 } : f));
 
       try {
         if (fileItem.file.size > MAX_FILE_SIZE) {
           throw new Error(`Arquivo ${fileItem.file.name} excede o limite de 100 MB`);
         }
-        const buffer = await fileItem.file.arrayBuffer();
-        const base64 = btoa(
-          new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-        );
+
+        // Comprimir PDF antes do envio
+        const compression = await compressPdf(fileItem.file, {
+          imageQuality: 0.65,
+          imageScale: 0.85,
+          onProgress: (pct) => {
+            setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, compressionProgress: pct } : f));
+          },
+        });
+
+        if (compression.savedPercent > 0) {
+          toast.info(`${fileItem.file.name}: comprimido de ${formatBytes(compression.originalSize)} para ${formatBytes(compression.compressedSize)} (-${compression.savedPercent}%)`);
+        }
+
+        setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "uploading", compression } : f));
+
+        const base64 = compression.compressedBase64;
 
         setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "extracting" } : f));
 
         const result = await uploadMutation.mutateAsync({
           fileName: fileItem.file.name,
           fileBase64: base64,
-          fileSize: fileItem.file.size,
+          fileSize: compression.compressedSize,
         });
 
         setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "done", result } : f));
@@ -173,6 +189,7 @@ function ProcessoUpload() {
                 <div key={index} className="flex items-center justify-between border rounded-lg p-3">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     {item.status === "pending" && <FileText className="h-4 w-4 text-muted-foreground shrink-0" />}
+                    {item.status === "compressing" && <Loader2 className="h-4 w-4 animate-spin text-purple-500 shrink-0" />}
                     {item.status === "uploading" && <Loader2 className="h-4 w-4 animate-spin text-blue-500 shrink-0" />}
                     {item.status === "extracting" && <Loader2 className="h-4 w-4 animate-spin text-[oklch(0.75_0.12_85)] shrink-0" />}
                     {item.status === "done" && <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />}
@@ -180,10 +197,15 @@ function ProcessoUpload() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{item.file.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {(item.file.size / 1024 / 1024).toFixed(1)} MB
-                        {item.status === "uploading" && " — Enviando..."}
+                        {formatBytes(item.file.size)}
+                        {item.status === "compressing" && ` — Comprimindo PDF... ${item.compressionProgress || 0}%`}
+                        {item.status === "uploading" && (item.compression && item.compression.savedPercent > 0
+                          ? ` — Enviando (${formatBytes(item.compression.compressedSize)}, -${item.compression.savedPercent}%)...`
+                          : " — Enviando...")}
                         {item.status === "extracting" && " — Extraindo dados via IA..."}
-                        {item.status === "done" && item.result && ` — ${item.result.clienteNome} (${item.result.cpf})`}
+                        {item.status === "done" && item.result && (
+                          <>{` — ${item.result.clienteNome} (${item.result.cpf})`}{item.compression && item.compression.savedPercent > 0 && <span className="text-green-600 font-medium ml-1">(-{item.compression.savedPercent}%)</span>}</>
+                        )}
                         {item.status === "error" && ` — ${item.error}`}
                       </p>
                     </div>
@@ -322,23 +344,36 @@ function ContrachequeUpload() {
       const fileItem = pendingFiles[i];
       const fileIndex = files.findIndex(f => f === fileItem);
 
-      setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "uploading" } : f));
+      setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "compressing", compressionProgress: 0 } : f));
 
       try {
         if (fileItem.file.size > MAX_FILE_SIZE) {
           throw new Error(`Arquivo ${fileItem.file.name} excede o limite de 100 MB`);
         }
-        const buffer = await fileItem.file.arrayBuffer();
-        const base64 = btoa(
-          new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-        );
+
+        // Comprimir PDF antes do envio
+        const compression = await compressPdf(fileItem.file, {
+          imageQuality: 0.65,
+          imageScale: 0.85,
+          onProgress: (pct) => {
+            setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, compressionProgress: pct } : f));
+          },
+        });
+
+        if (compression.savedPercent > 0) {
+          toast.info(`${fileItem.file.name}: comprimido de ${formatBytes(compression.originalSize)} para ${formatBytes(compression.compressedSize)} (-${compression.savedPercent}%)`);
+        }
+
+        setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "uploading", compression } : f));
+
+        const base64 = compression.compressedBase64;
 
         setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "extracting" } : f));
 
         const result = await uploadMutation.mutateAsync({
           fileName: fileItem.file.name,
           fileBase64: base64,
-          fileSize: fileItem.file.size,
+          fileSize: compression.compressedSize,
         });
 
         setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "done", result } : f));
@@ -435,6 +470,7 @@ function ContrachequeUpload() {
                 <div key={index} className="flex items-center justify-between border rounded-lg p-3">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     {item.status === "pending" && <Receipt className="h-4 w-4 text-muted-foreground shrink-0" />}
+                    {item.status === "compressing" && <Loader2 className="h-4 w-4 animate-spin text-purple-500 shrink-0" />}
                     {item.status === "uploading" && <Loader2 className="h-4 w-4 animate-spin text-blue-500 shrink-0" />}
                     {item.status === "extracting" && <Loader2 className="h-4 w-4 animate-spin text-blue-600 shrink-0" />}
                     {item.status === "done" && <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />}
@@ -442,10 +478,15 @@ function ContrachequeUpload() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{item.file.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {(item.file.size / 1024 / 1024).toFixed(1)} MB
-                        {item.status === "uploading" && " — Enviando..."}
+                        {formatBytes(item.file.size)}
+                        {item.status === "compressing" && ` — Comprimindo PDF... ${item.compressionProgress || 0}%`}
+                        {item.status === "uploading" && (item.compression && item.compression.savedPercent > 0
+                          ? ` — Enviando (${formatBytes(item.compression.compressedSize)}, -${item.compression.savedPercent}%)...`
+                          : " — Enviando...")}
                         {item.status === "extracting" && " — Extraindo dados financeiros via IA..."}
-                        {item.status === "done" && item.result && ` — ${item.result.clienteNome} (Ref: ${item.result.referencia})`}
+                        {item.status === "done" && item.result && (
+                          <>{` — ${item.result.clienteNome} (Ref: ${item.result.referencia})`}{item.compression && item.compression.savedPercent > 0 && <span className="text-green-600 font-medium ml-1">(-{item.compression.savedPercent}%)</span>}</>
+                        )}
                         {item.status === "error" && ` — ${item.error}`}
                       </p>
                     </div>
@@ -618,7 +659,7 @@ type LoteFileItem = {
   file: File;
   tipoDetectado: 'processo' | 'contracheque' | 'auto';
   tipoManual?: 'processo' | 'contracheque';
-  status: 'pending' | 'uploading' | 'queued' | 'processing' | 'done' | 'error';
+  status: 'pending' | 'compressing' | 'uploading' | 'queued' | 'processing' | 'done' | 'error';
 };
 
 function detectarTipoDocumento(fileName: string): 'processo' | 'contracheque' {
@@ -728,19 +769,28 @@ function ImportacaoLote() {
           toast.error(`${item.file.name} excede o limite de 100 MB e foi ignorado`);
           continue;
         }
-        setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'uploading' } : f));
-        toast.info(`Enviando ${i + 1}/${pendingFiles.length}: ${item.file.name}`);
+        setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'compressing' as const } : f));
+        toast.info(`Comprimindo ${i + 1}/${pendingFiles.length}: ${item.file.name}`);
 
-        const buffer = await item.file.arrayBuffer();
-        const base64 = btoa(
-          new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-        );
+        // Comprimir PDF antes do envio
+        const compression = await compressPdf(item.file, {
+          imageQuality: 0.65,
+          imageScale: 0.85,
+        });
+
+        if (compression.savedPercent > 0) {
+          toast.info(`${item.file.name}: comprimido -${compression.savedPercent}% (${formatBytes(compression.originalSize)} → ${formatBytes(compression.compressedSize)})`);
+        }
+
+        setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'uploading' } : f));
+
+        const base64 = compression.compressedBase64;
 
         try {
           const result = await uploadArquivoMutation.mutateAsync({
             fileName: item.file.name,
             fileBase64: base64,
-            fileSize: item.file.size,
+            fileSize: compression.compressedSize,
             tipoDocumento: (item.tipoManual || item.tipoDetectado) as 'processo' | 'contracheque' | 'auto',
             loteId: newLoteId,
             masterJobId: 0,

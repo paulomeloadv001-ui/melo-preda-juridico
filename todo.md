@@ -521,3 +521,6 @@
 - [x] BUG FIX: Erro 10002 permissão na página /clientes para usuários com role "user"
 - [x] BUG FIX: Auditar todas as rotas adminProcedure e corrigir as que devem ser protectedProcedure (18 rotas migradas)
 - [x] UPLOAD: Aumentar limite de upload de PDF de 16 MB para 100 MB no frontend (UploadProcessos individual + lote + main.tsx)
+- [x] COMPRESSÃO PDF: Criar utilitário de compressão de PDF no frontend (browser-side) (pdf-lib + Canvas API)
+- [x] COMPRESSÃO PDF: Integrar compressão nos 3 componentes de upload (Individual, Contracheque, Lote)
+- [x] COMPRESSÃO PDF: Feedback visual de compressão (tamanho original → comprimido, % economia)
