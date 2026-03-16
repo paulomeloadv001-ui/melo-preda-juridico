@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO monitoramento_config (tipoMon, valorMon, descricaoMon, ativoMon) VALUES \n('oab', '40559/GO', 'OAB do Dr. Paulo da Silva Melo Filho - Monitoramento principal', 1);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute INSERT INTO monitoramento_config (tipoMon, valorMon, descricaoMon, ativoMon) VALUES \n('oab', '40559/GO', 'OAB do Dr. Paulo da Silva Melo Filho - Monitoramento principal', 1);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 84
+}

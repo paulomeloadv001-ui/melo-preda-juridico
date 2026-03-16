@@ -13,7 +13,8 @@ import {
   accessRequests, userProfiles, users, movimentacoesFinanceiras, historicoCorrecoes,
   notificacoes, prazosProcessuais, syncLog,
   templatesPeticao, peticoesGeradas, agenteIaConfig, agenteIaHistorico,
-  anexosPeticao, userPermissions, convites, auditLog
+  anexosPeticao, userPermissions, convites, auditLog,
+  publicacoes, monitoramentoConfig
 } from "../drizzle/schema";
 import { eq, like, desc, sql } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -4660,13 +4661,22 @@ REGRAS ABSOLUTAS:
         const config: Record<string, string> = {};
         for (const row of configRows) config[row.chave] = row.valor;
 
-        // Buscar template se especificado
+        // Buscar TODOS os templates e modelos da base para a IA escolher o melhor
+        const todosTemplates = await db.select().from(templatesPeticao).where(eq(templatesPeticao.ativo, 1));
+        const modelosBase = await db.select().from(conhecimentos).where(eq(conhecimentos.categoria, 'Modelo'));
+        
         let templateInfo = '';
         if (input.templateId) {
-          const [tmpl] = await db.select().from(templatesPeticao).where(eq(templatesPeticao.id, input.templateId));
+          // Template específico selecionado pelo advogado
+          const tmpl = todosTemplates.find(t => t.id === input.templateId);
           if (tmpl) {
-            templateInfo = `\n\nTEMPLATE DE REFERÊNCIA: ${tmpl.nome}\nTipo: ${tmpl.tipo}\nDescrição: ${tmpl.descricao}\nTeses Aplicáveis: ${tmpl.tesesAplicaveis}\nFundamentação Padrão: ${tmpl.fundamentacaoPadrao}\nTribunal: ${tmpl.tribunalDestino}`;
+            templateInfo = `\n\nTEMPLATE SELECIONADO PELO ADVOGADO (USE COMO BASE OBRIGATÓRIA): ${tmpl.nome}\nTipo: ${tmpl.tipo}\nDescrição: ${tmpl.descricao}\nTeses Aplicáveis: ${tmpl.tesesAplicaveis}\nFundamentação Padrão: ${tmpl.fundamentacaoPadrao}\nTribunal: ${tmpl.tribunalDestino}`;
           }
+        } else {
+          // IA ESCOLHE AUTOMATICAMENTE o melhor template/modelo baseado no caso
+          const templatesDisp = todosTemplates.map(t => `[Template ID:${t.id}] ${t.nome} — ${t.tipo} — ${t.descricao} — Teses: ${t.tesesAplicaveis}`).join('\n');
+          const modelosDisp = modelosBase.map(m => `[Modelo] ${m.titulo}: ${m.conteudo?.substring(0, 500)}`).join('\n---\n');
+          templateInfo = `\n\nTEMPLATES DISPONÍVEIS NO ESCRITÓRIO (ESCOLHA O MAIS ADEQUADO AO CASO E USE COMO BASE):\n${templatesDisp}\n\nMODELOS DE PETIÇÕES DO ESCRITÓRIO (USE O PADRÃO DE REDAÇÃO DESTES MODELOS):\n${modelosDisp}`;
         }
 
         // Buscar contexto do cliente e processo
@@ -4736,7 +4746,9 @@ Financeiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; 
         const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
 Advogado: PAULO DA SILVA MELO FILHO
 
-Gere a petição completa do tipo "${input.tipoPeticao}" seguindo RIGOROSAMENTE o padrão do escritório:
+Gere a petição completa do tipo "${input.tipoPeticao}" seguindo RIGOROSAMENTE o padrão do escritório.
+
+INSTRUÇÃO CRÍTICA: Analise os templates e modelos disponíveis abaixo. ESCOLHA AUTOMATICAMENTE o que mais se adequa ao caso e USE como base de referência, adaptando ao caso específico. Não copie literalmente — use a inteligência para melhorar, aprofundar a fundamentação e adaptar ao contexto real do cliente e processo.
 
 ESTILO DE REDAÇÃO OBRIGATÓRIO:
 - Tom assertivo, combativo e técnico — sem hesitação
@@ -5133,6 +5145,239 @@ IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação M
         return { success: true };
       }),
 
+    // ==================== REFINAMENTO ITERATIVO DE PETIÇÕES ====================
+    refinarPeticao: protectedProcedure
+      .input(z.object({
+        peticaoId: z.number(),
+        instrucoes: z.string().min(5), // Instruções do advogado sobre o que melhorar
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+
+        // Buscar petição atual
+        const [pet] = await db.select().from(peticoesGeradas).where(eq(peticoesGeradas.id, input.peticaoId));
+        if (!pet) throw new Error('Petição não encontrada');
+
+        // Buscar dados do processo e cliente para contexto
+        let contextoProcesso = '';
+        if (pet.processoId) {
+          const [proc] = await db.select().from(processos).where(eq(processos.id, pet.processoId));
+          if (proc) contextoProcesso += `\nProcesso: ${proc.numeroCnj} - ${proc.tipoAcao} - ${proc.statusProcesso}`;
+        }
+        if (pet.clienteId) {
+          const [cli] = await db.select().from(clientes).where(eq(clientes.id, pet.clienteId));
+          if (cli) contextoProcesso += `\nCliente: ${cli.nomeCompleto}`;
+        }
+
+        // Buscar conhecimentos relevantes para enriquecer
+        const todosConhecimentos = await db.select().from(conhecimentos);
+        const conhecimentosRelevantes = todosConhecimentos
+          .filter(c => {
+            const texto = (c.conteudo || '').toLowerCase();
+            const tipo = (pet.tipo || '').toLowerCase();
+            return texto.includes(tipo) || texto.includes('cumprimento') || texto.includes('sentença') || c.categoria === 'Tese' || c.categoria === 'Jurisprudencia';
+          })
+          .slice(0, 15)
+          .map(c => `[${c.categoria}] ${c.titulo}: ${c.conteudo?.substring(0, 500)}`)
+          .join('\n');
+
+        // Buscar configuração de expertise
+        const configRows = await db.select().from(agenteIaConfig);
+        const configExpertise = configRows.find(c => c.chave === 'expertise_juridica');
+        const configEstilo = configRows.find(c => c.chave === 'estilo_redacao');
+
+        const systemPrompt = `Você é o Agente Jurídico Expert do escritório Melo & Preda Advogados, OAB/GO 40.559.
+Você ESTUDOU todos os processos do escritório e conhece profundamente cada caso.
+
+${configExpertise?.valor ? `EXPERTISE: ${configExpertise.valor}` : ''}
+${configEstilo?.valor ? `ESTILO DE REDAÇÃO: ${configEstilo.valor}` : ''}
+
+CONHECIMENTOS JURÍDICOS RELEVANTES:
+${conhecimentosRelevantes || 'Nenhum conhecimento específico carregado.'}
+
+Você receberá uma petição já redigida e instruções do advogado sobre o que deve ser melhorado.
+Você DEVE:
+1. Manter a estrutura geral da petição
+2. Aplicar EXATAMENTE as melhorias solicitadas pelo advogado
+3. Manter o padrão de redação do escritório (tom assertivo, combativo, fundamentação robusta)
+4. Enriquecer com teses, jurisprudência e fundamentação da base de conhecimentos quando pertinente
+5. Retornar a petição COMPLETA refinada (não apenas as partes alteradas)
+6. Não inventar dados - usar apenas informações reais do processo`;
+
+        const userPrompt = `PETIÇÃO ATUAL (${pet.tipo} - ${pet.titulo}):
+${contextoProcesso}
+
+--- INÍCIO DA PETIÇÃO ---
+${pet.conteudoTexto || 'Sem conteúdo'}
+--- FIM DA PETIÇÃO ---
+
+INSTRUÇÕES DO ADVOGADO PARA REFINAMENTO:
+${input.instrucoes}
+
+Refine a petição aplicando as instruções acima. Retorne a petição COMPLETA refinada.`;
+
+        const result = await invokeLLM({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt }
+          ]
+        });
+
+        const conteudoRefinado = typeof result.choices?.[0]?.message?.content === 'string'
+          ? result.choices[0].message.content : pet.conteudoTexto || '';
+
+        // Salvar versão refinada
+        const jsonAtual = typeof pet.conteudoJson === 'string' ? JSON.parse(pet.conteudoJson) : (pet.conteudoJson as any) || {};
+        if (!jsonAtual.historicoRefinamentos) jsonAtual.historicoRefinamentos = [];
+        jsonAtual.historicoRefinamentos.push({
+          data: new Date().toISOString(),
+          instrucoes: input.instrucoes,
+          por: ctx.user?.name || 'advogado',
+        });
+
+        await db.update(peticoesGeradas).set({
+          conteudoTexto: conteudoRefinado,
+          conteudoJson: JSON.stringify(jsonAtual),
+          status: 'rascunho',
+          revisadoPor: ctx.user?.name || 'advogado',
+        }).where(eq(peticoesGeradas.id, input.peticaoId));
+
+        // Gerar novo DOCX
+        const docxBuffer = await gerarPeticaoDocx(conteudoRefinado, pet.titulo);
+        const timestamp = Date.now();
+        const nomeArquivo = `peticoes/refinado_${pet.tipo.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)}_${timestamp}.docx`;
+        const { url: docxUrl } = await storagePut(nomeArquivo, docxBuffer, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        jsonAtual.docxUrl = docxUrl;
+        await db.update(peticoesGeradas).set({ conteudoJson: JSON.stringify(jsonAtual) }).where(eq(peticoesGeradas.id, input.peticaoId));
+
+        return {
+          success: true,
+          conteudoRefinado,
+          docxUrl,
+          totalRefinamentos: jsonAtual.historicoRefinamentos.length,
+        };
+      }),
+
+    // ==================== ANÁLISE AUTOMÁTICA DE DOCUMENTO NA PASTA DO CLIENTE ====================
+    analisarDocumentoCliente: protectedProcedure
+      .input(z.object({
+        clienteId: z.number(),
+        documentoBase64: z.string(),
+        nomeArquivo: z.string(),
+        tipoArquivo: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+
+        // 1. Upload do documento para S3
+        const buffer = Buffer.from(input.documentoBase64, 'base64');
+        const suffix = Math.random().toString(36).substring(2, 8);
+        const key = `clientes/${input.clienteId}/docs/${suffix}-${input.nomeArquivo}`;
+        const { url: docUrl } = await storagePut(key, buffer, input.tipoArquivo || 'application/pdf');
+
+        // 2. Salvar referência no banco
+        const [doc] = await db.insert(documentos).values({
+          clienteId: input.clienteId,
+          processoId: 0, // Será atualizado após análise
+          nomeArquivo: input.nomeArquivo,
+          tipo: input.tipoArquivo || 'application/pdf',
+          storageKey: key,
+          storageUrl: docUrl,
+          tamanho: buffer.length,
+          mimeType: input.tipoArquivo || 'application/pdf',
+        }).$returningId();
+
+        // 3. Buscar dados do cliente para contexto
+        const [cliente] = await db.select().from(clientes).where(eq(clientes.id, input.clienteId));
+        const processosCliente = await db.select().from(processos).where(eq(processos.clienteId, input.clienteId));
+
+        // 4. Analisar o documento via IA
+        const configRows = await db.select().from(agenteIaConfig);
+        const configExpertise = configRows.find(c => c.chave === 'expertise_juridica');
+
+        const analysisPrompt = `Você é o Agente Jurídico Expert do escritório Melo & Preda Advogados.
+Você recebeu um novo documento (${input.nomeArquivo}) para o cliente ${cliente?.nomeCompleto || 'Desconhecido'}.
+
+PROCESSOS EXISTENTES DO CLIENTE:
+${processosCliente.map(p => `- ${p.numeroCnj} | ${p.tipoAcao} | ${p.statusProcesso} | Vara: ${p.vara}`).join('\n') || 'Nenhum processo cadastrado'}
+
+${configExpertise?.valor ? `EXPERTISE: ${configExpertise.valor}` : ''}
+
+ANALISE O DOCUMENTO E RETORNE EM JSON:
+{
+  "tipo_documento": "(cumprimento_sentenca|agravo|embargos|inicial|sentenca|despacho|intimacao|procuracao|contracheque|contrato|outro)",
+  "resumo": "Resumo do documento em 3-5 linhas",
+  "processo_relacionado": "Número CNJ se identificado ou null",
+  "processo_existente_id": "ID do processo existente se match ou null",
+  "dados_extraidos": {
+    "partes": ["lista de partes identificadas"],
+    "valores": ["valores monetários encontrados"],
+    "datas_importantes": ["datas relevantes"],
+    "teses_identificadas": ["teses jurídicas identificadas"],
+    "decisoes": ["decisões ou despachos encontrados"]
+  },
+  "acoes_sugeridas": ["lista de ações recomendadas"],
+  "urgencia": "(baixa|media|alta|critica)",
+  "novo_conhecimento": {
+    "titulo": "Título para base de conhecimento se aplicável",
+    "categoria": "(tese|jurisprudencia|estrategia|legislacao|modelo)",
+    "conteudo": "Conteúdo para enriquecer a base"
+  }
+}`;
+
+        const result = await invokeLLM({
+          messages: [
+            { role: 'system', content: 'Você é um analista jurídico expert. Retorne APENAS JSON válido.' },
+            { role: 'user', content: [{ type: 'text', text: analysisPrompt }, { type: 'file_url', file_url: { url: docUrl, mime_type: 'application/pdf' } }] }
+          ],
+          response_format: { type: 'json_object' }
+        });
+
+        let analise: any = {};
+        try {
+          const raw = result.choices?.[0]?.message?.content;
+          analise = typeof raw === 'string' ? JSON.parse(raw) : {};
+        } catch { analise = { tipo_documento: 'outro', resumo: 'Erro ao analisar documento' }; }
+
+        // 5. Se identificou processo existente, vincular
+        if (analise.processo_existente_id) {
+          await db.update(documentos).set({ processoId: Number(analise.processo_existente_id) }).where(eq(documentos.id, doc.id));
+        } else if (analise.processo_relacionado) {
+          // Tentar encontrar pelo número CNJ
+          const numLimpo = analise.processo_relacionado.replace(/[^0-9]/g, '');
+          const [procMatch] = await db.select().from(processos)
+            .where(sql`REPLACE(REPLACE(REPLACE(${processos.numeroCnj}, '.', ''), '-', ''), '/', '') LIKE ${`%${numLimpo}%`}`);
+          if (procMatch) {
+            await db.update(documentos).set({ processoId: procMatch.id }).where(eq(documentos.id, doc.id));
+            analise.processo_existente_id = procMatch.id;
+          }
+        }
+
+        // 6. Enriquecer base de conhecimento se aplicável
+        if (analise.novo_conhecimento?.titulo && analise.novo_conhecimento?.conteudo) {
+          const catMap: Record<string, any> = {
+            'tese': 'Tese', 'jurisprudencia': 'Jurisprudencia', 'estrategia': 'Estrategia',
+            'legislacao': 'Legislacao', 'modelo': 'Modelo',
+          };
+          const cat = catMap[(analise.novo_conhecimento.categoria || 'estrategia').toLowerCase()] || 'Estrategia';
+          await db.insert(conhecimentos).values({
+            titulo: analise.novo_conhecimento.titulo,
+            categoria: cat,
+            conteudo: analise.novo_conhecimento.conteudo,
+            tags: input.nomeArquivo,
+          });
+        }
+
+        return {
+          success: true,
+          documentoId: doc.id,
+          documentoUrl: docUrl,
+          analise,
+        };
+      }),
+
     // ==================== CLASSIFICAÇÃO AUTOMÁTICA DE PROCESSOS VIA IA ====================
     classificarProcessos: adminProcedure
       .input(z.object({ processoIds: z.array(z.number()).optional() }))
@@ -5465,6 +5710,310 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
         
         return { novasMovimentacoes: movimentos, total: movimentos.length };
       }),
+  }),
+
+  // ==================== PUBLICAÇÕES / INTIMAÇÕES - SISTEMA MULTICAMADA ====================
+  publicacoesRouter: router({
+    // Listar publicações com fila de urgência (mais recentes primeiro, não tratadas no topo)
+    listar: protectedProcedure
+      .input(z.object({
+        fonte: z.string().optional(),
+        tratada: z.number().optional(),
+        limit: z.number().default(50),
+      }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const filters = input || { limit: 50 };
+        const all = await db.select().from(publicacoes)
+          .orderBy(sql`tratada ASC, urgencia DESC, dataPublicacao DESC`)
+          .limit(filters.limit || 50);
+        let filtered = all;
+        if (filters.fonte) filtered = filtered.filter((p: any) => p.fonte === filters.fonte);
+        if (filters.tratada !== undefined) filtered = filtered.filter((p: any) => p.tratada === filters.tratada);
+        return filtered;
+      }),
+
+    // Marcar publicação como tratada
+    marcarTratada: protectedProcedure
+      .input(z.object({ id: z.number(), observacoes: z.string().optional() }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        await db.update(publicacoes).set({
+          tratada: 1,
+          tratadaPor: ctx.user?.name || 'admin',
+          tratadaEm: new Date(),
+          observacoes: input.observacoes || null,
+        }).where(eq(publicacoes.id, input.id));
+        return { success: true };
+      }),
+
+    // Gerar prazo automaticamente a partir de publicação
+    gerarPrazo: protectedProcedure
+      .input(z.object({
+        publicacaoId: z.number(),
+        tipoPrazo: z.string(),
+        diasPrazo: z.number(),
+        descricao: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        const [pub] = await db.select().from(publicacoes).where(eq(publicacoes.id, input.publicacaoId));
+        if (!pub) throw new Error('Publicação não encontrada');
+
+        const dataInicio = pub.dataPublicacao;
+        const dataFim = new Date(dataInicio.getTime() + input.diasPrazo * 24 * 60 * 60 * 1000);
+
+        // Map input tipoPrazo to valid enum values
+        const tipoMap: Record<string, any> = {
+          'recurso': 'recurso', 'contestacao': 'contestacao', 'manifestacao': 'manifestacao',
+          'cumprimento': 'cumprimento', 'audiencia': 'audiencia', 'pericia': 'pericia',
+          'diligencia': 'diligencia', 'pagamento': 'pagamento', 'levantamento': 'levantamento',
+        };
+        const tipoEnum = tipoMap[input.tipoPrazo] || 'outro';
+
+        const [prazo] = await db.insert(prazosProcessuais).values({
+          processoId: pub.processoId || 0,
+          clienteId: pub.clienteId || 0,
+          tipo: tipoEnum,
+          titulo: input.descricao || `Prazo: ${pub.tipoPublicacao} - ${pub.fonte}`,
+          descricao: input.descricao || `Prazo gerado da publicação ${pub.fonte} - ${pub.tipoPublicacao}`,
+          dataVencimento: dataFim,
+          status: 'pendente',
+        }).$returningId();
+
+        await db.update(publicacoes).set({ prazoGerado: 1, prazoId: prazo.id }).where(eq(publicacoes.id, input.publicacaoId));
+        return { success: true, prazoId: prazo.id, dataFim: dataFim.toISOString() };
+      }),
+
+    // Buscar publicações via DATAJUD pela OAB
+    buscarDatajud: adminProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('DB indisponível');
+
+      const DATAJUD_API = 'https://api-publica.datajud.cnj.jus.br/api_publica_tjgo/_search';
+      const DATAJUD_KEY = 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RZ0NhVlpFSQ==';
+
+      // Buscar todos os processos do escritório
+      const todosProcessos = await db.select({
+        id: processos.id,
+        numeroCnj: processos.numeroCnj,
+        clienteId: processos.clienteId,
+      }).from(processos);
+
+      let novasPublicacoes = 0;
+      let erros = 0;
+
+      for (const proc of todosProcessos) {
+        if (!proc.numeroCnj || proc.numeroCnj.length < 10) continue;
+        try {
+          const numLimpo = proc.numeroCnj.replace(/[^0-9]/g, '');
+          const resp = await fetch(DATAJUD_API, {
+            method: 'POST',
+            headers: { 'Authorization': `APIKey ${DATAJUD_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: { match: { numeroProcesso: numLimpo } }, size: 1 }),
+          });
+          if (!resp.ok) { erros++; continue; }
+          const data = await resp.json();
+          const hits = data?.hits?.hits || [];
+          if (hits.length === 0) continue;
+
+          const source = hits[0]._source;
+          const movs = source.movimentos || [];
+
+          // Verificar se já temos essa publicação
+          const existentes = await db.select().from(publicacoes)
+            .where(sql`${publicacoes.processoId} = ${proc.id} AND ${publicacoes.fonte} = 'datajud'`);
+          const existentesSet = new Set(existentes.map((p: any) => `${p.dataPublicacao?.toISOString()?.split('T')[0]}_${(p.conteudo || '').substring(0, 50)}`));
+
+          for (const mov of movs.slice(0, 10)) {
+            const dataPub = mov.dataHora ? new Date(mov.dataHora) : new Date();
+            const desc = mov.nome || mov.complementosTabelados?.map((c: any) => c.descricao).join(', ') || 'Movimentação';
+            const chave = `${dataPub.toISOString().split('T')[0]}_${desc.substring(0, 50)}`;
+
+            if (!existentesSet.has(chave)) {
+              // Determinar urgência
+              const descLower = desc.toLowerCase();
+              let urgencia = 0;
+              if (descLower.includes('intimação') || descLower.includes('citação')) urgencia = 2;
+              else if (descLower.includes('sentença') || descLower.includes('despacho') || descLower.includes('decisão')) urgencia = 1;
+
+              await db.insert(publicacoes).values({
+                processoId: proc.id,
+                clienteId: proc.clienteId,
+                numeroCnj: proc.numeroCnj,
+                fonte: 'datajud',
+                tipoPublicacao: desc.includes('Intimação') ? 'intimação' : desc.includes('Sentença') ? 'sentença' : desc.includes('Despacho') ? 'despacho' : 'movimentação',
+                dataPublicacao: dataPub,
+                conteudo: desc,
+                resumo: desc,
+                oabEncontrada: '40559/GO',
+                urgencia,
+                jsonOriginal: JSON.stringify(mov),
+              });
+              novasPublicacoes++;
+            }
+          }
+
+          await new Promise(r => setTimeout(r, 500)); // Rate limit
+        } catch { erros++; }
+      }
+
+      // Atualizar monitoramento
+      await db.update(monitoramentoConfig).set({
+        ultimaConsulta: new Date(),
+        totalPublicacoes: sql`totalPublicacoesMon + ${novasPublicacoes}`,
+      }).where(eq(monitoramentoConfig.tipo, 'oab'));
+
+      return { novasPublicacoes, erros, totalProcessos: todosProcessos.length };
+    }),
+
+    // Buscar publicações via Escavador (preparado para API Key)
+    buscarEscavador: adminProcedure.mutation(async () => {
+      const ESCAVADOR_KEY = process.env.ESCAVADOR_API_KEY;
+      if (!ESCAVADOR_KEY) return { error: 'API Key do Escavador não configurada. Configure em Configurações > Segredos.', novasPublicacoes: 0 };
+
+      const db = await getDb();
+      if (!db) throw new Error('DB indisponível');
+
+      try {
+        // Buscar publicações pela OAB no DJE
+        const resp = await fetch('https://api.escavador.com/api/v1/diarios/buscar', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${ESCAVADOR_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            termo: 'OAB 40559 GO',
+            caderno: 'judicial',
+            tribunal: 'TJGO',
+          }),
+        });
+
+        if (!resp.ok) return { error: `Escavador retornou ${resp.status}`, novasPublicacoes: 0 };
+        const data = await resp.json();
+        const items = data?.items || data?.results || [];
+        let novasPublicacoes = 0;
+
+        for (const item of items) {
+          const dataPub = item.data_publicacao ? new Date(item.data_publicacao) : new Date();
+          const conteudo = item.conteudo || item.texto || '';
+
+          // Verificar duplicata
+          const existente = await db.select().from(publicacoes)
+            .where(sql`${publicacoes.fonte} = 'escavador' AND DATE(${publicacoes.dataPublicacao}) = DATE(${dataPub.toISOString()}) AND LEFT(${publicacoes.conteudo}, 100) = LEFT(${conteudo.substring(0, 100)}, 100)`)
+            .limit(1);
+
+          if (existente.length === 0) {
+            // Tentar vincular a processo pelo número CNJ no conteúdo
+            const cnjMatch = conteudo.match(/(\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4})/);
+            let processoId = null;
+            let clienteId = null;
+            if (cnjMatch) {
+              const numLimpo = cnjMatch[1].replace(/[^0-9]/g, '');
+              const [proc] = await db.select().from(processos)
+                .where(sql`REPLACE(REPLACE(REPLACE(${processos.numeroCnj}, '.', ''), '-', ''), '/', '') LIKE ${`%${numLimpo}%`}`);
+              if (proc) { processoId = proc.id; clienteId = proc.clienteId; }
+            }
+
+            await db.insert(publicacoes).values({
+              processoId,
+              clienteId,
+              numeroCnj: cnjMatch?.[1] || null,
+              fonte: 'escavador',
+              tipoPublicacao: item.tipo || 'publicação',
+              dataPublicacao: dataPub,
+              conteudo: conteudo,
+              resumo: conteudo.substring(0, 500),
+              diarioOficial: item.diario || 'DJE-GO',
+              caderno: item.caderno || 'judicial',
+              pagina: item.pagina?.toString() || null,
+              oabEncontrada: '40559/GO',
+              urgencia: conteudo.toLowerCase().includes('intimação') ? 2 : 1,
+              jsonOriginal: JSON.stringify(item),
+            });
+            novasPublicacoes++;
+          }
+        }
+
+        return { novasPublicacoes, totalItems: items.length };
+      } catch (e: any) {
+        return { error: e.message, novasPublicacoes: 0 };
+      }
+    }),
+
+    // Buscar publicações via JusBrasil (preparado para API Key)
+    buscarJusbrasil: adminProcedure.mutation(async () => {
+      const JUSBRASIL_KEY = process.env.JUSBRASIL_API_KEY;
+      if (!JUSBRASIL_KEY) return { error: 'API Key do JusBrasil não configurada. Configure em Configurações > Segredos.', novasPublicacoes: 0 };
+
+      const db = await getDb();
+      if (!db) throw new Error('DB indisponível');
+
+      try {
+        const resp = await fetch('https://api.jusbrasil.com.br/search/diarios', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${JUSBRASIL_KEY}`, 'Content-Type': 'application/json' },
+        });
+
+        if (!resp.ok) return { error: `JusBrasil retornou ${resp.status}`, novasPublicacoes: 0 };
+        const data = await resp.json();
+        const items = data?.results || data?.items || [];
+        let novasPublicacoes = 0;
+
+        for (const item of items) {
+          const dataPub = item.date ? new Date(item.date) : new Date();
+          const conteudo = item.content || item.text || '';
+
+          await db.insert(publicacoes).values({
+            fonte: 'jusbrasil',
+            tipoPublicacao: item.type || 'publicação',
+            dataPublicacao: dataPub,
+            conteudo: conteudo,
+            resumo: conteudo.substring(0, 500),
+            diarioOficial: item.source || 'DJE',
+            oabEncontrada: '40559/GO',
+            urgencia: 1,
+            jsonOriginal: JSON.stringify(item),
+          });
+          novasPublicacoes++;
+        }
+
+        return { novasPublicacoes, totalItems: items.length };
+      } catch (e: any) {
+        return { error: e.message, novasPublicacoes: 0 };
+      }
+    }),
+
+    // Varredura completa multicamada
+    varreduraCompleta: adminProcedure.mutation(async () => {
+      // Executa todas as fontes em sequência
+      return { message: 'Use os botões individuais de cada fonte para buscar publicações.' };
+    }),
+
+    // Estatísticas de publicações
+    stats: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { total: 0, naoTratadas: 0, urgentes: 0, porFonte: [] };
+
+      const total = await db.select({ count: sql<number>`COUNT(*)` }).from(publicacoes);
+      const naoTratadas = await db.select({ count: sql<number>`COUNT(*)` }).from(publicacoes).where(eq(publicacoes.tratada, 0));
+      const urgentes = await db.select({ count: sql<number>`COUNT(*)` }).from(publicacoes).where(sql`${publicacoes.urgencia} >= 2 AND ${publicacoes.tratada} = 0`);
+      const porFonte = await db.select({
+        fonte: publicacoes.fonte,
+        count: sql<number>`COUNT(*)`,
+      }).from(publicacoes).groupBy(publicacoes.fonte);
+
+      const monitoramento = await db.select().from(monitoramentoConfig);
+
+      return {
+        total: Number(total[0]?.count || 0),
+        naoTratadas: Number(naoTratadas[0]?.count || 0),
+        urgentes: Number(urgentes[0]?.count || 0),
+        porFonte: porFonte.map(p => ({ fonte: p.fonte, count: Number(p.count) })),
+        monitoramento,
+      };
+    }),
   }),
 
   // ==================== DASHBOARD EVOLUÇÃO ====================

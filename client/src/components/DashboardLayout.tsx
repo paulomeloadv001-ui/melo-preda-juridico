@@ -47,6 +47,7 @@ const menuGroups = [
       { icon: Upload, label: "Upload", path: "/upload" },
       { icon: Users, label: "Clientes", path: "/clientes" },
       { icon: Calendar, label: "Prazos", path: "/prazos" },
+      { icon: Bell, label: "Publicações", path: "/publicacoes" },
       { icon: Globe, label: "Acompanhar", path: "/acompanhamento" },
     ]
   },

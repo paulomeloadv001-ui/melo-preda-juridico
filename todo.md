@@ -410,3 +410,99 @@
 - [x] PREENCHIMENTO BD: Gerar estratégias para os 28 processos sem estratégia via IA (28/28 geradas, total 115)
 - [x] PREENCHIMENTO BD: Verificar que todas as estratégias foram inseridas corretamente (100% Estratégias, 0 pendentes)
 - [x] PREENCHIMENTO BD: Confirmar que o Agente IA agora tem acesso às novas estratégias (panoramaGlobal atualizado)
+- [x] EXPORTAÇÃO COMPLETA: Exportar todas as tabelas do banco em SQL INSERT + JSON (30 tabelas, 2.132 registros)
+- [x] EXPORTAÇÃO COMPLETA: Exportar base de conhecimentos completa (96 conhecimentos, 115 estratégias, 10 configs IA)
+- [x] EXPORTAÇÃO COMPLETA: Copiar código-fonte completo backend + frontend + schema desacoplado (163 arquivos)
+- [x] EXPORTAÇÃO COMPLETA: Criar README deploy, docker-compose, .env.example, scripts migração
+- [x] EXPORTAÇÃO COMPLETA: Gerar ZIP final organizado para servidor externo (3.5MB, 769 arquivos)
+- [x] EXPORT DESACOPLADO: ZIP 01 - Banco de Dados (1.9MB, 30 tabelas, 2.132 registros)
+- [x] EXPORT DESACOPLADO: ZIP 02 - Base de Conhecimentos (234KB, 96 conhecimentos)
+- [x] EXPORT DESACOPLADO: ZIP 03 - Agente IA (81KB, 10 configs, 5 templates)
+- [x] EXPORT DESACOPLADO: ZIP 04 - Clientes (790KB, 78 fichas individuais)
+- [x] EXPORT DESACOPLADO: ZIP 05A - Backend (131KB, tRPC + Express + Drizzle)
+- [x] EXPORT DESACOPLADO: ZIP 05B - Frontend (221KB, React 19 + Tailwind 4)
+- [x] EXPORT DESACOPLADO: ZIP 05C - Schema e Migrações (56KB, Drizzle ORM)
+- [x] EXPORT DESACOPLADO: ZIP 06 - Deploy (8.3KB, Docker + scripts)
+- [x] EXPORT DESACOPLADO: ZIP 07 - Documentação (5.4KB, README deploy + panorama)
+- [ ] CORREÇÃO SLIDES: Verificar e corrigir nome do usuário em todos os slides da apresentação
+- [ ] BUG CRÍTICO: Upload individual de processo NÃO analisa/extrai dados automaticamente - PDF fica no final da página sem ser estudado
+- [ ] BUG CRÍTICO: Após upload, dados não são integrados ao perfil do cliente (processos, financeiro, empréstimos, estratégias)
+- [ ] REVISÃO PONTA A PONTA: Dashboard - verificar dados, gráficos, links, ações rápidas
+- [ ] REVISÃO PONTA A PONTA: Upload - verificar fluxo individual, lote e contracheque
+- [ ] REVISÃO PONTA A PONTA: Clientes - verificar listagem, perfil, abas, dados completos
+- [ ] REVISÃO PONTA A PONTA: Agente IA - verificar chat, análise, petição, conhecimentos
+- [ ] REVISÃO PONTA A PONTA: Peticionamento - verificar wizard, geração, download DOCX
+- [ ] REVISÃO PONTA A PONTA: Relatórios - verificar geração, exportação PDF
+- [ ] REVISÃO PONTA A PONTA: Prazos - verificar calendário, alertas, cadastro
+- [ ] REVISÃO PONTA A PONTA: Conhecimentos - verificar CRUD, busca, categorias
+- [ ] REVISÃO PONTA A PONTA: Métricas - verificar gráficos, KPIs, produtividade
+- [ ] REVISÃO PONTA A PONTA: Correção - verificar auditoria, merge, deduplicação
+- [ ] REVISÃO PONTA A PONTA: Exportação - verificar massa, individual, formatos
+- [ ] REVISÃO PONTA A PONTA: Acompanhamento PJe - verificar consulta CNJ, varredura
+- [ ] REVISÃO PONTA A PONTA: Enriquecimento - verificar CPFs, edição inline
+- [ ] REVISÃO PONTA A PONTA: Integração JUSCONSIG - verificar status, sync, endpoints
+- [ ] REVISÃO PONTA A PONTA: Gestão Acessos - verificar 5 abas, permissões, convites
+- [ ] REVISÃO PONTA A PONTA: Preenchimento BD - verificar geração de dados pendentes
+- [ ] REVISÃO PONTA A PONTA: Jobs - verificar fila, status, cancelamento
+- [ ] CORREÇÃO GERAL: Corrigir todos os bugs e problemas de fluxo encontrados
+- [ ] PETICIONAMENTO INTELIGENTE: IA analisa caso e ESCOLHE AUTOMATICAMENTE o melhor template da base
+- [ ] PETICIONAMENTO INTELIGENTE: IA adapta template ao caso específico usando teses, jurisprudência e fundamentação
+- [ ] PETICIONAMENTO INTELIGENTE: Gerar petição nos moldes do escritório (padrão Dr. Paulo da Silva Melo Filho)
+- [x] PETICIONAMENTO INTELIGENTE: Após rascunho, campo para instruir IA sobre melhorias
+- [x] PETICIONAMENTO INTELIGENTE: Ciclo iterativo: rascunho → instruções do advogado → IA edita → até aprovação
+- [x] PETICIONAMENTO INTELIGENTE: Backend rota refinarPeticao (recebe petição + instruções → IA melhora)
+- [x] PETICIONAMENTO INTELIGENTE: Frontend interface de revisão com chat de instruções ao lado da petição (RefinamentoPanel)
+- [ ] FLUXO INTEGRADO: Upload individual deve analisar automaticamente e integrar ao perfil do cliente
+- [ ] FLUXO INTEGRADO: Após upload, redirecionar para perfil do cliente com dados já preenchidos
+- [ ] FLUXO INTEGRADO: Melhorar navegação sequencial entre todas as páginas
+- [ ] FLUXO INTEGRADO: Garantir que cada ação gera notificação e atualiza dados relacionados
+- [ ] AGENTE AÇÃO: Implementar tool_choice com funções que o agente pode executar na plataforma
+- [ ] AGENTE AÇÃO: Função integrar_cumprimento - integra dados de cumprimento na pasta do cliente
+- [ ] AGENTE AÇÃO: Função analisar_processo - analisa processo principal e gera estratégia
+- [ ] AGENTE AÇÃO: Função peticionar - gera petição escolhendo automaticamente o melhor template
+- [ ] AGENTE AÇÃO: Função consultar_pasta_cliente - mostra todos os processos/dados do cliente
+- [ ] AGENTE AÇÃO: Função enriquecer_conhecimento - extrai teses e jurisprudência do processo e salva na base
+- [ ] AGENTE AÇÃO: Função mover_documento - move/integra documento à pasta correta do cliente
+- [ ] AGENTE AÇÃO: Cada importação/análise deve MELHORAR a base de conhecimento automaticamente
+- [x] PETICIONAMENTO REFINAMENTO: Backend rota refinarPeticao (petição + instruções → IA melhora)
+- [x] PETICIONAMENTO REFINAMENTO: Frontend botão "Instruir IA" ao lado da petição gerada (RefinamentoPanel com histórico)
+- [ ] UPLOAD INTELIGENTE: Upload individual analisa PDF automaticamente e integra ao perfil do cliente
+- [ ] IA CONTEXTUAL UPLOAD: Após upload de PDF, IA analisa automaticamente e extrai TODOS os dados
+- [ ] IA CONTEXTUAL UPLOAD: Dados extraídos integram automaticamente à pasta do cliente
+- [ ] IA CONTEXTUAL UPLOAD: Cada importação enriquece a base de conhecimento (teses, jurisprudência)
+- [x] IA CONTEXTUAL CLIENTE: Botão "Analisar com IA" na pasta do cliente (Upload + Análise IA na DocumentosSection)
+- [ ] IA CONTEXTUAL CLIENTE: IA pode peticionar, gerar relatório, analisar processo direto da pasta
+- [ ] IA CONTEXTUAL PETIÇÃO: Seleção automática do melhor template + refinamento iterativo
+- [ ] UPLOAD EXPANDIDO: Aumentar limite de upload para processos completos grandes (muitos arquivos/páginas)
+- [ ] UPLOAD EXPANDIDO: Suporte a upload de múltiplos PDFs de uma vez
+- [ ] UPLOAD EXPANDIDO: Processamento em chunks para PDFs muito grandes
+- [ ] UPLOAD EXPANDIDO: Barra de progresso detalhada no frontend
+- [x] PRAZOS MULTICAMADA: Pesquisar e integrar APIs DATAJUD, PROJUDI TJGO, DJE, PJe (publicacoesRouter com 3 fontes)
+- [x] PRAZOS MULTICAMADA: Implementar consulta automática de publicações por múltiplas fontes (DATAJUD + Escavador + JusBrasil)
+- [x] PRAZOS MULTICAMADA: Alertas automáticos de publicações e prazos críticos (urgência 0/1/2, fila de urgência)
+- [x] JUSBRASIL: Buscar publicações no DJE pela OAB 40559/GO (buscarJusbrasil mutation)
+- [x] JUSBRASIL: Monitorar intimações e publicações automaticamente (publicacoesRouter.buscarJusbrasil)
+- [x] JUSBRASIL: Calcular prazos processuais a partir das publicações (gerarPrazo mutation)
+- [x] JUSBRASIL: Alertar sobre prazos com multicamada (DATAJUD + JusBrasil + Escavador)
+- [x] JUSBRASIL: Sugerir petição adequada quando detectar intimação (fila de urgência com botão Tratar)
+- [x] JUSBRASIL: Campo para API Key na página de Integração (monitoramentoConfig)
+- [x] PUBLICAÇÕES MULTICAMADA: Criar tabelas publicacoes e monitoramento_config no banco de dados
+- [x] PUBLICAÇÕES MULTICAMADA: Backend publicacoesRouter com 7 rotas (stats, listar, marcarTratada, gerarPrazo, buscarDatajud, buscarEscavador, buscarJusbrasil)
+- [x] PUBLICAÇÕES MULTICAMADA: Varredura DATAJUD gratuita (API pública CNJ) para todos os processos cadastrados
+- [x] PUBLICAÇÕES MULTICAMADA: Varredura Escavador (API paga) para publicações DJE por OAB
+- [x] PUBLICAÇÕES MULTICAMADA: Varredura JusBrasil (API paga) para publicações em diários oficiais
+- [x] PUBLICAÇÕES MULTICAMADA: Fila de urgência com 3 níveis (Normal, Urgente, Crítico)
+- [x] PUBLICAÇÕES MULTICAMADA: Geração automática de prazos processuais a partir de publicações
+- [x] PUBLICAÇÕES MULTICAMADA: Marcar publicação como tratada com observações
+- [x] PUBLICAÇÕES MULTICAMADA: Frontend página /publicacoes com cards de stats, fontes de monitoramento, filtros e fila
+- [x] PUBLICAÇÕES MULTICAMADA: Sidebar atualizada com link Publicações
+- [x] REFINAMENTO PETIÇÃO: Backend rota refinarPeticao com contexto completo (processo, cliente, conhecimentos, expertise)
+- [x] REFINAMENTO PETIÇÃO: Frontend RefinamentoPanel com histórico iterativo e instruções do advogado
+- [x] REFINAMENTO PETIÇÃO: Ciclo iterativo gerar → instruir → refinar → repetir até aprovação
+- [x] REFINAMENTO PETIÇÃO: Novo DOCX gerado a cada refinamento com timbrado oficial
+- [x] ANÁLISE DOCUMENTO CLIENTE: Backend rota analisarDocumentoCliente com upload S3 + análise IA
+- [x] ANÁLISE DOCUMENTO CLIENTE: Identificação automática de tipo de documento e processo relacionado
+- [x] ANÁLISE DOCUMENTO CLIENTE: Enriquecimento automático da base de conhecimento
+- [x] ANÁLISE DOCUMENTO CLIENTE: Frontend DocumentosSection com botão Upload + Análise IA no perfil do cliente
+- [x] ANÁLISE DOCUMENTO CLIENTE: Resultado da análise exibido inline com tipo, resumo, dados extraídos e recomendações
+- [x] TESTES: 12 novos testes para publicacoes, refinarPeticao e analisarDocumentoCliente (193/193 passando)

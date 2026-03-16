@@ -829,32 +829,134 @@ export default function ClientePerfil() {
         </CardContent>
       </Card>
 
-      {/* Documentos */}
-      {documentos && documentos.length > 0 && (
-        <Card className="border shadow-sm">
-          <CardHeader><CardTitle className="text-base">Documentos ({documentos.length})</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {documentos.map((doc: any) => (
-                <div key={doc.id} className="flex items-center justify-between border rounded-lg p-3">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm font-medium">{doc.nomeArquivo}</p>
-                      <p className="text-xs text-muted-foreground">{doc.tipo} — {doc.tamanho ? `${(doc.tamanho / 1024 / 1024).toFixed(1)} MB` : ""}</p>
-                    </div>
+      {/* Documentos + Upload + Análise IA */}
+      <DocumentosSection clienteId={clienteId} documentos={documentos || []} refetch={refetch} />
+    </div>
+  );
+}
+
+// ==================== COMPONENTE: DOCUMENTOS COM UPLOAD E ANÁLISE IA ====================
+function DocumentosSection({ clienteId, documentos, refetch }: { clienteId: number; documentos: any[]; refetch: () => void }) {
+  const [uploading, setUploading] = useState(false);
+  const [analyzing, setAnalyzing] = useState<number | null>(null);
+  const [analiseResult, setAnaliseResult] = useState<any>(null);
+
+  const analisar = trpc.agente.analisarDocumentoCliente.useMutation({
+    onSuccess: (data) => {
+      toast.success('Documento analisado com sucesso!');
+      setAnaliseResult(data.analise);
+      setAnalyzing(null);
+      refetch();
+    },
+    onError: (e) => {
+      toast.error(`Erro na análise: ${e.message}`);
+      setAnalyzing(null);
+    },
+  });
+
+  const handleUploadAndAnalyze = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        analisar.mutate({
+          clienteId,
+          nomeArquivo: file.name,
+          documentoBase64: base64,
+          tipoArquivo: file.type || 'application/pdf',
+        });
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      toast.error('Erro ao ler arquivo');
+      setUploading(false);
+    }
+    e.target.value = '';
+  };
+
+  return (
+    <Card className="border shadow-sm">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">Documentos ({documentos.length})</CardTitle>
+          <div className="flex gap-2">
+            <label>
+              <input type="file" className="hidden" accept=".pdf,.doc,.docx,.jpg,.png" onChange={handleUploadAndAnalyze} />
+              <Button variant="outline" size="sm" asChild className="cursor-pointer">
+                <span>
+                  {uploading || analisar.isPending ? (
+                    <><span className="animate-spin mr-1">⏳</span> Analisando...</>
+                  ) : (
+                    <><Upload className="h-4 w-4 mr-1" /> Upload + Análise IA</>
+                  )}
+                </span>
+              </Button>
+            </label>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Resultado da análise */}
+        {analiseResult && (
+          <div className="border rounded-lg p-4 bg-blue-50/50 dark:bg-blue-950/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium text-sm flex items-center gap-2">
+                <Bot className="h-4 w-4 text-blue-600" /> Resultado da Análise IA
+              </h4>
+              <Button variant="ghost" size="sm" onClick={() => setAnaliseResult(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div><span className="text-muted-foreground">Tipo:</span> <Badge variant="secondary">{analiseResult.tipo_documento}</Badge></div>
+              {analiseResult.processo_relacionado && <div><span className="text-muted-foreground">Processo:</span> {analiseResult.processo_relacionado}</div>}
+            </div>
+            <p className="text-sm">{analiseResult.resumo}</p>
+            {analiseResult.dados_extraidos && (
+              <div className="text-xs space-y-1">
+                <p className="font-medium">Dados extraídos:</p>
+                <pre className="bg-background rounded p-2 overflow-auto max-h-40">{JSON.stringify(analiseResult.dados_extraidos, null, 2)}</pre>
+              </div>
+            )}
+            {analiseResult.recomendacoes && (
+              <div className="text-xs">
+                <p className="font-medium">Recomendações:</p>
+                <p>{analiseResult.recomendacoes}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Lista de documentos */}
+        {documentos.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">Nenhum documento. Use o botão acima para enviar e analisar automaticamente.</p>
+        ) : (
+          <div className="space-y-2">
+            {documentos.map((doc: any) => (
+              <div key={doc.id} className="flex items-center justify-between border rounded-lg p-3">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">{doc.nomeArquivo}</p>
+                    <p className="text-xs text-muted-foreground">{doc.tipo} — {doc.tamanho ? `${(doc.tamanho / 1024 / 1024).toFixed(1)} MB` : ''}</p>
                   </div>
+                </div>
+                <div className="flex gap-1">
                   {doc.storageUrl && (
                     <a href={doc.storageUrl} target="_blank" rel="noopener noreferrer">
                       <Button variant="ghost" size="sm"><Download className="h-4 w-4" /></Button>
                     </a>
                   )}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

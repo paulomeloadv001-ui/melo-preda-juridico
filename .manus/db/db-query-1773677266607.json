@@ -1,0 +1,33 @@
+{
+  "query": "SELECT 'templates' as tipo, COUNT(*) as total FROM templates_peticao WHERE ativo = 1\nUNION ALL\nSELECT 'conhecimentos' as tipo, COUNT(*) as total FROM conhecimentos\nUNION ALL\nSELECT 'estrategias' as tipo, COUNT(*) as total FROM estrategias\nUNION ALL\nSELECT 'peticoes_geradas' as tipo, COUNT(*) as total FROM peticoes_geradas;\nSELECT id, nome, tipo, SUBSTRING(descricao, 1, 100) as descricao FROM templates_peticao WHERE ativo = 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT 'templates' as tipo, COUNT(*) as total FROM templates_peticao WHERE ativo = 1\nUNION ALL\nSELECT 'conhecimentos' as tipo, COUNT(*) as total FROM conhecimentos\nUNION ALL\nSELECT 'estrategias' as tipo, COUNT(*) as total FROM estrategias\nUNION ALL\nSELECT 'peticoes_geradas' as tipo, COUNT(*) as total FROM peticoes_geradas;\nSELECT id, nome, tipo, SUBSTRING(descricao, 1, 100) as descricao FROM templates_peticao WHERE ativo = 1;",
+  "rows": [
+    {
+      "tipo": "peticoes_geradas",
+      "total": "7"
+    },
+    {
+      "tipo": "conhecimentos",
+      "total": "96"
+    },
+    {
+      "tipo": "templates",
+      "total": "5"
+    },
+    {
+      "tipo": "estrategias",
+      "total": "122"
+    }
+  ],
+  "messages": [
+    "id\tnome\ttipo\tdescricao",
+    "1\tAgravo de Instrumento\tagravo_instrumento\tRecurso de agravo de instrumento contra decisão interlocutória, com pedido de efeito suspensivo/ativ",
+    "2\tCumprimento Provisório de Sentença\tcumprimento_provisorio\tPetição de cumprimento provisório de sentença com cálculo de débito, fundamentação em coisa julgada ",
+    "3\tEmbargos de Declaração com Efeitos Infringentes\tembargos_declaracao\tEmbargos de declaração com pedido de efeitos infringentes por omissão, contradição ou obscuridade de",
+    "4\tExceção de Pré-Executividade\texcecao_pre_executividade\tExceção de pré-executividade para arguir matérias de ordem pública sem necessidade de penhora prévia",
+    "5\tQuerela Nullitatis Incidental\tquerela_nullitatis\tAção declaratória de nulidade de sentença por vício insanável (citação inválida ou ausente), impresc"
+  ],
+  "stdout": "tipo\ttotal\npeticoes_geradas\t7\nconhecimentos\t96\ntemplates\t5\nestrategias\t122\nid\tnome\ttipo\tdescricao\n1\tAgravo de Instrumento\tagravo_instrumento\tRecurso de agravo de instrumento contra decisão interlocutória, com pedido de efeito suspensivo/ativ\n2\tCumprimento Provisório de Sentença\tcumprimento_provisorio\tPetição de cumprimento provisório de sentença com cálculo de débito, fundamentação em coisa julgada \n3\tEmbargos de Declaração com Efeitos Infringentes\tembargos_declaracao\tEmbargos de declaração com pedido de efeitos infringentes por omissão, contradição ou obscuridade de\n4\tExceção de Pré-Executividade\texcecao_pre_executividade\tExceção de pré-executividade para arguir matérias de ordem pública sem necessidade de penhora prévia\n5\tQuerela Nullitatis Incidental\tquerela_nullitatis\tAção declaratória de nulidade de sentença por vício insanável (citação inválida ou ausente), impresc\n",
+  "stderr": "",
+  "execution_time_ms": 184
+}

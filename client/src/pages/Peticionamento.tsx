@@ -592,6 +592,15 @@ export default function Peticionamento() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Refinamento Iterativo */}
+              {peticaoGerada.id && <RefinamentoPanel peticaoId={peticaoGerada.id} onRefined={(data: any) => {
+                setPeticaoGerada((prev: any) => ({
+                  ...prev,
+                  peticao: data.conteudoRefinado,
+                  docxUrl: data.docxUrl,
+                }));
+              }} />}
             </div>
           )}
         </TabsContent>
@@ -925,5 +934,71 @@ export default function Peticionamento() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// ==================== COMPONENTE: REFINAMENTO ITERATIVO ====================
+function RefinamentoPanel({ peticaoId, onRefined }: { peticaoId: number; onRefined: (data: any) => void }) {
+  const [instrucoes, setInstrucoes] = useState("");
+  const [historico, setHistorico] = useState<Array<{ instrucoes: string; data: string }>>([]);
+
+  const refinar = trpc.agente.refinarPeticao.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Petição refinada! (${data.totalRefinamentos}º refinamento)`);
+      setHistorico(prev => [...prev, { instrucoes, data: new Date().toISOString() }]);
+      setInstrucoes("");
+      onRefined(data);
+    },
+    onError: (e) => toast.error(`Erro ao refinar: ${e.message}`),
+  });
+
+  return (
+    <Card className="border-amber-200 bg-amber-50/30 dark:bg-amber-950/10">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200 text-lg">
+          <Edit className="h-5 w-5" />
+          Refinamento Iterativo
+        </CardTitle>
+        <CardDescription>
+          Instrua a IA sobre o que melhorar na petição. O processo é iterativo: gere → instrua → refine → repita até ficar perfeito.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {historico.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground">Histórico de refinamentos:</p>
+            {historico.map((h, i) => (
+              <div key={i} className="text-xs border rounded p-2 bg-background">
+                <span className="font-medium">#{i + 1}</span> — {h.instrucoes.substring(0, 100)}{h.instrucoes.length > 100 ? '...' : ''}
+                <span className="text-muted-foreground ml-2">{new Date(h.data).toLocaleTimeString('pt-BR')}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <Textarea
+          placeholder="Ex: Reforce a fundamentação sobre abusividade das consignações, adicione jurisprudência do STJ sobre margem consignável, melhore a conclusão pedindo tutela de urgência..."
+          value={instrucoes}
+          onChange={(e) => setInstrucoes(e.target.value)}
+          rows={4}
+          className="resize-none"
+        />
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            {historico.length > 0 ? `${historico.length} refinamento(s) realizado(s)` : 'Nenhum refinamento ainda'}
+          </p>
+          <Button
+            onClick={() => refinar.mutate({ peticaoId, instrucoes })}
+            disabled={refinar.isPending || instrucoes.length < 5}
+            className="bg-amber-600 hover:bg-amber-700 text-white"
+          >
+            {refinar.isPending ? (
+              <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Refinando...</>
+            ) : (
+              <><RefreshCw className="h-4 w-4 mr-2" /> Refinar Petição</>
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -1,0 +1,55 @@
+{
+  "query": "SELECT 'Conhecimentos' as tabela, categoria, COUNT(*) as total FROM conhecimentos GROUP BY categoria\nUNION ALL\nSELECT 'Config IA' as tabela, categoria, COUNT(*) as total FROM agente_ia_config WHERE ativo = 1 GROUP BY categoria\nORDER BY tabela, total DESC",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT 'Conhecimentos' as tabela, categoria, COUNT(*) as total FROM conhecimentos GROUP BY categoria\nUNION ALL\nSELECT 'Config IA' as tabela, categoria, COUNT(*) as total FROM agente_ia_config WHERE ativo = 1 GROUP BY categoria\nORDER BY tabela, total DESC",
+  "rows": [
+    {
+      "tabela": "Config IA",
+      "categoria": "conhecimento",
+      "total": "4"
+    },
+    {
+      "tabela": "Config IA",
+      "categoria": "estilo",
+      "total": "3"
+    },
+    {
+      "tabela": "Config IA",
+      "categoria": "agente",
+      "total": "2"
+    },
+    {
+      "tabela": "Config IA",
+      "categoria": "perfil",
+      "total": "1"
+    },
+    {
+      "tabela": "Conhecimentos",
+      "categoria": "Tese",
+      "total": "26"
+    },
+    {
+      "tabela": "Conhecimentos",
+      "categoria": "Jurisprudencia",
+      "total": "23"
+    },
+    {
+      "tabela": "Conhecimentos",
+      "categoria": "Legislacao",
+      "total": "22"
+    },
+    {
+      "tabela": "Conhecimentos",
+      "categoria": "Modelo",
+      "total": "14"
+    },
+    {
+      "tabela": "Conhecimentos",
+      "categoria": "Estrategia",
+      "total": "11"
+    }
+  ],
+  "messages": [],
+  "stdout": "tabela\tcategoria\ttotal\nConfig IA\tconhecimento\t4\nConfig IA\testilo\t3\nConfig IA\tagente\t2\nConfig IA\tperfil\t1\nConhecimentos\tTese\t26\nConhecimentos\tJurisprudencia\t23\nConhecimentos\tLegislacao\t22\nConhecimentos\tModelo\t14\nConhecimentos\tEstrategia\t11\n",
+  "stderr": "",
+  "execution_time_ms": 62
+}

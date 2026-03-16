@@ -620,3 +620,47 @@ export const auditLog = mysqlTable("audit_log", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type AuditLogEntry = typeof auditLog.$inferSelect;
+
+
+// ==================== PUBLICAÇÕES / INTIMAÇÕES (DJE, DATAJUD, JUSBRASIL, ESCAVADOR) ====================
+export const publicacoes = mysqlTable("publicacoes", {
+  id: int("id").autoincrement().primaryKey(),
+  processoId: int("processoIdPub"),
+  clienteId: int("clienteIdPub"),
+  numeroCnj: varchar("numeroCnjPub", { length: 30 }),
+  fonte: varchar("fonte", { length: 50 }).notNull(), // 'datajud', 'jusbrasil', 'escavador', 'dje', 'manual'
+  tipoPublicacao: varchar("tipoPublicacao", { length: 100 }), // 'intimação', 'despacho', 'sentença', 'acórdão'
+  dataPublicacao: timestamp("dataPublicacao").notNull(),
+  dataDisponibilizacao: timestamp("dataDisponibilizacao"),
+  conteudo: text("conteudoPub"),
+  resumo: text("resumoPub"),
+  diarioOficial: varchar("diarioOficial", { length: 255 }),
+  caderno: varchar("caderno", { length: 100 }),
+  pagina: varchar("pagina", { length: 20 }),
+  oabEncontrada: varchar("oabEncontrada", { length: 20 }),
+  prazoGerado: int("prazoGerado").default(0),
+  prazoId: int("prazoIdPub"),
+  tratada: int("tratada").default(0).notNull(),
+  tratadaPor: varchar("tratadaPor", { length: 255 }),
+  tratadaEm: timestamp("tratadaEm"),
+  urgencia: int("urgencia").default(0).notNull(), // 0=normal, 1=urgente, 2=crítico
+  observacoes: text("observacoesPub"),
+  jsonOriginal: text("jsonOriginalPub"),
+  createdAt: timestamp("createdAtPub").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAtPub").defaultNow().onUpdateNow().notNull(),
+});
+export type Publicacao = typeof publicacoes.$inferSelect;
+export type InsertPublicacao = typeof publicacoes.$inferInsert;
+
+// ==================== CONFIGURAÇÃO DE MONITORAMENTO ====================
+export const monitoramentoConfig = mysqlTable("monitoramento_config", {
+  id: int("id").autoincrement().primaryKey(),
+  tipo: varchar("tipoMon", { length: 50 }).notNull(), // 'oab', 'cnj', 'nome_parte'
+  valor: varchar("valorMon", { length: 255 }).notNull(), // Ex: '40559/GO'
+  descricao: varchar("descricaoMon", { length: 500 }),
+  ativo: int("ativoMon").default(1).notNull(),
+  ultimaConsulta: timestamp("ultimaConsulta"),
+  totalPublicacoes: int("totalPublicacoesMon").default(0),
+  createdAt: timestamp("createdAtMon").defaultNow().notNull(),
+});
+export type MonitoramentoConfig = typeof monitoramentoConfig.$inferSelect;
