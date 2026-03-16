@@ -38,7 +38,7 @@ function ProcessoUpload() {
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
 
-  const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16 MB
+  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
   const handleFileSelect = useCallback((selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
@@ -50,7 +50,7 @@ function ProcessoUpload() {
     const oversized = pdfFiles.filter(f => f.size > MAX_FILE_SIZE);
     const valid = pdfFiles.filter(f => f.size <= MAX_FILE_SIZE);
     if (oversized.length > 0) {
-      toast.error(`${oversized.length} arquivo(s) excedem o limite de 16 MB: ${oversized.map(f => f.name).join(', ')}`);
+      toast.error(`${oversized.length} arquivo(s) excedem o limite de 100 MB: ${oversized.map(f => f.name).join(', ')}`);
     }
     if (valid.length > 0) {
       setFiles(prev => [...prev, ...valid.map(f => ({ file: f, status: "pending" as const }))]);
@@ -73,7 +73,7 @@ function ProcessoUpload() {
 
       try {
         if (fileItem.file.size > MAX_FILE_SIZE) {
-          throw new Error(`Arquivo ${fileItem.file.name} excede o limite de 16 MB`);
+          throw new Error(`Arquivo ${fileItem.file.name} excede o limite de 100 MB`);
         }
         const buffer = await fileItem.file.arrayBuffer();
         const base64 = btoa(
@@ -92,8 +92,8 @@ function ProcessoUpload() {
         toast.success(`${fileItem.file.name} processado com sucesso`);
       } catch (error: any) {
         let friendlyError = error.message || "Erro desconhecido";
-        if (friendlyError.includes("grande demais") || friendlyError.includes("16 MB") || friendlyError.includes("413")) {
-          friendlyError = "O arquivo é grande demais. O limite máximo é de 16 MB por arquivo.";
+        if (friendlyError.includes("grande demais") || friendlyError.includes("100 MB") || friendlyError.includes("413")) {
+          friendlyError = "O arquivo é grande demais. O limite máximo é de 100 MB por arquivo.";
         } else if (friendlyError.includes("Data too long")) {
           friendlyError = "Dados extraídos excedem limite do campo. Tente novamente.";
         } else if (friendlyError.includes("Duplicate entry")) {
@@ -291,7 +291,7 @@ function ContrachequeUpload() {
   const utils = trpc.useUtils();
   const [, setLocation] = useLocation();
 
-  const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16 MB
+  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
   const handleFileSelect = useCallback((selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
@@ -303,7 +303,7 @@ function ContrachequeUpload() {
     const oversized = pdfFiles.filter(f => f.size > MAX_FILE_SIZE);
     const valid = pdfFiles.filter(f => f.size <= MAX_FILE_SIZE);
     if (oversized.length > 0) {
-      toast.error(`${oversized.length} arquivo(s) excedem o limite de 16 MB: ${oversized.map(f => f.name).join(', ')}`);
+      toast.error(`${oversized.length} arquivo(s) excedem o limite de 100 MB: ${oversized.map(f => f.name).join(', ')}`);
     }
     if (valid.length > 0) {
       setFiles(prev => [...prev, ...valid.map(f => ({ file: f, status: "pending" as const }))]);
@@ -326,7 +326,7 @@ function ContrachequeUpload() {
 
       try {
         if (fileItem.file.size > MAX_FILE_SIZE) {
-          throw new Error(`Arquivo ${fileItem.file.name} excede o limite de 16 MB`);
+          throw new Error(`Arquivo ${fileItem.file.name} excede o limite de 100 MB`);
         }
         const buffer = await fileItem.file.arrayBuffer();
         const base64 = btoa(
@@ -345,8 +345,8 @@ function ContrachequeUpload() {
         toast.success(`Contracheque de ${result.clienteNome} processado com sucesso`);
       } catch (error: any) {
         let friendlyError = error.message || "Erro desconhecido";
-        if (friendlyError.includes("grande demais") || friendlyError.includes("16 MB") || friendlyError.includes("413")) {
-          friendlyError = "O arquivo é grande demais. O limite máximo é de 16 MB por arquivo.";
+        if (friendlyError.includes("grande demais") || friendlyError.includes("100 MB") || friendlyError.includes("413")) {
+          friendlyError = "O arquivo é grande demais. O limite máximo é de 100 MB por arquivo.";
         } else if (friendlyError.includes("identificar o CPF")) {
           friendlyError = "Não foi possível identificar o CPF do servidor no contracheque.";
         } else if (friendlyError.includes("Data too long")) {
@@ -666,7 +666,7 @@ function ImportacaoLote() {
     }
   }, [statusLote?.master?.status]);
 
-  const MAX_FILE_SIZE = 16 * 1024 * 1024; // 16 MB
+  const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
   const handleFileSelect = useCallback((selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
@@ -678,7 +678,7 @@ function ImportacaoLote() {
     const oversized = pdfFiles.filter(f => f.size > MAX_FILE_SIZE);
     const valid = pdfFiles.filter(f => f.size <= MAX_FILE_SIZE);
     if (oversized.length > 0) {
-      toast.error(`${oversized.length} arquivo(s) excedem o limite de 16 MB e foram ignorados: ${oversized.map(f => f.name).join(', ')}`);
+      toast.error(`${oversized.length} arquivo(s) excedem o limite de 100 MB e foram ignorados: ${oversized.map(f => f.name).join(', ')}`);
     }
     if (valid.length > 0) {
       const newFiles: LoteFileItem[] = valid.map(f => ({
@@ -724,8 +724,8 @@ function ImportacaoLote() {
         const item = pendingFiles[i];
         // Validar tamanho antes de enviar
         if (item.file.size > MAX_FILE_SIZE) {
-          setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'error' as const, erro: `Arquivo excede o limite de 16 MB (${(item.file.size / (1024*1024)).toFixed(1)} MB)` } : f));
-          toast.error(`${item.file.name} excede o limite de 16 MB e foi ignorado`);
+          setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'error' as const, erro: `Arquivo excede o limite de 100 MB (${(item.file.size / (1024*1024)).toFixed(1)} MB)` } : f));
+          toast.error(`${item.file.name} excede o limite de 100 MB e foi ignorado`);
           continue;
         }
         setFiles(prev => prev.map(f => f.file === item.file ? { ...f, status: 'uploading' } : f));
