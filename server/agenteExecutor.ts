@@ -243,6 +243,37 @@ export const AGENT_TOOLS: Tool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "editar_peticao",
+      description: "Edita/refina uma petição já gerada. Pode alterar o texto, título ou regenerar o DOCX. Use quando o usuário pedir para corrigir, melhorar, alterar ou refinar uma petição existente.",
+      parameters: {
+        type: "object",
+        properties: {
+          peticaoId: { type: "number", description: "ID da petição a editar" },
+          novoTexto: { type: "string", description: "Novo texto completo da petição (se for reescrita total)" },
+          instrucoes: { type: "string", description: "Instruções de edição (ex: 'adicionar tese de prescrição', 'remover parágrafo sobre CDC', 'melhorar fundamentação')" },
+        },
+        required: ["peticaoId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "listar_peticoes",
+      description: "Lista todas as petições geradas no sistema, com filtros opcionais por cliente ou processo.",
+      parameters: {
+        type: "object",
+        properties: {
+          clienteId: { type: "number", description: "Filtrar por cliente" },
+          processoId: { type: "number", description: "Filtrar por processo" },
+        },
+        required: [],
+      },
+    },
+  },
 ];
 
 // ==================== TOOL EXECUTORS ====================
@@ -262,6 +293,8 @@ export async function executarTool(toolName: string, args: any): Promise<string>
       case "atualizar_dados_cliente": return await toolAtualizarCliente(args);
       case "atualizar_dados_processo": return await toolAtualizarProcesso(args);
       case "consultar_estatisticas": return await toolConsultarEstatisticas(args);
+      case "editar_peticao": return await toolEditarPeticao(args);
+      case "listar_peticoes": return await toolListarPeticoes(args);
       default: return JSON.stringify({ erro: `Tool desconhecida: ${toolName}` });
     }
   } catch (error: any) {
@@ -1054,6 +1087,118 @@ async function toolConsultarEstatisticas(_args: any): Promise<string> {
 }
 
 
+// --- EDITAR PETIÇÃO ---
+async function toolEditarPeticao(args: any): Promise<string> {
+  const db = await getDb();
+  if (!db) return JSON.stringify({ erro: "Banco de dados indisponível" });
+
+  const [pet] = await db.select().from(peticoesGeradas).where(eq(peticoesGeradas.id, args.peticaoId)).limit(1);
+  if (!pet) return JSON.stringify({ erro: `Petição ID ${args.peticaoId} não encontrada` });
+
+  let novoTexto = args.novoTexto;
+
+  // Se tem instruções de edição mas não texto novo, usar LLM para editar
+  if (!novoTexto && args.instrucoes) {
+    const editResult = await invokeLLM({
+      messages: [
+        { role: 'system', content: `Você é o PETICIONADOR EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
+Edite a petição abaixo conforme as instruções do advogado. Mantenha o mesmo estilo, formatação e qualidade.
+Retorne APENAS o texto completo da petição editada, sem comentários.` },
+        { role: 'user', content: `PETIÇÃO ATUAL:\n${pet.conteudoTexto}\n\nINSTRUÇÕES DE EDIÇÃO: ${args.instrucoes}` }
+      ]
+    });
+    const raw = editResult.choices?.[0]?.message?.content;
+    novoTexto = typeof raw === 'string' ? raw : pet.conteudoTexto;
+  }
+
+  if (!novoTexto) return JSON.stringify({ erro: "Nenhum texto novo ou instruções fornecidas" });
+
+  // Salvar no S3
+  const timestamp = Date.now();
+  const nomeArquivo = `peticoes/editada_${pet.id}_${timestamp}.md`;
+  const { url } = await storagePut(nomeArquivo, novoTexto, 'text/markdown');
+
+  // Gerar novo DOCX
+  let docxUrl = '';
+  try {
+    const docxBuffer = await gerarPeticaoDocx(novoTexto, pet.titulo || 'Petição Editada');
+    const docxNome = `peticoes/editada_${pet.id}_${timestamp}.docx`;
+    const docxResult = await storagePut(docxNome, docxBuffer, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    docxUrl = docxResult.url;
+  } catch (e: any) {
+    console.error('Erro ao gerar DOCX editado:', e);
+  }
+
+  // Atualizar no banco
+  await db.update(peticoesGeradas).set({
+    conteudoTexto: novoTexto,
+    conteudoJson: JSON.stringify({ texto: novoTexto, docxUrl }),
+    storageUrl: url,
+  }).where(eq(peticoesGeradas.id, args.peticaoId));
+
+  return JSON.stringify({
+    sucesso: true,
+    peticaoId: args.peticaoId,
+    titulo: pet.titulo,
+    markdownUrl: url,
+    docxUrl,
+    tamanho: novoTexto.length,
+    resumo: novoTexto.substring(0, 500) + '...',
+  });
+}
+
+// --- LISTAR PETIÇÕES ---
+async function toolListarPeticoes(args: any): Promise<string> {
+  const db = await getDb();
+  if (!db) return JSON.stringify({ erro: "Banco de dados indisponível" });
+
+  let rows: any[];
+  if (args.clienteId) {
+    rows = await db.select({
+      id: peticoesGeradas.id,
+      tipo: peticoesGeradas.tipo,
+      titulo: peticoesGeradas.titulo,
+      status: peticoesGeradas.status,
+      clienteId: peticoesGeradas.clienteId,
+      processoId: peticoesGeradas.processoId,
+      createdAt: peticoesGeradas.createdAt,
+    }).from(peticoesGeradas).where(eq(peticoesGeradas.clienteId, args.clienteId)).orderBy(desc(peticoesGeradas.createdAt)).limit(50);
+  } else if (args.processoId) {
+    rows = await db.select({
+      id: peticoesGeradas.id,
+      tipo: peticoesGeradas.tipo,
+      titulo: peticoesGeradas.titulo,
+      status: peticoesGeradas.status,
+      clienteId: peticoesGeradas.clienteId,
+      processoId: peticoesGeradas.processoId,
+      createdAt: peticoesGeradas.createdAt,
+    }).from(peticoesGeradas).where(eq(peticoesGeradas.processoId, args.processoId)).orderBy(desc(peticoesGeradas.createdAt)).limit(50);
+  } else {
+    rows = await db.select({
+      id: peticoesGeradas.id,
+      tipo: peticoesGeradas.tipo,
+      titulo: peticoesGeradas.titulo,
+      status: peticoesGeradas.status,
+      clienteId: peticoesGeradas.clienteId,
+      processoId: peticoesGeradas.processoId,
+      createdAt: peticoesGeradas.createdAt,
+    }).from(peticoesGeradas).orderBy(desc(peticoesGeradas.createdAt)).limit(50);
+  }
+
+  return JSON.stringify({
+    total: rows.length,
+    peticoes: rows.map(r => ({
+      id: r.id,
+      tipo: r.tipo,
+      titulo: r.titulo,
+      status: r.status,
+      clienteId: r.clienteId,
+      processoId: r.processoId,
+      criadoEm: r.createdAt,
+    })),
+  });
+}
+
 // ==================== AGENT EXECUTION LOOP ====================
 
 export interface AgentExecutionResult {
@@ -1082,51 +1227,42 @@ export async function executarAgenteCompleto(params: {
   const acoesExecutadas: AgentExecutionResult['acoesExecutadas'] = [];
   const MAX_ITERATIONS = 8; // Máximo de ciclos de tool calling
 
-  // System prompt com instruções para usar tools
-  const modoInstrucao: Record<string, string> = {
-    chat: 'Responda como consultor jurídico expert. Quando precisar de dados específicos, USE AS TOOLS disponíveis para buscar informações atualizadas.',
-    analise: 'Realize uma ANÁLISE TÉCNICA APROFUNDADA. Use as tools para buscar dados do processo, completar movimentações e gerar análise técnica.',
-    peticao: 'Gere uma PETIÇÃO COMPLETA. Use a tool gerar_peticao para criar a petição com timbrado do escritório.',
-    estrategia: 'Elabore uma ESTRATÉGIA PROCESSUAL COMPLETA. Use as tools para buscar dados e analisar o processo.',
-    calculo: 'Realize CÁLCULOS JURÍDICOS precisos. Use as tools para buscar dados financeiros e do processo.',
-  };
-
+  // System prompt PROATIVO — sempre consulta o banco antes de responder
   const systemPrompt = `Você é o Agente Jurídico Expert EXECUTOR do escritório Melo & Preda Advogados.
+Advogado: PAULO DA SILVA MELO FILHO — OAB/GO 40.559
 
-VOCÊ TEM PODER DE EXECUTAR AÇÕES REAIS NO SISTEMA. Use as tools disponíveis para:
-- Buscar dados de clientes e processos
-- Diagnosticar problemas no banco de dados
-- Fazer merge de clientes duplicados
-- Remover registros incorretos
-- Completar movimentações via DataJud
-- Analisar processos tecnicamente
-- Gerar petições completas com timbrado
-- Atualizar dados de clientes e processos
+## REGRA ABSOLUTA — NUNCA QUEBRE ESTAS REGRAS:
+1. NUNCA peça documentos, PDFs ou arquivos ao usuário — TODOS os dados já estão no banco de dados
+2. NUNCA diga "preciso de mais informações" ou "envie o documento" — USE AS TOOLS para buscar
+3. SEMPRE execute tools ANTES de responder — busque dados reais do banco
+4. NUNCA invente dados — use APENAS o que as tools retornarem
+5. Se o usuário mencionar um cliente ou processo, USE buscar_cliente ou buscar_processo IMEDIATAMENTE
+6. Se o usuário pedir petição, USE gerar_peticao IMEDIATAMENTE — os dados já estão no banco
 
-MODO ATUAL: ${(params.modo || 'chat').toUpperCase()}
-${modoInstrucao[params.modo || 'chat']}
+## SEU COMPORTAMENTO OBRIGATÓRIO:
+- Ao receber QUALQUER mensagem, sua PRIMEIRA ação deve ser usar uma tool para buscar dados relevantes
+- Se há um cliente selecionado (clienteId), use buscar_cliente para ter dados completos
+- Se há um processo selecionado (processoId), use buscar_processo para ter dados completos
+- Após buscar, RESPONDA com base nos dados reais encontrados
+- Se o usuário pedir análise → buscar_processo + analisar_processo_tecnico
+- Se o usuário pedir petição → gerar_peticao (a tool já puxa todos os dados necessários)
+- Se o usuário pedir correção → diagnosticar_banco + ação corretiva
+- Se o usuário pedir estatísticas → consultar_estatisticas
+- Se o usuário pedir para completar movimentações → completar_movimentacoes
+- Se o usuário pedir para atualizar dados → atualizar_dados_cliente ou atualizar_dados_processo
+- Se o usuário pedir para remover algo → remover_registro
+- Se o usuário pedir merge de duplicados → merge_clientes
 
-QUANDO USAR TOOLS:
-- Se o usuário pedir para ANALISAR algo → use buscar_processo + analisar_processo_tecnico
-- Se o usuário pedir para CORRIGIR duplicados → use diagnosticar_banco + merge_clientes
-- Se o usuário pedir para COMPLETAR movimentações → use completar_movimentacoes
-- Se o usuário pedir para GERAR PETIÇÃO → use gerar_peticao
-- Se o usuário pedir ESTATÍSTICAS → use consultar_estatisticas
-- Se o usuário pedir para BUSCAR cliente/processo → use buscar_cliente/buscar_processo
-- Se o usuário pedir para ATUALIZAR dados → use atualizar_dados_cliente/atualizar_dados_processo
-- Se o usuário pedir para REMOVER algo → use remover_registro
-- Se o usuário pedir DIAGNÓSTICO → use diagnosticar_banco
+## CONTEXTO ATUAL:
+${params.clienteId ? `CLIENTE SELECIONADO: ID ${params.clienteId} — Busque com buscar_cliente para dados completos` : 'Nenhum cliente selecionado'}
+${params.processoId ? `PROCESSO SELECIONADO: ID ${params.processoId} — Busque com buscar_processo para dados completos` : 'Nenhum processo selecionado'}
 
-IMPORTANTE:
-1. SEMPRE execute as tools necessárias antes de responder
-2. Após executar tools, RESUMA o que foi feito ao usuário
-3. Use dados REAIS do banco — nunca invente
-4. Fundamente respostas com legislação e jurisprudência
-5. Responda em português brasileiro
-
+## DADOS DO ESCRITÓRIO (já carregados do banco):
 ${params.panoramaGlobal}
 
-${params.baseConhecimento}${params.configExpertise}${params.contextoCliente}${params.contextoProcesso}`;
+${params.baseConhecimento}${params.configExpertise}${params.contextoCliente}${params.contextoProcesso}
+
+Responda SEMPRE em português brasileiro. Seja direto, técnico e assertivo.`;
 
   // Build messages
   const messages: Message[] = [

@@ -569,3 +569,11 @@
 - [x] ESTUDO PROFUNDO: Corrigir nomes de partes, dados incompletos, duplicados em cada processo
 - [x] ESTUDO PROFUNDO: Gerar análise profunda e salvar no banco de conhecimentos para cada processo
 - [ ] ESTUDO PROFUNDO: Adicionar botão no frontend para disparar o estudo profundo em lote
+- [ ] BUG CRÍTICO: Agente IA não consulta banco de dados automaticamente - pede documentos que já existem
+- [ ] BUG CRÍTICO: Peticionamento não puxa dados do banco - pede documentos ao invés de usar dados existentes
+- [ ] BUG CRÍTICO: Não há edição de petição após geração
+- [ ] BUG CRÍTICO: Fluxo lento e sem sentido do upload até a petição
+- [ ] FIX: Agente IA deve SEMPRE consultar banco primeiro antes de responder
+- [ ] FIX: Peticionamento deve puxar TODOS os dados do processo/cliente do banco automaticamente
+- [ ] FIX: Adicionar edição/refinamento de petição após geração
+- [ ] FIX: Fluxo direto: selecionar processo → gerar petição → editar → exportar

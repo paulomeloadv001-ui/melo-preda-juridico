@@ -243,12 +243,15 @@ export default function Peticionamento() {
 
   const handleDownloadDocx = (pet: any) => {
     // Usar rota proxy do servidor para evitar problemas de CORS
-    if (pet.id) {
+    if (pet.docxUrl || pet.id) {
       const proxyUrl = `/api/v1/download-docx/${pet.id}`;
       const filename = `${pet.titulo || 'peticao'}.docx`.replace(/[^a-zA-Z0-9À-ÿ\s._-]/g, '_');
       forceDownload(proxyUrl, filename);
-    } else {
+    } else if (pet.id) {
+      // Regenerar DOCX se não existe ainda
       regenerarDocx.mutate({ id: pet.id });
+    } else {
+      toast.error('Petição sem ID — salve primeiro antes de baixar.');
     }
   };
 
