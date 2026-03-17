@@ -577,3 +577,8 @@
 - [ ] FIX: Peticionamento deve puxar TODOS os dados do processo/cliente do banco automaticamente
 - [ ] FIX: Adicionar edição/refinamento de petição após geração
 - [ ] FIX: Fluxo direto: selecionar processo → gerar petição → editar → exportar
+- [ ] EDINALVA: Upload dos 2 PDFs (principal + cumprimento definitivo) via plataforma
+- [ ] EDINALVA: Análise detalhada com cruzamento de dados entre os 2 processos
+- [ ] EDINALVA: Identificar pagamentos, alvarás e valores pendentes de honorários
+- [ ] EDINALVA: Gerar recurso contra extinção da execução
+- [ ] PLATAFORMA: Corrigir problemas que impedem o fluxo funcionar corretamente
