@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE agente_ia_config MODIFY COLUMN valor LONGTEXT NOT NULL",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute ALTER TABLE agente_ia_config MODIFY COLUMN valor LONGTEXT NOT NULL",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 160
+}

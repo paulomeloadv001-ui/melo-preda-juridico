@@ -1,0 +1,280 @@
+{
+  "query": "\nSELECT pp.id, pp.processoId, pp.nome, pp.tipo, pp.cpfCnpj,\n       p.numeroCnj, c.nomeCompleto as clienteNome\nFROM partes_processuais pp\nLEFT JOIN processos p ON pp.processoId = p.id\nLEFT JOIN clientes c ON p.clienteId = c.id\nORDER BY pp.processoId, pp.tipo\nLIMIT 30\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute \nSELECT pp.id, pp.processoId, pp.nome, pp.tipo, pp.cpfCnpj,\n       p.numeroCnj, c.nomeCompleto as clienteNome\nFROM partes_processuais pp\nLEFT JOIN processos p ON pp.processoId = p.id\nLEFT JOIN clientes c ON p.clienteId = c.id\nORDER BY pp.processoId, pp.tipo\nLIMIT 30\n",
+  "rows": [
+    {
+      "id": "1",
+      "processoId": "1",
+      "nome": "BANCO BRADESCO S.A.",
+      "tipo": "Reu",
+      "cpfCnpj": "60.746.948/0001-12",
+      "numeroCnj": "5409032-24.2025.8.09.0179",
+      "clienteNome": "VANDERSON OLIVEIRA DINIZ LIMA"
+    },
+    {
+      "id": "4",
+      "processoId": "1",
+      "nome": "BRB BANCO DE BRASILIA SA",
+      "tipo": "Reu",
+      "cpfCnpj": "00.000.208/0001-00",
+      "numeroCnj": "5409032-24.2025.8.09.0179",
+      "clienteNome": "VANDERSON OLIVEIRA DINIZ LIMA"
+    },
+    {
+      "id": "2",
+      "processoId": "1",
+      "nome": "BANCO PAN S.A.",
+      "tipo": "Reu",
+      "cpfCnpj": "59.285.411/0001-13",
+      "numeroCnj": "5409032-24.2025.8.09.0179",
+      "clienteNome": "VANDERSON OLIVEIRA DINIZ LIMA"
+    },
+    {
+      "id": "3",
+      "processoId": "1",
+      "nome": "ITAU UNIBANCO S.A.",
+      "tipo": "Reu",
+      "cpfCnpj": "60.701.190/0001-04",
+      "numeroCnj": "5409032-24.2025.8.09.0179",
+      "clienteNome": "VANDERSON OLIVEIRA DINIZ LIMA"
+    },
+    {
+      "id": "5",
+      "processoId": "2",
+      "nome": "ARIEL ANSELMO DE OLIVEIRA",
+      "tipo": "Reu",
+      "cpfCnpj": "39154017149",
+      "numeroCnj": "5890301-69.2024.8.09.0174",
+      "clienteNome": "ARIEL ANSELMO DE OLIVEIRA"
+    },
+    {
+      "id": "6",
+      "processoId": "3",
+      "nome": "BANCO BRADESCO S.A.",
+      "tipo": "Reu",
+      "cpfCnpj": "60.746.948/0001-12",
+      "numeroCnj": "5806457-90.2025.8.09.0174",
+      "clienteNome": "ARIEL ANSELMO DE OLIVEIRA"
+    },
+    {
+      "id": "7",
+      "processoId": "4",
+      "nome": "COOPERATIVA DE CRÉDITO DE LIVRE ADMISSÃO CENTRO BRASILEIRA",
+      "tipo": "Reu",
+      "cpfCnpj": "37.395.399/0001-67",
+      "numeroCnj": "5660467-45.2025.8.09.0117",
+      "clienteNome": "O.J.S COMÉRCIO E SERVIÇOS LTDA"
+    },
+    {
+      "id": "8",
+      "processoId": "5",
+      "nome": "BANCO DO BRADESCO S/A",
+      "tipo": "Reu",
+      "cpfCnpj": "NULL",
+      "numeroCnj": "5726214-43.2025.8.09.0051",
+      "clienteNome": "ANA TEONILA FAGUNDES DA CUNHA"
+    },
+    {
+      "id": "9",
+      "processoId": "6",
+      "nome": "MJ INFORMATICA LTDA (TOTUN)",
+      "tipo": "Reu",
+      "cpfCnpj": "08.852.937/0001-05",
+      "numeroCnj": "5111379-59.2024.8.09.0011",
+      "clienteNome": "MAEVE PRODUTOS HOSPITALARES LTDA"
+    },
+    {
+      "id": "13",
+      "processoId": "7",
+      "nome": "CAIXA INTERMEDIUM",
+      "tipo": "Reu",
+      "cpfCnpj": "NULL",
+      "numeroCnj": "5180612-25.2024.8.09.0018",
+      "clienteNome": "STELA CARDOSO DA SILVA SANTOS"
+    },
+    {
+      "id": "12",
+      "processoId": "7",
+      "nome": "BANCO SAFRA S/A",
+      "tipo": "Reu",
+      "cpfCnpj": "58160789000128",
+      "numeroCnj": "5180612-25.2024.8.09.0018",
+      "clienteNome": "STELA CARDOSO DA SILVA SANTOS"
+    },
+    {
+      "id": "11",
+      "processoId": "7",
+      "nome": "BANCO INDUSTRIAL DO BRASIL",
+      "tipo": "Reu",
+      "cpfCnpj": "31895683000116",
+      "numeroCnj": "5180612-25.2024.8.09.0018",
+      "clienteNome": "STELA CARDOSO DA SILVA SANTOS"
+    },
+    {
+      "id": "10",
+      "processoId": "7",
+      "nome": "BANCO SANTANDER (BRASIL) S/A",
+      "tipo": "Reu",
+      "cpfCnpj": "90400888000142",
+      "numeroCnj": "5180612-25.2024.8.09.0018",
+      "clienteNome": "STELA CARDOSO DA SILVA SANTOS"
+    },
+    {
+      "id": "14",
+      "processoId": "7",
+      "nome": "BANCO ITAÚ",
+      "tipo": "Reu",
+      "cpfCnpj": "NULL",
+      "numeroCnj": "5180612-25.2024.8.09.0018",
+      "clienteNome": "STELA CARDOSO DA SILVA SANTOS"
+    },
+    {
+      "id": "15",
+      "processoId": "8",
+      "nome": "ANA TEONILA FAGUNDES DA CUNHA",
+      "tipo": "Reu",
+      "cpfCnpj": "03237672149",
+      "numeroCnj": "5017749-86.2025.8.09.0051",
+      "clienteNome": "BANCO BRADESCO S/A"
+    },
+    {
+      "id": "16",
+      "processoId": "9",
+      "nome": "BANCO BRADESCO S.A.",
+      "tipo": "Reu",
+      "cpfCnpj": "60746948000112",
+      "numeroCnj": "5363744-49.2025.8.09.0051",
+      "clienteNome": "IRENE MARIA DOS SANTOS"
+    },
+    {
+      "id": "17",
+      "processoId": "9",
+      "nome": "BANCO SANTANDER (BRASIL) S.A.",
+      "tipo": "Reu",
+      "cpfCnpj": "90400888000142",
+      "numeroCnj": "5363744-49.2025.8.09.0051",
+      "clienteNome": "IRENE MARIA DOS SANTOS"
+    },
+    {
+      "id": "19",
+      "processoId": "10",
+      "nome": "CAIXA ECONOMICA FEDERAL",
+      "tipo": "Reu",
+      "cpfCnpj": "00360305000104",
+      "numeroCnj": "5347120-22.2025.8.09.0051",
+      "clienteNome": "NATALICIO LUIZ DA COSTA"
+    },
+    {
+      "id": "20",
+      "processoId": "10",
+      "nome": "BANCO SANTANDER (BRASIL) S.A.",
+      "tipo": "Reu",
+      "cpfCnpj": "90400888000142",
+      "numeroCnj": "5347120-22.2025.8.09.0051",
+      "clienteNome": "NATALICIO LUIZ DA COSTA"
+    },
+    {
+      "id": "18",
+      "processoId": "10",
+      "nome": "BANCO INTER S.A",
+      "tipo": "Reu",
+      "cpfCnpj": "00416968000101",
+      "numeroCnj": "5347120-22.2025.8.09.0051",
+      "clienteNome": "NATALICIO LUIZ DA COSTA"
+    },
+    {
+      "id": "60001",
+      "processoId": "30002",
+      "nome": "LEONARDO ROSA CORREIA",
+      "tipo": "Autor",
+      "cpfCnpj": "00581377184",
+      "numeroCnj": "5380169-54.2025.8.09.0051",
+      "clienteNome": "LEONARDO ROSA CORREIA"
+    },
+    {
+      "id": "60002",
+      "processoId": "30002",
+      "nome": "BANCO INTER S.A.",
+      "tipo": "Reu",
+      "cpfCnpj": "00416968000101",
+      "numeroCnj": "5380169-54.2025.8.09.0051",
+      "clienteNome": "LEONARDO ROSA CORREIA"
+    },
+    {
+      "id": "60003",
+      "processoId": "30002",
+      "nome": "BANCO PAN S.A.",
+      "tipo": "Reu",
+      "cpfCnpj": "59285411000113",
+      "numeroCnj": "5380169-54.2025.8.09.0051",
+      "clienteNome": "LEONARDO ROSA CORREIA"
+    },
+    {
+      "id": "60004",
+      "processoId": "30002",
+      "nome": "ITAÚ UNIBANCO S.A.",
+      "tipo": "Reu",
+      "cpfCnpj": "60701190000104",
+      "numeroCnj": "5380169-54.2025.8.09.0051",
+      "clienteNome": "LEONARDO ROSA CORREIA"
+    },
+    {
+      "id": "30006",
+      "processoId": "30003",
+      "nome": "BANCO ITAÚ S.A.",
+      "tipo": "Reu",
+      "cpfCnpj": "60.701.190/0001-04",
+      "numeroCnj": "5947078-21.2025.8.09.0051",
+      "clienteNome": "LEONARDO ROSA CORREIA"
+    },
+    {
+      "id": "30004",
+      "processoId": "30003",
+      "nome": "BANCO INTERMEDIUM S/A (BANCO INTER)",
+      "tipo": "Reu",
+      "cpfCnpj": "00.416.968/0001-01",
+      "numeroCnj": "5947078-21.2025.8.09.0051",
+      "clienteNome": "LEONARDO ROSA CORREIA"
+    },
+    {
+      "id": "30005",
+      "processoId": "30003",
+      "nome": "BANCO PAN S.A.",
+      "tipo": "Reu",
+      "cpfCnpj": "59.285.411/0001-13",
+      "numeroCnj": "5947078-21.2025.8.09.0051",
+      "clienteNome": "LEONARDO ROSA CORREIA"
+    },
+    {
+      "id": "90006",
+      "processoId": "120019",
+      "nome": "PAULO DA SILVA MELO FILHO (Advogado)",
+      "tipo": "Autor",
+      "cpfCnpj": "OAB/GO 40.559",
+      "numeroCnj": "5607856-45.2025.8.09.0011",
+      "clienteNome": "CARLOS ANDRADE DOS SANTOS"
+    },
+    {
+      "id": "90008",
+      "processoId": "120019",
+      "nome": "BANCO SANTANDER (BRASIL) S.A.",
+      "tipo": "Reu",
+      "cpfCnpj": "NULL",
+      "numeroCnj": "5607856-45.2025.8.09.0011",
+      "clienteNome": "CARLOS ANDRADE DOS SANTOS"
+    },
+    {
+      "id": "90007",
+      "processoId": "120019",
+      "nome": "BANCO SAFRA S.A.",
+      "tipo": "Reu",
+      "cpfCnpj": "NULL",
+      "numeroCnj": "5607856-45.2025.8.09.0011",
+      "clienteNome": "CARLOS ANDRADE DOS SANTOS"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tprocessoId\tnome\ttipo\tcpfCnpj\tnumeroCnj\tclienteNome\n1\t1\tBANCO BRADESCO S.A.\tReu\t60.746.948/0001-12\t5409032-24.2025.8.09.0179\tVANDERSON OLIVEIRA DINIZ LIMA\n4\t1\tBRB BANCO DE BRASILIA SA\tReu\t00.000.208/0001-00\t5409032-24.2025.8.09.0179\tVANDERSON OLIVEIRA DINIZ LIMA\n2\t1\tBANCO PAN S.A.\tReu\t59.285.411/0001-13\t5409032-24.2025.8.09.0179\tVANDERSON OLIVEIRA DINIZ LIMA\n3\t1\tITAU UNIBANCO S.A.\tReu\t60.701.190/0001-04\t5409032-24.2025.8.09.0179\tVANDERSON OLIVEIRA DINIZ LIMA\n5\t2\tARIEL ANSELMO DE OLIVEIRA\tReu\t39154017149\t5890301-69.2024.8.09.0174\tARIEL ANSELMO DE OLIVEIRA\n6\t3\tBANCO BRADESCO S.A.\tReu\t60.746.948/0001-12\t5806457-90.2025.8.09.0174\tARIEL ANSELMO DE OLIVEIRA\n7\t4\tCOOPERATIVA DE CRÉDITO DE LIVRE ADMISSÃO CENTRO BRASILEIRA\tReu\t37.395.399/0001-67\t5660467-45.2025.8.09.0117\tO.J.S COMÉRCIO E SERVIÇOS LTDA\n8\t5\tBANCO DO BRADESCO S/A\tReu\tNULL\t5726214-43.2025.8.09.0051\tANA TEONILA FAGUNDES DA CUNHA\n9\t6\tMJ INFORMATICA LTDA (TOTUN)\tReu\t08.852.937/0001-05\t5111379-59.2024.8.09.0011\tMAEVE PRODUTOS HOSPITALARES LTDA\n13\t7\tCAIXA INTERMEDIUM\tReu\tNULL\t5180612-25.2024.8.09.0018\tSTELA CARDOSO DA SILVA SANTOS\n12\t7\tBANCO SAFRA S/A\tReu\t58160789000128\t5180612-25.2024.8.09.0018\tSTELA CARDOSO DA SILVA SANTOS\n11\t7\tBANCO INDUSTRIAL DO BRASIL\tReu\t31895683000116\t5180612-25.2024.8.09.0018\tSTELA CARDOSO DA SILVA SANTOS\n10\t7\tBANCO SANTANDER (BRASIL) S/A\tReu\t90400888000142\t5180612-25.2024.8.09.0018\tSTELA CARDOSO DA SILVA SANTOS\n14\t7\tBANCO ITAÚ\tReu\tNULL\t5180612-25.2024.8.09.0018\tSTELA CARDOSO DA SILVA SANTOS\n15\t8\tANA TEONILA FAGUNDES DA CUNHA\tReu\t03237672149\t5017749-86.2025.8.09.0051\tBANCO BRADESCO S/A\n16\t9\tBANCO BRADESCO S.A.\tReu\t60746948000112\t5363744-49.2025.8.09.0051\tIRENE MARIA DOS SANTOS\n17\t9\tBANCO SANTANDER (BRASIL) S.A.\tReu\t90400888000142\t5363744-49.2025.8.09.0051\tIRENE MARIA DOS SANTOS\n19\t10\tCAIXA ECONOMICA FEDERAL\tReu\t00360305000104\t5347120-22.2025.8.09.0051\tNATALICIO LUIZ DA COSTA\n20\t10\tBANCO SANTANDER (BRASIL) S.A.\tReu\t90400888000142\t5347120-22.2025.8.09.0051\tNATALICIO LUIZ DA COSTA\n18\t10\tBANCO INTER S.A\tReu\t00416968000101\t5347120-22.2025.8.09.0051\tNATALICIO LUIZ DA COSTA\n60001\t30002\tLEONARDO ROSA CORREIA\tAutor\t00581377184\t5380169-54.2025.8.09.0051\tLEONARDO ROSA CORREIA\n60002\t30002\tBANCO INTER S.A.\tReu\t00416968000101\t5380169-54.2025.8.09.0051\tLEONARDO ROSA CORREIA\n60003\t30002\tBANCO PAN S.A.\tReu\t59285411000113\t5380169-54.2025.8.09.0051\tLEONARDO ROSA CORREIA\n60004\t30002\tITAÚ UNIBANCO S.A.\tReu\t60701190000104\t5380169-54.2025.8.09.0051\tLEONARDO ROSA CORREIA\n30006\t30003\tBANCO ITAÚ S.A.\tReu\t60.701.190/0001-04\t5947078-21.2025.8.09.0051\tLEONARDO ROSA CORREIA\n30004\t30003\tBANCO INTERMEDIUM S/A (BANCO INTER)\tReu\t00.416.968/0001-01\t5947078-21.2025.8.09.0051\tLEONARDO ROSA CORREIA\n30005\t30003\tBANCO PAN S.A.\tReu\t59.285.411/0001-13\t5947078-21.2025.8.09.0051\tLEONARDO ROSA CORREIA\n90006\t120019\tPAULO DA SILVA MELO FILHO (Advogado)\tAutor\tOAB/GO 40.559\t5607856-45.2025.8.09.0011\tCARLOS ANDRADE DOS SANTOS\n90008\t120019\tBANCO SANTANDER (BRASIL) S.A.\tReu\tNULL\t5607856-45.2025.8.09.0011\tCARLOS ANDRADE DOS SANTOS\n90007\t120019\tBANCO SAFRA S.A.\tReu\tNULL\t5607856-45.2025.8.09.0011\tCARLOS ANDRADE DOS SANTOS\n",
+  "stderr": "",
+  "execution_time_ms": 67
+}

@@ -1,0 +1,980 @@
+{
+  "query": "SELECT p.id, p.numeroCnj, p.tipoAcao, p.faseAtual, p.statusProcesso, c.nomeCompleto as clienteNome, c.cpfCnpj, LENGTH(p.textoExtraido) as tamanhoTexto FROM processos p LEFT JOIN clientes c ON p.clienteId = c.id ORDER BY p.id",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT p.id, p.numeroCnj, p.tipoAcao, p.faseAtual, p.statusProcesso, c.nomeCompleto as clienteNome, c.cpfCnpj, LENGTH(p.textoExtraido) as tamanhoTexto FROM processos p LEFT JOIN clientes c ON p.clienteId = c.id ORDER BY p.id",
+  "rows": [
+    {
+      "id": "1",
+      "numeroCnj": "5409032-24.2025.8.09.0179",
+      "tipoAcao": "AÇÃO DE OBRIGAÇÃO DE FAZER",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "VANDERSON OLIVEIRA DINIZ LIMA",
+      "cpfCnpj": "04056581177",
+      "tamanhoTexto": "41096"
+    },
+    {
+      "id": "2",
+      "numeroCnj": "5890301-69.2024.8.09.0174",
+      "tipoAcao": "EXECUÇÃO DE TÍTULO EXTRAJUDICIAL",
+      "faseAtual": "Recurso",
+      "statusProcesso": "Ativo",
+      "clienteNome": "ARIEL ANSELMO DE OLIVEIRA",
+      "cpfCnpj": "39154017149",
+      "tamanhoTexto": "51460"
+    },
+    {
+      "id": "3",
+      "numeroCnj": "5806457-90.2025.8.09.0174",
+      "tipoAcao": "CUMPRIMENTO PROVISÓRIO DE SENTENÇA",
+      "faseAtual": "Cumprimento Provisorio",
+      "statusProcesso": "Ativo",
+      "clienteNome": "ARIEL ANSELMO DE OLIVEIRA",
+      "cpfCnpj": "39154017149",
+      "tamanhoTexto": "51504"
+    },
+    {
+      "id": "4",
+      "numeroCnj": "5660467-45.2025.8.09.0117",
+      "tipoAcao": "AÇÃO CAUTELAR DE TUTELA DE URGÊNCIA ANTECEDENTE",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "O.J.S COMÉRCIO E SERVIÇOS LTDA",
+      "cpfCnpj": "37355845000100",
+      "tamanhoTexto": "51555"
+    },
+    {
+      "id": "5",
+      "numeroCnj": "5726214-43.2025.8.09.0051",
+      "tipoAcao": "Agravo de Instrumento",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "ANA TEONILA FAGUNDES DA CUNHA",
+      "cpfCnpj": "03237672149",
+      "tamanhoTexto": "41345"
+    },
+    {
+      "id": "6",
+      "numeroCnj": "5111379-59.2024.8.09.0011",
+      "tipoAcao": "AÇÃO DECLARATÓRIA DE INEXISTÊNCIA DE DÉBITO COM PEDIDO DE TUTELA ANTECIPADA DE URGÊNCIA",
+      "faseAtual": "Recurso",
+      "statusProcesso": "Ativo",
+      "clienteNome": "MAEVE PRODUTOS HOSPITALARES LTDA",
+      "cpfCnpj": "09034672000192",
+      "tamanhoTexto": "41039"
+    },
+    {
+      "id": "7",
+      "numeroCnj": "5180612-25.2024.8.09.0018",
+      "tipoAcao": "AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "STELA CARDOSO DA SILVA SANTOS",
+      "cpfCnpj": "53000625100",
+      "tamanhoTexto": "41232"
+    },
+    {
+      "id": "8",
+      "numeroCnj": "5017749-86.2025.8.09.0051",
+      "tipoAcao": "AÇÃO DE COBRANÇA",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "BANCO BRADESCO S/A",
+      "cpfCnpj": "60746948000112",
+      "tamanhoTexto": "32547"
+    },
+    {
+      "id": "9",
+      "numeroCnj": "5363744-49.2025.8.09.0051",
+      "tipoAcao": "AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "IRENE MARIA DOS SANTOS",
+      "cpfCnpj": "06726666187",
+      "tamanhoTexto": "51388"
+    },
+    {
+      "id": "10",
+      "numeroCnj": "5347120-22.2025.8.09.0051",
+      "tipoAcao": "AÇÃO DE REPACTUAÇÃO DE DÍVIDAS com Pedido de TUTELA ANTECIPADA DE URGÊNCIA",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "NATALICIO LUIZ DA COSTA",
+      "cpfCnpj": "24357677149",
+      "tamanhoTexto": "41157"
+    },
+    {
+      "id": "11",
+      "numeroCnj": "5730066-84.2023.8.09.0006",
+      "tipoAcao": "AÇÃO DE CUMPRIMENTO DE OBRIGAÇÃO DE FAZER com Pedido de Antecipação dos Efeitos da Tutela Específica",
+      "faseAtual": "Execucao",
+      "statusProcesso": "Ativo",
+      "clienteNome": "GLAYSON CHARLLES REZENDE REIS",
+      "cpfCnpj": "34813039120",
+      "tamanhoTexto": "47068"
+    },
+    {
+      "id": "12",
+      "numeroCnj": "5478158-79.2025.8.09.0174",
+      "tipoAcao": "AÇÃO DE OBRIGAÇÃO DE FAZER",
+      "faseAtual": "Recurso",
+      "statusProcesso": "Ativo",
+      "clienteNome": "MARIA JULIA DE LIMA",
+      "cpfCnpj": "36342718172",
+      "tamanhoTexto": "51272"
+    },
+    {
+      "id": "13",
+      "numeroCnj": "CUMPRIMENTO_VERANEIDE_BB_01",
+      "tipoAcao": "Cumprimento Definitivo de Sentença",
+      "faseAtual": "Cumprimento de Sentença",
+      "statusProcesso": "Ativo",
+      "clienteNome": "VERANEIDE SOARES CAMPOS LUCY",
+      "cpfCnpj": "PENDENTE_VER",
+      "tamanhoTexto": "4537"
+    },
+    {
+      "id": "15",
+      "numeroCnj": "6151759-84.2024.8.09.0051",
+      "tipoAcao": "Execução de Título Extrajudicial",
+      "faseAtual": "Execução",
+      "statusProcesso": "Petição Enviada",
+      "clienteNome": "ANA TEONILA FAGUNDES DA CUNHA",
+      "cpfCnpj": "03237672149",
+      "tamanhoTexto": "51787"
+    },
+    {
+      "id": "16",
+      "numeroCnj": "6163756-64.2024.8.09.0051",
+      "tipoAcao": "Cumprimento Definitivo de Sentença - Honorários Advocatícios Sucumbenciais",
+      "faseAtual": "Cumprimento Definitivo de Sentença",
+      "statusProcesso": "Ativo",
+      "clienteNome": "VERANEIDE SOARES CAMPOS LUCY",
+      "cpfCnpj": "PENDENTE_VER",
+      "tamanhoTexto": "2276"
+    },
+    {
+      "id": "30002",
+      "numeroCnj": "5380169-54.2025.8.09.0051",
+      "tipoAcao": "Obrigação de Fazer c/c Tutela Antecipada de Urgência",
+      "faseAtual": "Conhecimento - Pós-sentença",
+      "statusProcesso": "Ativo - Pendente Apelação",
+      "clienteNome": "LEONARDO ROSA CORREIA",
+      "cpfCnpj": "00581377184",
+      "tamanhoTexto": "30914"
+    },
+    {
+      "id": "30003",
+      "numeroCnj": "5947078-21.2025.8.09.0051",
+      "tipoAcao": "Cumprimento Provisório de Sentença - Honorários Advocatícios de Sucumbência",
+      "faseAtual": "Execução",
+      "statusProcesso": "Ativo",
+      "clienteNome": "LEONARDO ROSA CORREIA",
+      "cpfCnpj": "00581377184",
+      "tamanhoTexto": "30952"
+    },
+    {
+      "id": "120001",
+      "numeroCnj": "5343069-91.2025.8.09.0107",
+      "tipoAcao": "Obrigação de Fazer",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "ANA MARIA DE SOUZA",
+      "cpfCnpj": "P5418079",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120002",
+      "numeroCnj": "5401282-58.2023.8.09.0011",
+      "tipoAcao": "Fornecimento",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "MAEVE PRODUTOS HOSPITALARES LTDA",
+      "cpfCnpj": "09034672000192",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120003",
+      "numeroCnj": "5034072-29.2024.8.09.0011",
+      "tipoAcao": "Obrigação de Fazer",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "MAEVE PRODUTOS HOSPITALARES LTDA",
+      "cpfCnpj": "09034672000192",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120004",
+      "numeroCnj": "5272510-20.2024.8.09.0051",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "ARIEL ANSELMO DE OLIVEIRA",
+      "cpfCnpj": "39154017149",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120005",
+      "numeroCnj": "5409032-24.2017.8.09.0011",
+      "tipoAcao": "Ação Penal",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "VANDERSON OLIVEIRA DINIZ LIMA",
+      "cpfCnpj": "04056581177",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120006",
+      "numeroCnj": "5552007-65.2025.8.09.0051",
+      "tipoAcao": "Cumprimento de Sentença",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Paulo Da Silva Melo Filho",
+      "cpfCnpj": "PENDab382c1f6bd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120007",
+      "numeroCnj": "5837417-10.2025.8.09.0051",
+      "tipoAcao": "Obrigação de Fazer",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Paulo Da Silva Melo Filho",
+      "cpfCnpj": "PENDab382c1f6bd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120008",
+      "numeroCnj": "5838302-24.2025.8.09.0051",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Paulo Da Silva Melo Filho",
+      "cpfCnpj": "PENDab382c1f6bd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120009",
+      "numeroCnj": "5842311-76.2025.8.09.0100",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Paulo Da Silva Melo Filho",
+      "cpfCnpj": "PENDab382c1f6bd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120010",
+      "numeroCnj": "5380750-40.2023.8.09.0051",
+      "tipoAcao": "Execução Contratual",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Goias Turismo Agencia Estadual De Turismo",
+      "cpfCnpj": "PEND5533cc01de5",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120011",
+      "numeroCnj": "5120489-18.2022.8.09.0152",
+      "tipoAcao": "Falência",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Francisco Barrozo Neto",
+      "cpfCnpj": "PENDa36eca49687",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120012",
+      "numeroCnj": "5120489-18.2015.8.09.0102",
+      "tipoAcao": "Ação Penal",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Francisco Barrozo Neto",
+      "cpfCnpj": "PENDa36eca49687",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120013",
+      "numeroCnj": "5202717-28.2023.8.09.0051",
+      "tipoAcao": "Ação Penal",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Ministério Público do Estado de Goiás",
+      "cpfCnpj": "PEND4b1cad048bc",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120014",
+      "numeroCnj": "5506369-43.2025.8.09.0072",
+      "tipoAcao": "Embargos à Execução",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Aroldo Teixeira Rocha",
+      "cpfCnpj": "PENDb62e593e78a",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120015",
+      "numeroCnj": "5304519-95.2024.8.09.0128",
+      "tipoAcao": "Ação de Indenização",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Fabio Santana Da Silva",
+      "cpfCnpj": "PEND8e7d9627e25",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120016",
+      "numeroCnj": "5313450-90.2025.8.09.0051",
+      "tipoAcao": "Ação Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Cleidiomar Santos Freitas",
+      "cpfCnpj": "PENDdc39ee36643",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120017",
+      "numeroCnj": "5565182-48.2025.8.09.0174",
+      "tipoAcao": "Ação Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Paulo Da Silva Melo Filho",
+      "cpfCnpj": "PENDab382c1f6bd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120018",
+      "numeroCnj": "5569898-57.2025.8.09.0065",
+      "tipoAcao": "Ação Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Lucia Vanda Nunes Cardoso Rodrigues",
+      "cpfCnpj": "PEND7e283b18723",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120019",
+      "numeroCnj": "5607856-45.2025.8.09.0011",
+      "tipoAcao": "Cumprimento Provisório de Sentença - Honorários Advocatícios de Sucumbência",
+      "faseAtual": "Cumprimento Provisório",
+      "statusProcesso": "Petição Enviada",
+      "clienteNome": "CARLOS ANDRADE DOS SANTOS",
+      "cpfCnpj": "24357650100",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120020",
+      "numeroCnj": "5946944-91.2025.8.09.0051",
+      "tipoAcao": "Ação Declaratória",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Mauricio Silvestre De Andrade",
+      "cpfCnpj": "PENDb5f121f0592",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120021",
+      "numeroCnj": "5122094-74.2023.8.09.0051",
+      "tipoAcao": "Execução Fiscal",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "CACILIA BEATRIZ DA SILVA MACHADO",
+      "cpfCnpj": "PEND4dc84e0c97a",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120022",
+      "numeroCnj": "5290162-84.2023.8.09.0051",
+      "tipoAcao": "Ação Penal",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "MINISTERIO PUBLICO",
+      "cpfCnpj": "PEND777a4bcd2cd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120023",
+      "numeroCnj": "5179693-47.2024.8.09.0079",
+      "tipoAcao": "Ação Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Dalva Lizeth Lucio Martins",
+      "cpfCnpj": "PEND4ffe4fe4370",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120024",
+      "numeroCnj": "5201443-92.2024.8.09.0051",
+      "tipoAcao": "Cumprimento de Sentença",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Carlos Ferro De Lacerda",
+      "cpfCnpj": "PENDef56143fbbd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120025",
+      "numeroCnj": "5208817-83.2024.8.09.0044",
+      "tipoAcao": "Cumprimento de Sentença",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Ivia Lucas E Silva",
+      "cpfCnpj": "PEND3a160ec351b",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120026",
+      "numeroCnj": "5243879-66.2024.8.09.0051",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Helio Rodrigues Soares",
+      "cpfCnpj": "PEND94df12ece98",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120027",
+      "numeroCnj": "5301130-42.2024.8.09.0051",
+      "tipoAcao": "Cumprimento de Sentença",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Lenildes De Jesus Fonseca",
+      "cpfCnpj": "PEND50d95e8fdb6",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120028",
+      "numeroCnj": "5968559-74.2024.8.09.0051",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Ione Antonia Da Silva",
+      "cpfCnpj": "PEND8bca5a2e6a3",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120029",
+      "numeroCnj": "5345293-13.2025.8.09.0071",
+      "tipoAcao": "Obrigação de Fazer",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Manoel Alves De Jesus",
+      "cpfCnpj": "PENDae4f2634959",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120030",
+      "numeroCnj": "5347584-50.2025.8.09.0082",
+      "tipoAcao": "Obrigação de Fazer",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Orica Florinda Do Prado",
+      "cpfCnpj": "PENDb2069fd1b63",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120031",
+      "numeroCnj": "5350383-84.2025.8.09.0076",
+      "tipoAcao": "Obrigação de Fazer",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Rui Batista Vivono",
+      "cpfCnpj": "PEND823569d7d8a",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120032",
+      "numeroCnj": "5362987-55.2025.8.09.0051",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Ivaldi Alves de Freitas",
+      "cpfCnpj": "PEND1adfe222d99",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120033",
+      "numeroCnj": "5364300-74.2025.8.09.0011",
+      "tipoAcao": "Obrigação de Fazer",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Maria Moraes De Assis",
+      "cpfCnpj": "PEND04998a998ef",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120034",
+      "numeroCnj": "5406227-91.2025.8.09.0149",
+      "tipoAcao": "Obrigação de Fazer",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Joao Gomes Nogueira",
+      "cpfCnpj": "PEND7b9e73ef206",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120035",
+      "numeroCnj": "5511728-37.2025.8.09.0051",
+      "tipoAcao": "Obrigação de Fazer",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Sonia Alves De Oliveira",
+      "cpfCnpj": "PEND9e45dff1d6b",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120036",
+      "numeroCnj": "5525505-89.2025.8.09.0051",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Ivânia Ferreira De Melo",
+      "cpfCnpj": "PEND760851469f3",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120037",
+      "numeroCnj": "5565113-94.2025.8.09.0051",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Paulo Da Silva Melo Filho",
+      "cpfCnpj": "PENDab382c1f6bd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120038",
+      "numeroCnj": "5325315-28.2016.8.09.0051",
+      "tipoAcao": "Ação contra a Fazenda Pública",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "AGÊNCIA BRASIL CENTRAL - ABC",
+      "cpfCnpj": "PEND46b09fd7cd6",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120039",
+      "numeroCnj": "5574389-85.2019.8.09.0011",
+      "tipoAcao": "Ação Contratual",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Julierme Francisco Maciel",
+      "cpfCnpj": "PEND7a996597e29",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120040",
+      "numeroCnj": "5470394-96.2020.8.09.0051",
+      "tipoAcao": "Cumprimento de Sentença de Despejo",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Homero Pinto Figueiredo",
+      "cpfCnpj": "PEND0fd68aab842",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120041",
+      "numeroCnj": "5372968-50.2021.8.09.0051",
+      "tipoAcao": "Ação de Locação",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Premium Veiculos",
+      "cpfCnpj": "PEND1a42cd0fd43",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120042",
+      "numeroCnj": "5575301-88.2021.8.09.0051",
+      "tipoAcao": "Ação de Dação em Pagamento",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "TANIA MARIA QUINTAO CASTRO",
+      "cpfCnpj": "PENDba88b65dcaf",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120043",
+      "numeroCnj": "5726563-51.2022.8.09.0051",
+      "tipoAcao": "Busca e Apreensão (Alienação Fiduciária)",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Maria De Fatima Dos Santos Dantas",
+      "cpfCnpj": "PENDe7aa1e293e1",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120044",
+      "numeroCnj": "5273420-86.2023.8.09.0017",
+      "tipoAcao": "Ação de Indenização",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Camargos Participações Ltda",
+      "cpfCnpj": "PEND6fe4626211e",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120045",
+      "numeroCnj": "5410932-32.2023.8.09.0011",
+      "tipoAcao": "Obrigação de Fazer",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "MAEVE PRODUTOS HOSPITALARES LTDA",
+      "cpfCnpj": "09034672000192",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120046",
+      "numeroCnj": "5633574-89.2023.8.09.0051",
+      "tipoAcao": "Cumprimento de Sentença",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "BANCO DO BRASIL S/A",
+      "cpfCnpj": "PEND76ca325678f",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120047",
+      "numeroCnj": "5832286-45.2023.8.09.0012",
+      "tipoAcao": "Rescisão Contratual",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "B & B Credito Ltda",
+      "cpfCnpj": "PENDbed5a70491c",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120048",
+      "numeroCnj": "5017236-54.2022.8.09.0074",
+      "tipoAcao": "Ação Previdenciária",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Valmir Dos Reis",
+      "cpfCnpj": "PEND55d949dc72c",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120049",
+      "numeroCnj": "5031723-30.2024.8.09.0051",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Joselia Alves Da Silva",
+      "cpfCnpj": "PEND934c1e52845",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120050",
+      "numeroCnj": "5067088-48.2024.8.09.0051",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Dorisval Pereira De Moraes",
+      "cpfCnpj": "PENDce10922184b",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120051",
+      "numeroCnj": "5129355-53.2024.8.09.0149",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Zeneide Maria De Souza Matias",
+      "cpfCnpj": "PEND4f6834dd83e",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120052",
+      "numeroCnj": "5139402-35.2024.8.09.0069",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Willian Jose De Souza",
+      "cpfCnpj": "PEND64d1bba1226",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120053",
+      "numeroCnj": "5177067-63.2024.8.09.0044",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Eduardo Das Neves Rocha",
+      "cpfCnpj": "PENDb75ecaf565d",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120054",
+      "numeroCnj": "5199506-10.2024.8.09.0128",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Fabio Santana Da Silva",
+      "cpfCnpj": "PEND8e7d9627e25",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120055",
+      "numeroCnj": "5204558-24.2024.8.09.0051",
+      "tipoAcao": "Ação Penal",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "MINISTERIO PUBLICO DO ESTADO DE GOIÁS",
+      "cpfCnpj": "PEND6b3ae1aaca9",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120056",
+      "numeroCnj": "5240834-65.2024.8.09.0112",
+      "tipoAcao": "Superendividamento",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Ronaldo Azevedo Da Silva",
+      "cpfCnpj": "PEND1fb949706f7",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120057",
+      "numeroCnj": "5300012-69.2024.8.09.0006",
+      "tipoAcao": "Ação de Indenização",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Marco Junio Dourado De Castro",
+      "cpfCnpj": "PEND0c697188a8c",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120058",
+      "numeroCnj": "5380158-59.2024.8.09.0051",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Cybelle Silva Tristao",
+      "cpfCnpj": "PEND947097d0c70",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120059",
+      "numeroCnj": "5445397-29.2024.8.09.0174",
+      "tipoAcao": "Superendividamento",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Edinalva Filha de Lima Ramos",
+      "cpfCnpj": "PEND49b1ede781a",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120060",
+      "numeroCnj": "5613407-17.2024.8.09.0051",
+      "tipoAcao": "Cumprimento de Sentença",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "ALVARO PIRES ZANELLA",
+      "cpfCnpj": "PEND17dde7aa970",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120061",
+      "numeroCnj": "5738443-74.2024.8.09.0017",
+      "tipoAcao": "Ação de Usucapião",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Laura Rosa Moreira",
+      "cpfCnpj": "PEND683da0f397a",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120062",
+      "numeroCnj": "5789759-20.2024.8.09.0117",
+      "tipoAcao": "Ação de Rescisão Contratual",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Genilson Lucas Rodrigues Queiroz",
+      "cpfCnpj": "PENDb76049b3e66",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120063",
+      "numeroCnj": "5909091-28.2024.8.09.0166",
+      "tipoAcao": "Ação de Indenização",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Leandro Peres De Amorim",
+      "cpfCnpj": "PEND29b78158ddd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120064",
+      "numeroCnj": "6036859-82.2024.8.09.0150",
+      "tipoAcao": "Execução de Título Extrajudicial",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Walkiria Rodrigues Da Cunha E Silva",
+      "cpfCnpj": "PEND70d8b0fa4db",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120065",
+      "numeroCnj": "5022663-11.2025.8.09.0144",
+      "tipoAcao": "Busca e Apreensão",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "OMNI S/A CRÉDITO FINANCIAMENTO E INVESTIMENTO",
+      "cpfCnpj": "PEND81ed15886a2",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120066",
+      "numeroCnj": "5271186-58.2025.8.09.0051",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Alessandro Silverio De Almeida",
+      "cpfCnpj": "PENDbb4aa784875",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120067",
+      "numeroCnj": "5276753-70.2025.8.09.0051",
+      "tipoAcao": "Revisão de Dívida por Superendividamento",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Paulo Da Silva Melo Filho",
+      "cpfCnpj": "PENDab382c1f6bd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120068",
+      "numeroCnj": "5292864-29.2025.8.09.0149",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Paulo Da Silva Melo Filho",
+      "cpfCnpj": "PENDab382c1f6bd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120069",
+      "numeroCnj": "5345233-50.2025.8.09.0100",
+      "tipoAcao": "Obrigação de Fazer",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Fabiana Dias Das Chagas Chaves",
+      "cpfCnpj": "PEND3f6486f27cf",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120070",
+      "numeroCnj": "5352212-78.2025.8.09.0051",
+      "tipoAcao": "Obrigação de Fazer",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Mauricio Silvestre De Andrade",
+      "cpfCnpj": "PENDb5f121f0592",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120071",
+      "numeroCnj": "5565616-37.2025.8.09.0174",
+      "tipoAcao": "Revisão de Dívida por Superendividamento",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Paulo Da Silva Melo Filho",
+      "cpfCnpj": "PENDab382c1f6bd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120072",
+      "numeroCnj": "5565859-59.2025.8.09.0051",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Paulo Da Silva Melo Filho",
+      "cpfCnpj": "PENDab382c1f6bd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120073",
+      "numeroCnj": "5582357-96.2025.8.09.0128",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Paulo Da Silva Melo Filho",
+      "cpfCnpj": "PENDab382c1f6bd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120074",
+      "numeroCnj": "5616492-97.2025.8.09.0011",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Edna Maria De Lima",
+      "cpfCnpj": "PENDe20b2a65d57",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120076",
+      "numeroCnj": "5632288-12.2025.8.09.0082",
+      "tipoAcao": "Tutela Provisória de Urgência",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Orica Florinda Do Prado",
+      "cpfCnpj": "PENDb2069fd1b63",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120077",
+      "numeroCnj": "5663863-38.2025.8.09.0082",
+      "tipoAcao": "Tutela Provisória de Urgência",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Orica Florinda Do Prado",
+      "cpfCnpj": "PENDb2069fd1b63",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120078",
+      "numeroCnj": "5758322-28.2025.8.09.0051",
+      "tipoAcao": "Superendividamento",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Paulo Da Silva Melo Filho",
+      "cpfCnpj": "PENDab382c1f6bd",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120079",
+      "numeroCnj": "5938129-63.2025.8.09.0065",
+      "tipoAcao": "Tutela Provisória de Urgência",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Maria Das Gracas De Jesus",
+      "cpfCnpj": "PEND789ecb29b5b",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "120080",
+      "numeroCnj": "5946750-50.2025.8.09.0000",
+      "tipoAcao": "Embargos à Execução",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo",
+      "clienteNome": "Banco Do Brasil S A",
+      "cpfCnpj": "PENDdd80fb4984b",
+      "tamanhoTexto": "NULL"
+    },
+    {
+      "id": "210003",
+      "numeroCnj": "5365470-18.2024.8.09.0011",
+      "tipoAcao": "AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA",
+      "faseAtual": "Recurso/Apelação",
+      "statusProcesso": "Sentença Procedente",
+      "clienteNome": "CARLOS ANDRADE DOS SANTOS",
+      "cpfCnpj": "24357650100",
+      "tamanhoTexto": "NULL"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tnumeroCnj\ttipoAcao\tfaseAtual\tstatusProcesso\tclienteNome\tcpfCnpj\ttamanhoTexto\n1\t5409032-24.2025.8.09.0179\tAÇÃO DE OBRIGAÇÃO DE FAZER\tConhecimento\tAtivo\tVANDERSON OLIVEIRA DINIZ LIMA\t04056581177\t41096\n2\t5890301-69.2024.8.09.0174\tEXECUÇÃO DE TÍTULO EXTRAJUDICIAL\tRecurso\tAtivo\tARIEL ANSELMO DE OLIVEIRA\t39154017149\t51460\n3\t5806457-90.2025.8.09.0174\tCUMPRIMENTO PROVISÓRIO DE SENTENÇA\tCumprimento Provisorio\tAtivo\tARIEL ANSELMO DE OLIVEIRA\t39154017149\t51504\n4\t5660467-45.2025.8.09.0117\tAÇÃO CAUTELAR DE TUTELA DE URGÊNCIA ANTECEDENTE\tConhecimento\tAtivo\tO.J.S COMÉRCIO E SERVIÇOS LTDA\t37355845000100\t51555\n5\t5726214-43.2025.8.09.0051\tAgravo de Instrumento\tConhecimento\tAtivo\tANA TEONILA FAGUNDES DA CUNHA\t03237672149\t41345\n6\t5111379-59.2024.8.09.0011\tAÇÃO DECLARATÓRIA DE INEXISTÊNCIA DE DÉBITO COM PEDIDO DE TUTELA ANTECIPADA DE URGÊNCIA\tRecurso\tAtivo\tMAEVE PRODUTOS HOSPITALARES LTDA\t09034672000192\t41039\n7\t5180612-25.2024.8.09.0018\tAÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA\tConhecimento\tAtivo\tSTELA CARDOSO DA SILVA SANTOS\t53000625100\t41232\n8\t5017749-86.2025.8.09.0051\tAÇÃO DE COBRANÇA\tConhecimento\tAtivo\tBANCO BRADESCO S/A\t60746948000112\t32547\n9\t5363744-49.2025.8.09.0051\tAÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA\tConhecimento\tAtivo\tIRENE MARIA DOS SANTOS\t06726666187\t51388\n10\t5347120-22.2025.8.09.0051\tAÇÃO DE REPACTUAÇÃO DE DÍVIDAS com Pedido de TUTELA ANTECIPADA DE URGÊNCIA\tConhecimento\tAtivo\tNATALICIO LUIZ DA COSTA\t24357677149\t41157\n11\t5730066-84.2023.8.09.0006\tAÇÃO DE CUMPRIMENTO DE OBRIGAÇÃO DE FAZER com Pedido de Antecipação dos Efeitos da Tutela Específica\tExecucao\tAtivo\tGLAYSON CHARLLES REZENDE REIS\t34813039120\t47068\n12\t5478158-79.2025.8.09.0174\tAÇÃO DE OBRIGAÇÃO DE FAZER\tRecurso\tAtivo\tMARIA JULIA DE LIMA\t36342718172\t51272\n13\tCUMPRIMENTO_VERANEIDE_BB_01\tCumprimento Definitivo de Sentença\tCumprimento de Sentença\tAtivo\tVERANEIDE SOARES CAMPOS LUCY\tPENDENTE_VER\t4537\n15\t6151759-84.2024.8.09.0051\tExecução de Título Extrajudicial\tExecução\tPetição Enviada\tANA TEONILA FAGUNDES DA CUNHA\t03237672149\t51787\n16\t6163756-64.2024.8.09.0051\tCumprimento Definitivo de Sentença - Honorários Advocatícios Sucumbenciais\tCumprimento Definitivo de Sentença\tAtivo\tVERANEIDE SOARES CAMPOS LUCY\tPENDENTE_VER\t2276\n30002\t5380169-54.2025.8.09.0051\tObrigação de Fazer c/c Tutela Antecipada de Urgência\tConhecimento - Pós-sentença\tAtivo - Pendente Apelação\tLEONARDO ROSA CORREIA\t00581377184\t30914\n30003\t5947078-21.2025.8.09.0051\tCumprimento Provisório de Sentença - Honorários Advocatícios de Sucumbência\tExecução\tAtivo\tLEONARDO ROSA CORREIA\t00581377184\t30952\n120001\t5343069-91.2025.8.09.0107\tObrigação de Fazer\tConhecimento\tAtivo\tANA MARIA DE SOUZA\tP5418079\tNULL\n120002\t5401282-58.2023.8.09.0011\tFornecimento\tConhecimento\tAtivo\tMAEVE PRODUTOS HOSPITALARES LTDA\t09034672000192\tNULL\n120003\t5034072-29.2024.8.09.0011\tObrigação de Fazer\tConhecimento\tAtivo\tMAEVE PRODUTOS HOSPITALARES LTDA\t09034672000192\tNULL\n120004\t5272510-20.2024.8.09.0051\tRevisional de Contrato\tConhecimento\tAtivo\tARIEL ANSELMO DE OLIVEIRA\t39154017149\tNULL\n120005\t5409032-24.2017.8.09.0011\tAção Penal\tConhecimento\tAtivo\tVANDERSON OLIVEIRA DINIZ LIMA\t04056581177\tNULL\n120006\t5552007-65.2025.8.09.0051\tCumprimento de Sentença\tConhecimento\tAtivo\tPaulo Da Silva Melo Filho\tPENDab382c1f6bd\tNULL\n120007\t5837417-10.2025.8.09.0051\tObrigação de Fazer\tConhecimento\tAtivo\tPaulo Da Silva Melo Filho\tPENDab382c1f6bd\tNULL\n120008\t5838302-24.2025.8.09.0051\tRevisional de Contrato\tConhecimento\tAtivo\tPaulo Da Silva Melo Filho\tPENDab382c1f6bd\tNULL\n120009\t5842311-76.2025.8.09.0100\tRevisional de Contrato\tConhecimento\tAtivo\tPaulo Da Silva Melo Filho\tPENDab382c1f6bd\tNULL\n120010\t5380750-40.2023.8.09.0051\tExecução Contratual\tConhecimento\tAtivo\tGoias Turismo Agencia Estadual De Turismo\tPEND5533cc01de5\tNULL\n120011\t5120489-18.2022.8.09.0152\tFalência\tConhecimento\tAtivo\tFrancisco Barrozo Neto\tPENDa36eca49687\tNULL\n120012\t5120489-18.2015.8.09.0102\tAção Penal\tConhecimento\tAtivo\tFrancisco Barrozo Neto\tPENDa36eca49687\tNULL\n120013\t5202717-28.2023.8.09.0051\tAção Penal\tConhecimento\tAtivo\tMinistério Público do Estado de Goiás\tPEND4b1cad048bc\tNULL\n120014\t5506369-43.2025.8.09.0072\tEmbargos à Execução\tConhecimento\tAtivo\tAroldo Teixeira Rocha\tPENDb62e593e78a\tNULL\n120015\t5304519-95.2024.8.09.0128\tAção de Indenização\tConhecimento\tAtivo\tFabio Santana Da Silva\tPEND8e7d9627e25\tNULL\n120016\t5313450-90.2025.8.09.0051\tAção Revisional de Contrato\tConhecimento\tAtivo\tCleidiomar Santos Freitas\tPENDdc39ee36643\tNULL\n120017\t5565182-48.2025.8.09.0174\tAção Revisional de Contrato\tConhecimento\tAtivo\tPaulo Da Silva Melo Filho\tPENDab382c1f6bd\tNULL\n120018\t5569898-57.2025.8.09.0065\tAção Revisional de Contrato\tConhecimento\tAtivo\tLucia Vanda Nunes Cardoso Rodrigues\tPEND7e283b18723\tNULL\n120019\t5607856-45.2025.8.09.0011\tCumprimento Provisório de Sentença - Honorários Advocatícios de Sucumbência\tCumprimento Provisório\tPetição Enviada\tCARLOS ANDRADE DOS SANTOS\t24357650100\tNULL\n120020\t5946944-91.2025.8.09.0051\tAção Declaratória\tConhecimento\tAtivo\tMauricio Silvestre De Andrade\tPENDb5f121f0592\tNULL\n120021\t5122094-74.2023.8.09.0051\tExecução Fiscal\tConhecimento\tAtivo\tCACILIA BEATRIZ DA SILVA MACHADO\tPEND4dc84e0c97a\tNULL\n120022\t5290162-84.2023.8.09.0051\tAção Penal\tConhecimento\tAtivo\tMINISTERIO PUBLICO\tPEND777a4bcd2cd\tNULL\n120023\t5179693-47.2024.8.09.0079\tAção Revisional de Contrato\tConhecimento\tAtivo\tDalva Lizeth Lucio Martins\tPEND4ffe4fe4370\tNULL\n120024\t5201443-92.2024.8.09.0051\tCumprimento de Sentença\tConhecimento\tAtivo\tCarlos Ferro De Lacerda\tPENDef56143fbbd\tNULL\n120025\t5208817-83.2024.8.09.0044\tCumprimento de Sentença\tConhecimento\tAtivo\tIvia Lucas E Silva\tPEND3a160ec351b\tNULL\n120026\t5243879-66.2024.8.09.0051\tRevisional de Contrato\tConhecimento\tAtivo\tHelio Rodrigues Soares\tPEND94df12ece98\tNULL\n120027\t5301130-42.2024.8.09.0051\tCumprimento de Sentença\tConhecimento\tAtivo\tLenildes De Jesus Fonseca\tPEND50d95e8fdb6\tNULL\n120028\t5968559-74.2024.8.09.0051\tRevisional de Contrato\tConhecimento\tAtivo\tIone Antonia Da Silva\tPEND8bca5a2e6a3\tNULL\n120029\t5345293-13.2025.8.09.0071\tObrigação de Fazer\tConhecimento\tAtivo\tManoel Alves De Jesus\tPENDae4f2634959\tNULL\n120030\t5347584-50.2025.8.09.0082\tObrigação de Fazer\tConhecimento\tAtivo\tOrica Florinda Do Prado\tPENDb2069fd1b63\tNULL\n120031\t5350383-84.2025.8.09.0076\tObrigação de Fazer\tConhecimento\tAtivo\tRui Batista Vivono\tPEND823569d7d8a\tNULL\n120032\t5362987-55.2025.8.09.0051\tRevisional de Contrato\tConhecimento\tAtivo\tIvaldi Alves de Freitas\tPEND1adfe222d99\tNULL\n120033\t5364300-74.2025.8.09.0011\tObrigação de Fazer\tConhecimento\tAtivo\tMaria Moraes De Assis\tPEND04998a998ef\tNULL\n120034\t5406227-91.2025.8.09.0149\tObrigação de Fazer\tConhecimento\tAtivo\tJoao Gomes Nogueira\tPEND7b9e73ef206\tNULL\n120035\t5511728-37.2025.8.09.0051\tObrigação de Fazer\tConhecimento\tAtivo\tSonia Alves De Oliveira\tPEND9e45dff1d6b\tNULL\n120036\t5525505-89.2025.8.09.0051\tRevisional de Contrato\tConhecimento\tAtivo\tIvânia Ferreira De Melo\tPEND760851469f3\tNULL\n120037\t5565113-94.2025.8.09.0051\tRevisional de Contrato\tConhecimento\tAtivo\tPaulo Da Silva Melo Filho\tPENDab382c1f6bd\tNULL\n120038\t5325315-28.2016.8.09.0051\tAção contra a Fazenda Pública\tConhecimento\tAtivo\tAGÊNCIA BRASIL CENTRAL - ABC\tPEND46b09fd7cd6\tNULL\n120039\t5574389-85.2019.8.09.0011\tAção Contratual\tConhecimento\tAtivo\tJulierme Francisco Maciel\tPEND7a996597e29\tNULL\n120040\t5470394-96.2020.8.09.0051\tCumprimento de Sentença de Despejo\tConhecimento\tAtivo\tHomero Pinto Figueiredo\tPEND0fd68aab842\tNULL\n120041\t5372968-50.2021.8.09.0051\tAção de Locação\tConhecimento\tAtivo\tPremium Veiculos\tPEND1a42cd0fd43\tNULL\n120042\t5575301-88.2021.8.09.0051\tAção de Dação em Pagamento\tConhecimento\tAtivo\tTANIA MARIA QUINTAO CASTRO\tPENDba88b65dcaf\tNULL\n120043\t5726563-51.2022.8.09.0051\tBusca e Apreensão (Alienação Fiduciária)\tConhecimento\tAtivo\tMaria De Fatima Dos Santos Dantas\tPENDe7aa1e293e1\tNULL\n120044\t5273420-86.2023.8.09.0017\tAção de Indenização\tConhecimento\tAtivo\tCamargos Participações Ltda\tPEND6fe4626211e\tNULL\n120045\t5410932-32.2023.8.09.0011\tObrigação de Fazer\tConhecimento\tAtivo\tMAEVE PRODUTOS HOSPITALARES LTDA\t09034672000192\tNULL\n120046\t5633574-89.2023.8.09.0051\tCumprimento de Sentença\tConhecimento\tAtivo\tBANCO DO BRASIL S/A\tPEND76ca325678f\tNULL\n120047\t5832286-45.2023.8.09.0012\tRescisão Contratual\tConhecimento\tAtivo\tB & B Credito Ltda\tPENDbed5a70491c\tNULL\n120048\t5017236-54.2022.8.09.0074\tAção Previdenciária\tConhecimento\tAtivo\tValmir Dos Reis\tPEND55d949dc72c\tNULL\n120049\t5031723-30.2024.8.09.0051\tRevisional de Contrato\tConhecimento\tAtivo\tJoselia Alves Da Silva\tPEND934c1e52845\tNULL\n120050\t5067088-48.2024.8.09.0051\tRevisional de Contrato\tConhecimento\tAtivo\tDorisval Pereira De Moraes\tPENDce10922184b\tNULL\n120051\t5129355-53.2024.8.09.0149\tRevisional de Contrato\tConhecimento\tAtivo\tZeneide Maria De Souza Matias\tPEND4f6834dd83e\tNULL\n120052\t5139402-35.2024.8.09.0069\tRevisional de Contrato\tConhecimento\tAtivo\tWillian Jose De Souza\tPEND64d1bba1226\tNULL\n120053\t5177067-63.2024.8.09.0044\tRevisional de Contrato\tConhecimento\tAtivo\tEduardo Das Neves Rocha\tPENDb75ecaf565d\tNULL\n120054\t5199506-10.2024.8.09.0128\tRevisional de Contrato\tConhecimento\tAtivo\tFabio Santana Da Silva\tPEND8e7d9627e25\tNULL\n120055\t5204558-24.2024.8.09.0051\tAção Penal\tConhecimento\tAtivo\tMINISTERIO PUBLICO DO ESTADO DE GOIÁS\tPEND6b3ae1aaca9\tNULL\n120056\t5240834-65.2024.8.09.0112\tSuperendividamento\tConhecimento\tAtivo\tRonaldo Azevedo Da Silva\tPEND1fb949706f7\tNULL\n120057\t5300012-69.2024.8.09.0006\tAção de Indenização\tConhecimento\tAtivo\tMarco Junio Dourado De Castro\tPEND0c697188a8c\tNULL\n120058\t5380158-59.2024.8.09.0051\tRevisional de Contrato\tConhecimento\tAtivo\tCybelle Silva Tristao\tPEND947097d0c70\tNULL\n120059\t5445397-29.2024.8.09.0174\tSuperendividamento\tConhecimento\tAtivo\tEdinalva Filha de Lima Ramos\tPEND49b1ede781a\tNULL\n120060\t5613407-17.2024.8.09.0051\tCumprimento de Sentença\tConhecimento\tAtivo\tALVARO PIRES ZANELLA\tPEND17dde7aa970\tNULL\n120061\t5738443-74.2024.8.09.0017\tAção de Usucapião\tConhecimento\tAtivo\tLaura Rosa Moreira\tPEND683da0f397a\tNULL\n120062\t5789759-20.2024.8.09.0117\tAção de Rescisão Contratual\tConhecimento\tAtivo\tGenilson Lucas Rodrigues Queiroz\tPENDb76049b3e66\tNULL\n120063\t5909091-28.2024.8.09.0166\tAção de Indenização\tConhecimento\tAtivo\tLeandro Peres De Amorim\tPEND29b78158ddd\tNULL\n120064\t6036859-82.2024.8.09.0150\tExecução de Título Extrajudicial\tConhecimento\tAtivo\tWalkiria Rodrigues Da Cunha E Silva\tPEND70d8b0fa4db\tNULL\n120065\t5022663-11.2025.8.09.0144\tBusca e Apreensão\tConhecimento\tAtivo\tOMNI S/A CRÉDITO FINANCIAMENTO E INVESTIMENTO\tPEND81ed15886a2\tNULL\n120066\t5271186-58.2025.8.09.0051\tRevisional de Contrato\tConhecimento\tAtivo\tAlessandro Silverio De Almeida\tPENDbb4aa784875\tNULL\n120067\t5276753-70.2025.8.09.0051\tRevisão de Dívida por Superendividamento\tConhecimento\tAtivo\tPaulo Da Silva Melo Filho\tPENDab382c1f6bd\tNULL\n120068\t5292864-29.2025.8.09.0149\tRevisional de Contrato\tConhecimento\tAtivo\tPaulo Da Silva Melo Filho\tPENDab382c1f6bd\tNULL\n120069\t5345233-50.2025.8.09.0100\tObrigação de Fazer\tConhecimento\tAtivo\tFabiana Dias Das Chagas Chaves\tPEND3f6486f27cf\tNULL\n120070\t5352212-78.2025.8.09.0051\tObrigação de Fazer\tConhecimento\tAtivo\tMauricio Silvestre De Andrade\tPENDb5f121f0592\tNULL\n120071\t5565616-37.2025.8.09.0174\tRevisão de Dívida por Superendividamento\tConhecimento\tAtivo\tPaulo Da Silva Melo Filho\tPENDab382c1f6bd\tNULL\n120072\t5565859-59.2025.8.09.0051\tRevisional de Contrato\tConhecimento\tAtivo\tPaulo Da Silva Melo Filho\tPENDab382c1f6bd\tNULL\n120073\t5582357-96.2025.8.09.0128\tRevisional de Contrato\tConhecimento\tAtivo\tPaulo Da Silva Melo Filho\tPENDab382c1f6bd\tNULL\n120074\t5616492-97.2025.8.09.0011\tRevisional de Contrato\tConhecimento\tAtivo\tEdna Maria De Lima\tPENDe20b2a65d57\tNULL\n120076\t5632288-12.2025.8.09.0082\tTutela Provisória de Urgência\tConhecimento\tAtivo\tOrica Florinda Do Prado\tPENDb2069fd1b63\tNULL\n120077\t5663863-38.2025.8.09.0082\tTutela Provisória de Urgência\tConhecimento\tAtivo\tOrica Florinda Do Prado\tPENDb2069fd1b63\tNULL\n120078\t5758322-28.2025.8.09.0051\tSuperendividamento\tConhecimento\tAtivo\tPaulo Da Silva Melo Filho\tPENDab382c1f6bd\tNULL\n120079\t5938129-63.2025.8.09.0065\tTutela Provisória de Urgência\tConhecimento\tAtivo\tMaria Das Gracas De Jesus\tPEND789ecb29b5b\tNULL\n120080\t5946750-50.2025.8.09.0000\tEmbargos à Execução\tConhecimento\tAtivo\tBanco Do Brasil S A\tPENDdd80fb4984b\tNULL\n210003\t5365470-18.2024.8.09.0011\tAÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA\tRecurso/Apelação\tSentença Procedente\tCARLOS ANDRADE DOS SANTOS\t24357650100\tNULL\n",
+  "stderr": "",
+  "execution_time_ms": 62
+}

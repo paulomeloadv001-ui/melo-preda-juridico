@@ -834,9 +834,20 @@ export const appRouter = router({
         const extractionPrompt = `Você é um assistente jurídico especializado em análise de processos judiciais brasileiros.
 Analise o texto extraído de um processo judicial e extraia TODOS os dados estruturados possíveis.
 
-REGRAS IMPORTANTES:
-- Extraia CPF/CNPJ do AUTOR (polo ativo/cliente), não do advogado
-- Se houver múltiplos CPFs, identifique qual pertence ao autor/cliente
+REGRAS CRÍTICAS PARA IDENTIFICAÇÃO DO CLIENTE:
+- O escritório é MELO & PREDA ADVOGADOS, do Dr. PAULO DA SILVA MELO FILHO (OAB/GO 40.559)
+- O CLIENTE é SEMPRE a parte que o Dr. Paulo Melo representa no processo
+- Para identificar o cliente: procure quem outorgou procuração ao Dr. Paulo Melo ou quem ele representa como advogado
+- O cliente NUNCA é um banco (Bradesco, Itaú, Santander, Caixa, Inter, Pan, Safra, BB, BRB, etc.)
+- O cliente NUNCA é o advogado da parte contrária
+- Se o Dr. Paulo Melo representa o AUTOR, o cliente é o autor (pessoa física/jurídica que não é banco)
+- Se o Dr. Paulo Melo representa o RÉU, o cliente é o réu (pessoa física/jurídica que não é banco)
+- Em processos de cumprimento de sentença/execução, o cliente é quem o Dr. Paulo Melo representa, mesmo que a petição tenha sido protocolada pelo banco
+- Se houver dúvida, o cliente é a PESSOA FÍSICA mencionada no processo (não o banco, não o advogado)
+- Extraia CPF/CNPJ do CLIENTE identificado acima, não do advogado nem do banco
+
+OUTRAS REGRAS:
+- Se houver múltiplos CPFs, identifique qual pertence ao cliente (parte representada pelo Dr. Paulo Melo)
 - Valores monetários devem ser números sem formatação (ex: 487150.30)
 - Datas no formato DD/MM/YYYY
 - Se não encontrar um campo, retorne null
@@ -957,6 +968,61 @@ ${textoExtraido}`;
         } catch (e) {
           console.error("AI extraction error:", e);
           dadosExtraidos = { error: "Falha na extração via IA" };
+        }
+
+        // 2.5. VALIDAÇÃO: Verificar se o LLM confundiu banco com cliente
+        const BANCOS_CONHECIDOS = ['BANCO', 'BRADESCO', 'ITAU', 'ITAÚ', 'SANTANDER', 'CAIXA ECONOMICA', 'CAIXA ECONÔMICA', 'INTER S.A', 'INTER S/A', 'PAN S.A', 'PAN S/A', 'SAFRA', 'BRB', 'BANCO DO BRASIL', 'BMG', 'DAYCOVAL', 'VOTORANTIM', 'ORIGINAL', 'BANRISUL', 'SICOOB', 'SICREDI', 'COOPERATIVA DE CREDITO', 'COOPERATIVA DE CRÉDITO', 'FINANCEIRA', 'CREDITAS', 'NUBANK', 'C6 BANK', 'AGIBANK'];
+        const nomeClienteExtraido = (dadosExtraidos.cliente?.nomeCompleto || '').toUpperCase();
+        const clienteEhBanco = BANCOS_CONHECIDOS.some(b => nomeClienteExtraido.includes(b.toUpperCase()));
+        
+        if (clienteEhBanco) {
+          console.log(`[Upload] CORREÇÃO: LLM identificou banco como cliente (${nomeClienteExtraido}). Invertendo partes...`);
+          // O banco foi identificado como cliente - precisamos inverter
+          // Buscar a pessoa física/jurídica real nas partes passivas ou no polo ativo/passivo
+          const poloAtivo = dadosExtraidos.processo?.poloAtivo || '';
+          const poloPassivo = dadosExtraidos.processo?.poloPassivo || '';
+          const partesPassivas = dadosExtraidos.partesPassivas || [];
+          
+          // Procurar pessoa que não é banco
+          let clienteReal = null;
+          // Verificar polo ativo primeiro
+          if (poloAtivo && !BANCOS_CONHECIDOS.some(b => poloAtivo.toUpperCase().includes(b.toUpperCase()))) {
+            clienteReal = { nome: poloAtivo, cpf: null };
+          }
+          // Verificar polo passivo
+          if (!clienteReal && poloPassivo) {
+            const partesPassivoArr = poloPassivo.split(';').map((p: string) => p.trim());
+            for (const p of partesPassivoArr) {
+              if (!BANCOS_CONHECIDOS.some(b => p.toUpperCase().includes(b.toUpperCase()))) {
+                clienteReal = { nome: p, cpf: null };
+                break;
+              }
+            }
+          }
+          // Verificar nas partes passivas extraídas
+          if (!clienteReal) {
+            for (const pp of partesPassivas) {
+              if (pp.categoria !== 'Banco' && !BANCOS_CONHECIDOS.some(b => (pp.nome || '').toUpperCase().includes(b.toUpperCase()))) {
+                clienteReal = { nome: pp.nome, cpf: pp.cpfCnpj };
+                break;
+              }
+            }
+          }
+          
+          if (clienteReal) {
+            // Mover o banco para as partes passivas
+            if (!dadosExtraidos.partesPassivas) dadosExtraidos.partesPassivas = [];
+            dadosExtraidos.partesPassivas.push({
+              nome: dadosExtraidos.cliente.nomeCompleto,
+              cpfCnpj: dadosExtraidos.cliente.cpfCnpj,
+              categoria: 'Banco'
+            });
+            // Corrigir o cliente
+            dadosExtraidos.cliente.nomeCompleto = clienteReal.nome;
+            dadosExtraidos.cliente.cpfCnpj = clienteReal.cpf;
+            dadosExtraidos.cliente.tipoPessoa = 'PF';
+            console.log(`[Upload] Cliente corrigido para: ${clienteReal.nome}`);
+          }
         }
 
         // 3. Deduplication and save to DB
@@ -1216,6 +1282,80 @@ ${textoExtraido}`;
             tipoAcao: dadosExtraidos.processo?.tipoAcao,
             processoOrigemId: processoId,
           });
+        }
+
+        // 11.5. ANÁLISE PROFUNDA: Gerar estudo completo do processo para o banco de conhecimentos
+        try {
+          const analiseProfundaPrompt = `Você é um advogado sênior expert do escritório MELO & PREDA ADVOGADOS.
+Faça uma ANÁLISE PROFUNDA E COMPLETA do processo abaixo. Esta análise será usada como base de conhecimento para gerar petições, estratégias e qualquer ação futura.
+
+RETORNE UM JSON com esta estrutura:
+{
+  "resumoExecutivo": "Resumo completo do processo em 3-5 parágrafos, incluindo histórico, situação atual e perspectivas",
+  "analiseJuridica": "Análise jurídica detalhada: teses aplicáveis, fundamentação legal, jurisprudência relevante, pontos fortes e fracos",
+  "estrategiaDetalhada": "Estratégia processual completa: próximos passos, petições necessárias, prazos críticos, argumentos a desenvolver",
+  "pontosChave": ["lista de pontos-chave do processo"],
+  "riscosOportunidades": "Riscos identificados e oportunidades processuais",
+  "valorEstimado": "Análise de valores: causa, condenação, honorários, depósitos",
+  "historicoResumo": "Resumo cronológico das movimentações mais importantes",
+  "peticoesNecessarias": ["lista de petições que podem ser necessárias"],
+  "observacoesEspeciais": "Qualquer observação especial, peculiaridade ou atenção necessária"
+}
+
+TEXTO DO PROCESSO:
+${textoExtraido.substring(0, 45000)}`;
+
+          const analiseResult = await invokeLLM({
+            messages: [
+              { role: 'system', content: 'Você é um advogado sênior especialista. Responda APENAS com JSON válido.' },
+              { role: 'user', content: analiseProfundaPrompt }
+            ],
+            responseFormat: { type: 'json_object' },
+          });
+          const analiseContent = analiseResult.choices[0]?.message?.content;
+          const analiseText = typeof analiseContent === 'string' ? analiseContent : Array.isArray(analiseContent) ? analiseContent.map((c: any) => c.type === 'text' ? c.text : '').join('') : '';
+          const analiseProfunda = JSON.parse(analiseText);
+
+          // Salvar análise profunda no banco de conhecimentos
+          await db.insert(conhecimentos).values({
+            categoria: 'Estrategia',
+            titulo: `Análise Profunda: ${dadosExtraidos.processo?.tipoAcao || 'Processo'} - ${nome} (${numCnj})`,
+            conteudo: JSON.stringify(analiseProfunda, null, 2),
+            tribunal: dadosExtraidos.processo?.tribunal,
+            tipoAcao: dadosExtraidos.processo?.tipoAcao,
+            processoOrigemId: processoId,
+            tags: `analise_profunda,${nome},${numCnj}`,
+          });
+
+          // Salvar resumo executivo separado
+          if (analiseProfunda.resumoExecutivo) {
+            await db.insert(conhecimentos).values({
+              categoria: 'Estrategia',
+              titulo: `Resumo Executivo: ${nome} - ${numCnj}`,
+              conteudo: analiseProfunda.resumoExecutivo + '\n\n' + (analiseProfunda.analiseJuridica || '') + '\n\n' + (analiseProfunda.estrategiaDetalhada || ''),
+              tribunal: dadosExtraidos.processo?.tribunal,
+              tipoAcao: dadosExtraidos.processo?.tipoAcao,
+              processoOrigemId: processoId,
+              tags: `resumo_executivo,${nome},${numCnj}`,
+            });
+          }
+
+          // Salvar petições necessárias como conhecimento
+          if (analiseProfunda.peticoesNecessarias?.length) {
+            await db.insert(conhecimentos).values({
+              categoria: 'Estrategia',
+              titulo: `Petições Necessárias: ${nome} - ${numCnj}`,
+              conteudo: analiseProfunda.peticoesNecessarias.join('\n- ') + '\n\n' + (analiseProfunda.observacoesEspeciais || ''),
+              tribunal: dadosExtraidos.processo?.tribunal,
+              tipoAcao: dadosExtraidos.processo?.tipoAcao,
+              processoOrigemId: processoId,
+              tags: `peticoes_necessarias,${nome},${numCnj}`,
+            });
+          }
+
+          console.log(`[Upload] Análise profunda gerada e salva para ${nome} (${numCnj})`);
+        } catch (analiseErr) {
+          console.error('[Upload] Erro na análise profunda (não-crítico):', analiseErr);
         }
 
         // 12. Build client folder with all JSON files in S3
@@ -7641,9 +7781,20 @@ async function processarJobImportacaoPdf(jobId: number, inputData: any) {
     const extractionPrompt = `Você é um assistente jurídico especializado em análise de processos judiciais brasileiros.
 Analise o texto extraído de um processo judicial e extraia TODOS os dados estruturados possíveis.
 
-REGRAS IMPORTANTES:
-- Extraia CPF/CNPJ do AUTOR (polo ativo/cliente), não do advogado
-- Se houver múltiplos CPFs, identifique qual pertence ao autor/cliente
+REGRAS CRÍTICAS PARA IDENTIFICAÇÃO DO CLIENTE:
+- O escritório é MELO & PREDA ADVOGADOS, do Dr. PAULO DA SILVA MELO FILHO (OAB/GO 40.559)
+- O CLIENTE é SEMPRE a parte que o Dr. Paulo Melo representa no processo
+- Para identificar o cliente: procure quem outorgou procuração ao Dr. Paulo Melo ou quem ele representa como advogado
+- O cliente NUNCA é um banco (Bradesco, Itaú, Santander, Caixa, Inter, Pan, Safra, BB, BRB, etc.)
+- O cliente NUNCA é o advogado da parte contrária
+- Se o Dr. Paulo Melo representa o AUTOR, o cliente é o autor (pessoa física/jurídica que não é banco)
+- Se o Dr. Paulo Melo representa o RÉU, o cliente é o réu (pessoa física/jurídica que não é banco)
+- Em processos de cumprimento de sentença/execução, o cliente é quem o Dr. Paulo Melo representa, mesmo que a petição tenha sido protocolada pelo banco
+- Se houver dúvida, o cliente é a PESSOA FÍSICA mencionada no processo (não o banco, não o advogado)
+- Extraia CPF/CNPJ do CLIENTE identificado acima, não do advogado nem do banco
+
+OUTRAS REGRAS:
+- Se houver múltiplos CPFs, identifique qual pertence ao cliente (parte representada pelo Dr. Paulo Melo)
 - Valores monetários devem ser números sem formatação (ex: 487150.30)
 - Datas no formato DD/MM/YYYY
 - Se não encontrar um campo, retorne null
@@ -7790,6 +7941,48 @@ ${textoTruncado}`;
     } catch (e) {
       console.error('[Job] AI extraction error:', e);
       dadosExtraidos = { error: 'Falha na extração via IA' };
+    }
+
+    await updateProgress(35, 'Validando identificação das partes...');
+    // 2.5. VALIDAÇÃO: Verificar se o LLM confundiu banco com cliente
+    const BANCOS_CONHECIDOS_JOB = ['BANCO', 'BRADESCO', 'ITAU', 'ITAÚ', 'SANTANDER', 'CAIXA ECONOMICA', 'CAIXA ECONÔMICA', 'INTER S.A', 'INTER S/A', 'PAN S.A', 'PAN S/A', 'SAFRA', 'BRB', 'BANCO DO BRASIL', 'BMG', 'DAYCOVAL', 'VOTORANTIM', 'ORIGINAL', 'BANRISUL', 'SICOOB', 'SICREDI', 'COOPERATIVA DE CREDITO', 'COOPERATIVA DE CRÉDITO', 'FINANCEIRA', 'CREDITAS', 'NUBANK', 'C6 BANK', 'AGIBANK'];
+    const nomeClienteExtraidoJob = (dadosExtraidos.cliente?.nomeCompleto || '').toUpperCase();
+    const clienteEhBancoJob = BANCOS_CONHECIDOS_JOB.some(b => nomeClienteExtraidoJob.includes(b.toUpperCase()));
+    
+    if (clienteEhBancoJob) {
+      console.log(`[Job] CORREÇÃO: LLM identificou banco como cliente (${nomeClienteExtraidoJob}). Invertendo partes...`);
+      const poloAtivoJ = dadosExtraidos.processo?.poloAtivo || '';
+      const poloPassivoJ = dadosExtraidos.processo?.poloPassivo || '';
+      const partesPassivasJ = dadosExtraidos.partesPassivas || [];
+      let clienteRealJ: any = null;
+      if (poloAtivoJ && !BANCOS_CONHECIDOS_JOB.some(b => poloAtivoJ.toUpperCase().includes(b.toUpperCase()))) {
+        clienteRealJ = { nome: poloAtivoJ, cpf: null };
+      }
+      if (!clienteRealJ && poloPassivoJ) {
+        const partesArr = poloPassivoJ.split(';').map((p: string) => p.trim());
+        for (const p of partesArr) {
+          if (!BANCOS_CONHECIDOS_JOB.some(b => p.toUpperCase().includes(b.toUpperCase()))) {
+            clienteRealJ = { nome: p, cpf: null };
+            break;
+          }
+        }
+      }
+      if (!clienteRealJ) {
+        for (const pp of partesPassivasJ) {
+          if (pp.categoria !== 'Banco' && !BANCOS_CONHECIDOS_JOB.some(b => (pp.nome || '').toUpperCase().includes(b.toUpperCase()))) {
+            clienteRealJ = { nome: pp.nome, cpf: pp.cpfCnpj };
+            break;
+          }
+        }
+      }
+      if (clienteRealJ) {
+        if (!dadosExtraidos.partesPassivas) dadosExtraidos.partesPassivas = [];
+        dadosExtraidos.partesPassivas.push({ nome: dadosExtraidos.cliente.nomeCompleto, cpfCnpj: dadosExtraidos.cliente.cpfCnpj, categoria: 'Banco' });
+        dadosExtraidos.cliente.nomeCompleto = clienteRealJ.nome;
+        dadosExtraidos.cliente.cpfCnpj = clienteRealJ.cpf;
+        dadosExtraidos.cliente.tipoPessoa = 'PF';
+        console.log(`[Job] Cliente corrigido para: ${clienteRealJ.nome}`);
+      }
     }
 
     await updateProgress(40, 'Salvando cliente...');
@@ -8125,7 +8318,79 @@ ${textoTruncado}`;
       });
     }
 
-    await updateProgress(92, 'Gerando pasta do cliente...');
+    await updateProgress(88, 'Gerando análise profunda do processo...');
+    // 11.5. ANÁLISE PROFUNDA: Gerar estudo completo do processo
+    try {
+      const analiseProfundaPromptJob = `Você é um advogado sênior expert do escritório MELO & PREDA ADVOGADOS.
+Faça uma ANÁLISE PROFUNDA E COMPLETA do processo abaixo. Esta análise será usada como base de conhecimento para gerar petições, estratégias e qualquer ação futura.
+
+RETORNE UM JSON com esta estrutura:
+{
+  "resumoExecutivo": "Resumo completo do processo em 3-5 parágrafos",
+  "analiseJuridica": "Análise jurídica detalhada: teses, fundamentação, jurisprudência",
+  "estrategiaDetalhada": "Estratégia processual completa: próximos passos, petições, prazos",
+  "pontosChave": ["pontos-chave"],
+  "riscosOportunidades": "Riscos e oportunidades",
+  "valorEstimado": "Análise de valores",
+  "historicoResumo": "Resumo cronológico",
+  "peticoesNecessarias": ["petições necessárias"],
+  "observacoesEspeciais": "Observações especiais"
+}
+
+TEXTO DO PROCESSO:
+${textoExtraido.substring(0, 45000)}`;
+
+      const analiseResultJob = await invokeLLM({
+        messages: [
+          { role: 'system', content: 'Você é um advogado sênior especialista. Responda APENAS com JSON válido.' },
+          { role: 'user', content: analiseProfundaPromptJob }
+        ],
+        responseFormat: { type: 'json_object' },
+      });
+      const analiseContentJob = analiseResultJob.choices[0]?.message?.content;
+      const analiseTextJob = typeof analiseContentJob === 'string' ? analiseContentJob : Array.isArray(analiseContentJob) ? analiseContentJob.map((c: any) => c.type === 'text' ? c.text : '').join('') : '';
+      const analiseProfundaJob = JSON.parse(analiseTextJob);
+
+      await db.insert(conhecimentos).values({
+        categoria: 'Estrategia',
+        titulo: `Análise Profunda: ${dadosExtraidos.processo?.tipoAcao || 'Processo'} - ${nome} (${numCnj})`,
+        conteudo: JSON.stringify(analiseProfundaJob, null, 2),
+        tribunal: dadosExtraidos.processo?.tribunal,
+        tipoAcao: dadosExtraidos.processo?.tipoAcao,
+        processoOrigemId: processoId,
+        tags: `analise_profunda,${nome},${numCnj}`,
+      });
+
+      if (analiseProfundaJob.resumoExecutivo) {
+        await db.insert(conhecimentos).values({
+          categoria: 'Estrategia',
+          titulo: `Resumo Executivo: ${nome} - ${numCnj}`,
+          conteudo: analiseProfundaJob.resumoExecutivo + '\n\n' + (analiseProfundaJob.analiseJuridica || '') + '\n\n' + (analiseProfundaJob.estrategiaDetalhada || ''),
+          tribunal: dadosExtraidos.processo?.tribunal,
+          tipoAcao: dadosExtraidos.processo?.tipoAcao,
+          processoOrigemId: processoId,
+          tags: `resumo_executivo,${nome},${numCnj}`,
+        });
+      }
+
+      if (analiseProfundaJob.peticoesNecessarias?.length) {
+        await db.insert(conhecimentos).values({
+          categoria: 'Estrategia',
+          titulo: `Petições Necessárias: ${nome} - ${numCnj}`,
+          conteudo: analiseProfundaJob.peticoesNecessarias.join('\n- ') + '\n\n' + (analiseProfundaJob.observacoesEspeciais || ''),
+          tribunal: dadosExtraidos.processo?.tribunal,
+          tipoAcao: dadosExtraidos.processo?.tipoAcao,
+          processoOrigemId: processoId,
+          tags: `peticoes_necessarias,${nome},${numCnj}`,
+        });
+      }
+
+      console.log(`[Job] Análise profunda gerada e salva para ${nome} (${numCnj})`);
+    } catch (analiseErr) {
+      console.error('[Job] Erro na análise profunda (não-crítico):', analiseErr);
+    }
+
+    await updateProgress(94, 'Gerando pasta do cliente...');
     // 12. Build client folder with all JSON files in S3
     try {
       await buildClientFolder(clienteId, nome, clienteCpf);

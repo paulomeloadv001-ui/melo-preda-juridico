@@ -1,0 +1,28 @@
+{
+  "query": "\nSELECT c.id, c.nomeCompleto, c.cpfCnpj, COUNT(p.id) as numProcessos\nFROM clientes c\nLEFT JOIN processos p ON p.clienteId = c.id\nWHERE c.nomeCompleto LIKE '%BANCO%' OR c.nomeCompleto LIKE '%CAIXA ECON%' OR c.nomeCompleto LIKE '%ITAU%' OR c.nomeCompleto LIKE '%BRADESCO%' OR c.nomeCompleto LIKE '%SANTANDER%'\nGROUP BY c.id, c.nomeCompleto, c.cpfCnpj\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute \nSELECT c.id, c.nomeCompleto, c.cpfCnpj, COUNT(p.id) as numProcessos\nFROM clientes c\nLEFT JOIN processos p ON p.clienteId = c.id\nWHERE c.nomeCompleto LIKE '%BANCO%' OR c.nomeCompleto LIKE '%CAIXA ECON%' OR c.nomeCompleto LIKE '%ITAU%' OR c.nomeCompleto LIKE '%BRADESCO%' OR c.nomeCompleto LIKE '%SANTANDER%'\nGROUP BY c.id, c.nomeCompleto, c.cpfCnpj\n",
+  "rows": [
+    {
+      "id": "8",
+      "nomeCompleto": "BANCO BRADESCO S/A",
+      "cpfCnpj": "60746948000112",
+      "numProcessos": "1"
+    },
+    {
+      "id": "150059",
+      "nomeCompleto": "Banco Do Brasil S A",
+      "cpfCnpj": "PENDdd80fb4984b",
+      "numProcessos": "1"
+    },
+    {
+      "id": "150035",
+      "nomeCompleto": "BANCO DO BRASIL S/A",
+      "cpfCnpj": "PEND76ca325678f",
+      "numProcessos": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tnomeCompleto\tcpfCnpj\tnumProcessos\n8\tBANCO BRADESCO S/A\t60746948000112\t1\n150059\tBanco Do Brasil S A\tPENDdd80fb4984b\t1\n150035\tBANCO DO BRASIL S/A\tPEND76ca325678f\t1\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}

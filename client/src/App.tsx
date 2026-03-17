@@ -24,6 +24,7 @@ import Enriquecimento from "./pages/Enriquecimento";
 import Metricas from "./pages/Metricas";
 import PreenchimentoDB from "./pages/PreenchimentoDB";
 import PublicacoesPage from "./pages/PublicacoesPage";
+import FloatingAgent from "./components/FloatingAgent";
 
 function Router() {
   return (
@@ -70,6 +71,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
+          <FloatingAgent />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

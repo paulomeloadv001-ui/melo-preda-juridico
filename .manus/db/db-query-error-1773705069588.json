@@ -1,0 +1,8 @@
+{
+  "query": "\nSELECT pp.id, pp.processoId, pp.nome, pp.tipo, pp.cpfCnpj,\n       p.numeroCnj, c.nomeCompleto as clienteNome\nFROM partesProcessuais pp\nLEFT JOIN processos p ON pp.processoId = p.id\nLEFT JOIN clientes c ON p.clienteId = c.id\nORDER BY pp.processoId, pp.tipo\nLIMIT 30\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute \nSELECT pp.id, pp.processoId, pp.nome, pp.tipo, pp.cpfCnpj,\n       p.numeroCnj, c.nomeCompleto as clienteNome\nFROM partesProcessuais pp\nLEFT JOIN processos p ON pp.processoId = p.id\nLEFT JOIN clientes c ON p.clienteId = c.id\nORDER BY pp.processoId, pp.tipo\nLIMIT 30\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 2: Table '4imsnkhwnzycxmswcgemqe.partesProcessuais' doesn't exist"
+  ]
+}

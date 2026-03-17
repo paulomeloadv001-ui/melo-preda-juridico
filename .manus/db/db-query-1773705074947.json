@@ -1,0 +1,112 @@
+{
+  "query": "SHOW TABLES",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SHOW TABLES",
+  "rows": [
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "access_requests"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "agente_ia_config"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "agente_ia_historico"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "analise_geral"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "anexos_peticao"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "audit_log"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "clientes"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "conhecimentos"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "convites"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "cumprimentos_sentenca"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "dados_financeiros"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "documentos"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "emprestimos_consignados"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "estrategias"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "historico_correcoes"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "jobs"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "monitoramento_config"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "movimentacoes"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "movimentacoes_financeiras"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "notificacoes"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "partes_processuais"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "perfis_acesso"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "peticao_versoes"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "peticoes_geradas"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "prazos_processuais"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "processos"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "publicacoes"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "relatorios"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "sync_log"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "templates_peticao"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "user_permissions"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "user_profiles"
+    },
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_4imSnKhwnzycXmSWcGeMqe\n__drizzle_migrations\naccess_requests\nagente_ia_config\nagente_ia_historico\nanalise_geral\nanexos_peticao\naudit_log\nclientes\nconhecimentos\nconvites\ncumprimentos_sentenca\ndados_financeiros\ndocumentos\nemprestimos_consignados\nestrategias\nhistorico_correcoes\njobs\nmonitoramento_config\nmovimentacoes\nmovimentacoes_financeiras\nnotificacoes\npartes_processuais\nperfis_acesso\npeticao_versoes\npeticoes_geradas\nprazos_processuais\nprocessos\npublicacoes\nrelatorios\nsync_log\ntemplates_peticao\nuser_permissions\nuser_profiles\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 52
+}

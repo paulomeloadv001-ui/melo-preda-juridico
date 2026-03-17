@@ -552,3 +552,20 @@
 - [ ] CORREÇÃO BANCO: Completar dados faltantes de processos não estudados
 - [x] AGENTE IA COMPLETO: Reescrever com tool_choice e funções executáveis (analisar, deduplicar, organizar, completar movimentações, gerar petições, merge clientes)
 - [x] AGENTE IA COMPLETO: Agente deve usar todo o conhecimento do banco para executar qualquer ação requisitada
+- [x] BUG AGENTE EXECUTOR: Diagnosticar e corrigir todos os erros do Agente IA Executor
+- [x] BUG AGENTE EXECUTOR: Verificar logs do servidor para identificar erros
+- [x] BUG AGENTE EXECUTOR: Testar chat no browser e corrigir problemas
+- [x] BUG AGENTE EXECUTOR: Garantir que tool_choice funciona corretamente com o LLM
+- [x] BUG: Nomes das partes confundidos nos processos - sistema troca/confunde nomes das partes
+- [ ] BUG: Upload de processo não funciona corretamente
+- [x] FIX: Prompt de extração deve identificar cliente como a parte representada pelo Dr. Paulo Melo (OAB/GO 40.559), nunca banco/advogado contrário
+- [x] FIX: Adicionar validação pós-extração para rejeitar bancos como cliente
+- [x] FIX: Corrigir dados existentes com bancos cadastrados como clientes (IDs 8, 150035, 150059)
+- [ ] AGENTE FLUTUANTE: Criar componente de Agente IA flutuante disponível em TODAS as abas do sistema
+- [x] UPLOAD PROFUNDO: Reescrever processamento de upload para análise profunda e completa do processo
+- [x] UPLOAD PROFUNDO: Sistema deve estudar o processo a fundo para saber tudo e poder gerar petições e executar qualquer comando
+- [x] AGENTE CONHECIMENTOS: Integrar todos os conhecimentos e habilidades do escritório no system prompt do Agente IA
+- [x] ESTUDO PROFUNDO: Criar rota backend para agente estudar a fundo todos os processos do escritório
+- [x] ESTUDO PROFUNDO: Corrigir nomes de partes, dados incompletos, duplicados em cada processo
+- [x] ESTUDO PROFUNDO: Gerar análise profunda e salvar no banco de conhecimentos para cada processo
+- [ ] ESTUDO PROFUNDO: Adicionar botão no frontend para disparar o estudo profundo em lote
