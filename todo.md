@@ -582,3 +582,45 @@
 - [ ] EDINALVA: Identificar pagamentos, alvarás e valores pendentes de honorários
 - [ ] EDINALVA: Gerar recurso contra extinção da execução
 - [ ] PLATAFORMA: Corrigir problemas que impedem o fluxo funcionar corretamente
+- [ ] MARLENE AUDI: Análise completa do processo de ponta a ponta
+- [ ] MARLENE AUDI: Identificar trânsito em julgado, acórdão STJ, valores condenatórios
+- [ ] MARLENE AUDI: Gerar cumprimento definitivo de sentença com múltiplas opções estratégicas (defeito veículo)
+- [ ] MARLENE AUDI: Inserir dados no banco da plataforma
+
+
+## Restauração e Expansão v5 — 18/03/2026
+
+- [ ] Corrigir imports quebrados (docxGenerator, agenteExecutor) no routers.ts
+- [ ] Garantir que todas as novas tabelas do schema existam no banco de dados
+- [ ] Otimizar fluxo único: Upload → Extração IA profunda → Banco de Dados → Análise → Peticionamento
+- [ ] Expandir Agente IA com conhecimento jurídico completo (teses, jurisprudências, estratégias do escritório)
+- [ ] Agente IA deve atuar como advogado completo e autônomo em todas as funcionalidades
+- [ ] Melhorar usabilidade: rapidez, navegação fluida, feedback visual em cada ação
+- [ ] Instalar skill v4 atualizada no diretório de skills
+- [ ] Sincronizar banco de conhecimento da skill v4 com a plataforma
+- [ ] Garantir botões de atualizar, excluir, gerar e exportar em cada aba/função
+- [ ] Upload individual ou importação com preenchimento automático em todo o fluxo
+- [x] Testar todas as funcionalidades de ponta a ponta (11 páginas testadas, todas OK)
+- [ ] Salvar checkpoint final
+
+- [x] BUG CRÍTICO: Erro ao iniciar importação - investigado: upload chunked parou no chunk 3/14 por reinício do servidor, retry adicionado
+
+## Fluxo Único Lógico v5 — 18/03/2026
+
+- [ ] FLUXO: Upload → Análise Total → Banco Conhecimentos → Cadastro Clientes → Peticionamento → Salvar na Pasta
+- [x] Corrigir erro de upload/importação (retry no finalizar + ECONNRESET tratado)
+- [ ] Pós-upload: redirecionar automaticamente para análise completa do processo
+- [ ] Análise IA: extrair TUDO do processo (partes, valores, teses, jurisprudência, estratégias, movimentações)
+- [ ] Salvar análise no Banco de Conhecimentos da plataforma e do Agente IA
+- [ ] Cadastrar cliente automaticamente com TODOS os dados na aba Clientes
+- [ ] Fluxo guiado: botão "Gerar Petição" que leva ao Peticionamento com contexto completo
+- [ ] Agente IA já ter estudado o processo e estar pronto para receber comando do Dr. Paulo
+- [ ] Aba "Petições Geradas" dentro da pasta do cliente com todas as petições salvas
+- [ ] Fluxo único sem fragmentação: cada etapa alimenta a próxima automaticamente
+
+- [ ] PUBLICAÇÕES: Sincronizar publicações automaticamente com pasta do cliente
+- [x] PUBLICAÇÕES: Nova publicação detectada → integrar na pasta do cliente automaticamente
+- [x] PRAZOS: Publicação nova → gerar prazo automático na página de Prazos (auto-geração implementada no buscarDatajud)
+- [x] AGENTE FLUTUANTE: Omnipresente com todos os conhecimentos do escritório
+- [x] AGENTE FLUTUANTE: Capaz de gerar petições, organizar plataforma, analisar processos
+- [x] AGENTE FLUTUANTE: Contexto da página atual para respostas inteligentes

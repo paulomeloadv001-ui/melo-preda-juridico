@@ -1,0 +1,52 @@
+{
+  "query": "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME > 'movimentacoes_financeiras' ORDER BY TABLE_NAME;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME > 'movimentacoes_financeiras' ORDER BY TABLE_NAME;",
+  "rows": [
+    {
+      "TABLE_NAME": "notificacoes"
+    },
+    {
+      "TABLE_NAME": "partes_processuais"
+    },
+    {
+      "TABLE_NAME": "perfis_acesso"
+    },
+    {
+      "TABLE_NAME": "peticao_versoes"
+    },
+    {
+      "TABLE_NAME": "peticoes_geradas"
+    },
+    {
+      "TABLE_NAME": "prazos_processuais"
+    },
+    {
+      "TABLE_NAME": "processos"
+    },
+    {
+      "TABLE_NAME": "publicacoes"
+    },
+    {
+      "TABLE_NAME": "relatorios"
+    },
+    {
+      "TABLE_NAME": "sync_log"
+    },
+    {
+      "TABLE_NAME": "templates_peticao"
+    },
+    {
+      "TABLE_NAME": "user_permissions"
+    },
+    {
+      "TABLE_NAME": "user_profiles"
+    },
+    {
+      "TABLE_NAME": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "TABLE_NAME\nnotificacoes\npartes_processuais\nperfis_acesso\npeticao_versoes\npeticoes_geradas\nprazos_processuais\nprocessos\npublicacoes\nrelatorios\nsync_log\ntemplates_peticao\nuser_permissions\nuser_profiles\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

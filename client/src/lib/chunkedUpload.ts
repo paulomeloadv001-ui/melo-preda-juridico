@@ -115,22 +115,37 @@ export async function uploadFileChunked(
   onStatus?.('Processando arquivo...');
   onProgress?.(92);
 
-  const finalRes = await fetch('/api/upload/finalizar', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ uploadId }),
-  });
+  // Finalizar com retry
+  let finalRetries = 0;
+  const maxFinalRetries = 3;
+  while (finalRetries < maxFinalRetries) {
+    try {
+      const finalRes = await fetch('/api/upload/finalizar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uploadId }),
+      });
 
-  if (!finalRes.ok) {
-    const err = await finalRes.json().catch(() => ({ error: 'Erro ao finalizar upload' }));
-    throw new Error(err.error || `Erro HTTP ${finalRes.status}`);
+      if (!finalRes.ok) {
+        const err = await finalRes.json().catch(() => ({ error: 'Erro ao finalizar upload' }));
+        throw new Error(err.error || `Erro HTTP ${finalRes.status}`);
+      }
+
+      const result = await finalRes.json();
+      onProgress?.(100);
+      onStatus?.('Upload completo!');
+
+      return result as ChunkedUploadResult;
+    } catch (err: any) {
+      finalRetries++;
+      if (finalRetries >= maxFinalRetries) {
+        throw new Error(`Falha ao finalizar upload após ${maxFinalRetries} tentativas: ${err.message}`);
+      }
+      await new Promise(r => setTimeout(r, 2000 * finalRetries));
+      onStatus?.(`Reenviando finalização (tentativa ${finalRetries + 1})...`);
+    }
   }
-
-  const result = await finalRes.json();
-  onProgress?.(100);
-  onStatus?.('Upload completo!');
-
-  return result as ChunkedUploadResult;
+  throw new Error('Falha inesperada ao finalizar upload');
 }
 
 /**

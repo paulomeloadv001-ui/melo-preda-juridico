@@ -6254,20 +6254,56 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
               if (descLower.includes('intimação') || descLower.includes('citação')) urgencia = 2;
               else if (descLower.includes('sentença') || descLower.includes('despacho') || descLower.includes('decisão')) urgencia = 1;
 
-              await db.insert(publicacoes).values({
+              const tipoPublicacao = desc.includes('Intimação') ? 'intimação' : desc.includes('Sentença') ? 'sentença' : desc.includes('Despacho') ? 'despacho' : 'movimentação';
+              const [pubInserted] = await db.insert(publicacoes).values({
                 processoId: proc.id,
                 clienteId: proc.clienteId,
                 numeroCnj: proc.numeroCnj,
                 fonte: 'datajud',
-                tipoPublicacao: desc.includes('Intimação') ? 'intimação' : desc.includes('Sentença') ? 'sentença' : desc.includes('Despacho') ? 'despacho' : 'movimentação',
+                tipoPublicacao,
                 dataPublicacao: dataPub,
                 conteudo: desc,
                 resumo: desc,
                 oabEncontrada: '40559/GO',
                 urgencia,
                 jsonOriginal: JSON.stringify(mov),
-              });
+              }).$returningId();
               novasPublicacoes++;
+
+              // AUTO-GERAÇÃO DE PRAZOS para publicações urgentes (intimações e citações)
+              if (urgencia >= 2 && proc.clienteId) {
+                try {
+                  const diasPrazo = descLower.includes('citação') ? 15 : descLower.includes('contestação') ? 15 : descLower.includes('recurso') ? 15 : 5;
+                  const tipoPrazo = descLower.includes('citação') ? 'contestacao' : descLower.includes('recurso') ? 'recurso' : 'manifestacao';
+                  const dataVenc = new Date(dataPub.getTime() + diasPrazo * 24 * 60 * 60 * 1000);
+                  const [prazoAuto] = await db.insert(prazosProcessuais).values({
+                    processoId: proc.id,
+                    clienteId: proc.clienteId,
+                    tipo: tipoPrazo as any,
+                    titulo: `Prazo Auto: ${desc.substring(0, 100)}`,
+                    descricao: `Prazo gerado automaticamente da publicação DATAJUD: ${desc}`,
+                    dataVencimento: dataVenc,
+                    status: 'pendente',
+                    diasAntecedencia: 3,
+                  }).$returningId();
+                  await db.update(publicacoes).set({ prazoGerado: 1, prazoId: prazoAuto.id }).where(eq(publicacoes.id, pubInserted.id));
+                  // Notificar sobre o novo prazo
+                  await criarNotificacao({
+                    tipo: 'prazo_vencendo',
+                    prioridade: 'alta',
+                    titulo: `Novo Prazo: ${desc.substring(0, 60)}`,
+                    mensagem: `Prazo de ${diasPrazo} dias gerado automaticamente. Vence em ${dataVenc.toLocaleDateString('pt-BR')}.`,
+                    processoId: proc.id,
+                    clienteId: proc.clienteId,
+                    prazoId: prazoAuto.id,
+                    linkUrl: `/prazos`,
+                    icone: 'Clock',
+                    cor: 'amber',
+                  });
+                } catch (prazoErr) {
+                  console.error('[DATAJUD] Erro ao gerar prazo automático:', prazoErr);
+                }
+              }
             }
           }
 
@@ -9092,7 +9128,8 @@ async function verificarPrazosAutomaticamente() {
       }
     }
     console.log(`[Prazos] Verificação automática: ${pendentes.length} prazos verificados`);
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.message?.includes('ECONNRESET') || e?.cause?.message?.includes('ECONNRESET')) return;
     console.error('[Prazos] Erro na verificação automática:', e);
   }
 }
@@ -9122,7 +9159,12 @@ async function limparJobsPresos() {
       }).where(sql`${jobs.status} = 'processando' AND ${jobs.createdAt} < ${trintaMinAtras}`);
       console.log(`[Jobs] Auto-cleanup: ${presos.length} jobs presos corrigidos`);
     }
-  } catch (e) {
+  } catch (e: any) {
+    // Silenciar erros de conexão (ECONNRESET) que são normais em ambientes cloud
+    if (e?.message?.includes('ECONNRESET') || e?.cause?.message?.includes('ECONNRESET')) {
+      // Conexão perdida temporariamente - será retentada no próximo ciclo
+      return;
+    }
     console.error('[Jobs] Erro no auto-cleanup:', e);
   }
 }
