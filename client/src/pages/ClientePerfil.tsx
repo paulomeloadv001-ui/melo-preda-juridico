@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { useLocation, useParams } from "wouter";
@@ -49,6 +49,14 @@ export default function ClientePerfil() {
     onError: (e) => toast.error(e.message),
   });
   const { data: pastaFiles, refetch: refetchPasta } = trpc.pasta.getFiles.useQuery({ clienteId });
+  const { data: peticoesCliente, refetch: refetchPeticoes } = trpc.agente.listarPeticoes.useQuery({ clienteId, limit: 50 });
+  const exportarDocx = trpc.agente.exportarDocx.useMutation({
+    onSuccess: (data: any) => {
+      if (data?.url) window.open(data.url, '_blank');
+      toast.success('DOCX gerado com sucesso!');
+    },
+    onError: (e: any) => toast.error(`Erro: ${e.message}`),
+  });
   const generatePasta = trpc.pasta.generate.useMutation({
     onSuccess: () => {
       toast.success("Pasta do cliente gerada com sucesso!");
@@ -826,6 +834,77 @@ export default function ClientePerfil() {
               </div>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Petições Geradas do Cliente */}
+      <Card className="border shadow-sm">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FilePlus className="h-4 w-4 text-amber-600" /> Petições Geradas ({peticoesCliente?.length ?? 0})
+            </CardTitle>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => refetchPeticoes()}>
+                <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
+              </Button>
+              <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => setLocation(`/peticionamento?clienteId=${clienteId}`)}>
+                <Plus className="h-4 w-4 mr-1" /> Nova Petição
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!peticoesCliente || peticoesCliente.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Nenhuma petição gerada para este cliente</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => setLocation(`/peticionamento?clienteId=${clienteId}`)}>
+                <FilePlus className="h-4 w-4 mr-1" /> Gerar Primeira Petição
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {(peticoesCliente as any[]).map((pet: any) => (
+                <div key={pet.id} className="flex items-center justify-between border rounded-lg p-3 hover:bg-accent/50 transition-colors">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <FileText className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{pet.titulo}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <Badge variant="outline" className="text-[10px]">{pet.tipo}</Badge>
+                        <Badge variant={pet.status === 'finalizada' ? 'default' : pet.status === 'rascunho' ? 'secondary' : 'outline'} className="text-[10px]">
+                          {pet.status}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(pet.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    {pet.storageUrl && (
+                      <a href={pet.storageUrl} target="_blank" rel="noopener noreferrer">
+                        <Button variant="ghost" size="sm" title="Baixar"><Download className="h-4 w-4" /></Button>
+                      </a>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      title="Exportar DOCX com Timbrado"
+                      disabled={exportarDocx.isPending}
+                      onClick={() => exportarDocx.mutate({ peticaoId: pet.id })}
+                    >
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" title="Ver no Peticionamento" onClick={() => setLocation(`/peticionamento`)}>
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

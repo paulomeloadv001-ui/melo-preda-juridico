@@ -16,7 +16,7 @@ import {
   anexosPeticao, userPermissions, convites, auditLog,
   publicacoes, monitoramentoConfig, peticaoVersoes, perfisAcesso
 } from "../drizzle/schema";
-import { eq, like, desc, asc, and, sql } from "drizzle-orm";
+import { eq, like, desc, asc, and, sql, inArray } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
 import { storagePut, storageGet } from "./storage";
 import { gerarPeticaoDocx } from "./docxGenerator";
@@ -4456,17 +4456,23 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
         if (input?.clienteId) {
           rows = rows.filter((p: any) => p.clienteId === input.clienteId);
         }
-        // Enriquecer com dados do processo e cliente
+        // Enriquecer com dados do processo, cliente e partes
         const procs = await db.select().from(processos);
         const clis = await db.select().from(clientes);
+        const partes = await db.select().from(partesProcessuais);
         const enriched = rows.map((p: any) => {
           const proc = (procs as any[]).find((pr: any) => pr.id === p.processoId);
           const cli = (clis as any[]).find((c: any) => c.id === p.clienteId);
+          const partesDoProcesso = (partes as any[]).filter((pt: any) => pt.processoId === p.processoId);
+          const autores = partesDoProcesso.filter((pt: any) => pt.tipo === 'Autor').map((pt: any) => pt.nome);
+          const reus = partesDoProcesso.filter((pt: any) => pt.tipo === 'Reu').map((pt: any) => pt.nome);
           return {
             ...p,
             numeroCnj: proc?.numeroCnj || '',
             tipoAcao: proc?.tipoAcao || '',
             nomeCliente: cli?.nomeCompleto || '',
+            poloAtivo: proc?.poloAtivo || autores.join(', ') || cli?.nomeCompleto || '',
+            poloPassivo: proc?.poloPassivo || reus.join(', ') || '',
           };
         });
         return enriched;
@@ -4551,55 +4557,73 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
         const agora = new Date();
         let notificacoesEnviadas = 0;
         let prazosVencidos = 0;
+
+        // Batch: separar vencidos e prestes a vencer
+        const idsVencidos: number[] = [];
+        const idsNotificarVencido: number[] = [];
+        const prazosVencendo: Array<{ id: number; titulo: string; vencimento: Date; diffDias: number; processoId: number; clienteId: number }> = [];
+
         for (const prazo of pendentes) {
           const vencimento = new Date(prazo.dataVencimento);
           const diffMs = vencimento.getTime() - agora.getTime();
           const diffDias = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-          // Prazo já vencido
           if (diffDias < 0) {
-            await db.update(prazosProcessuais)
-              .set({ status: 'vencido' })
-              .where(eq(prazosProcessuais.id, prazo.id));
-            if (!prazo.notificacaoEnviada) {
-              await criarNotificacao({
-                tipo: 'prazo_vencido',
-                prioridade: 'urgente',
-                titulo: `PRAZO VENCIDO: ${prazo.titulo}`,
-                mensagem: `O prazo venceu em ${vencimento.toLocaleDateString('pt-BR')}. Ação imediata necessária.`,
-                processoId: prazo.processoId,
-                clienteId: prazo.clienteId,
-                prazoId: prazo.id,
-                linkUrl: `/clientes/${prazo.clienteId}`,
-                icone: 'AlertTriangle',
-                cor: 'red',
-              });
-              await db.update(prazosProcessuais)
-                .set({ notificacaoEnviada: 1 })
-                .where(eq(prazosProcessuais.id, prazo.id));
-              notificacoesEnviadas++;
-            }
+            idsVencidos.push(prazo.id);
+            if (!prazo.notificacaoEnviada) idsNotificarVencido.push(prazo.id);
             prazosVencidos++;
+          } else if (diffDias <= (prazo.diasAntecedencia || 3) && !prazo.notificacaoEnviada) {
+            prazosVencendo.push({ id: prazo.id, titulo: prazo.titulo, vencimento, diffDias, processoId: prazo.processoId, clienteId: prazo.clienteId });
           }
-          // Prazo vencendo em breve
-          else if (diffDias <= (prazo.diasAntecedencia || 3) && !prazo.notificacaoEnviada) {
+        }
+
+        // Batch UPDATE: marcar todos vencidos de uma vez
+        if (idsVencidos.length > 0) {
+          await db.update(prazosProcessuais)
+            .set({ status: 'vencido' })
+            .where(inArray(prazosProcessuais.id, idsVencidos));
+        }
+        // Batch UPDATE: marcar notificação enviada para vencidos
+        if (idsNotificarVencido.length > 0) {
+          await db.update(prazosProcessuais)
+            .set({ notificacaoEnviada: 1 })
+            .where(inArray(prazosProcessuais.id, idsNotificarVencido));
+          // Criar apenas 1 notificação resumida para vencidos
+          await criarNotificacao({
+            tipo: 'prazo_vencido',
+            prioridade: 'urgente',
+            titulo: `${idsNotificarVencido.length} prazo(s) vencido(s)`,
+            mensagem: `Foram identificados ${idsNotificarVencido.length} prazos vencidos. Verifique a página de Prazos.`,
+            linkUrl: '/prazos',
+            icone: 'AlertTriangle',
+            cor: 'red',
+          });
+          notificacoesEnviadas++;
+        }
+
+        // Notificações individuais apenas para os que estão vencendo em breve (máx 10)
+        const vencendoParaNotificar = prazosVencendo.slice(0, 10);
+        if (vencendoParaNotificar.length > 0) {
+          const idsVencendo = vencendoParaNotificar.map(p => p.id);
+          await db.update(prazosProcessuais)
+            .set({ notificacaoEnviada: 1 })
+            .where(inArray(prazosProcessuais.id, idsVencendo));
+          for (const prazo of vencendoParaNotificar) {
             await criarNotificacao({
               tipo: 'prazo_vencendo',
-              prioridade: diffDias <= 1 ? 'urgente' : 'alta',
-              titulo: `Prazo em ${diffDias} dia(s): ${prazo.titulo}`,
-              mensagem: `O prazo vence em ${vencimento.toLocaleDateString('pt-BR')} (${diffDias} dia(s) restantes).`,
+              prioridade: prazo.diffDias <= 1 ? 'urgente' : 'alta',
+              titulo: `Prazo em ${prazo.diffDias} dia(s): ${prazo.titulo}`,
+              mensagem: `O prazo vence em ${prazo.vencimento.toLocaleDateString('pt-BR')} (${prazo.diffDias} dia(s) restantes).`,
               processoId: prazo.processoId,
               clienteId: prazo.clienteId,
               prazoId: prazo.id,
-              linkUrl: `/clientes/${prazo.clienteId}`,
+              linkUrl: `/prazos`,
               icone: 'Clock',
-              cor: diffDias <= 1 ? 'red' : 'amber',
+              cor: prazo.diffDias <= 1 ? 'red' : 'amber',
             });
-            await db.update(prazosProcessuais)
-              .set({ notificacaoEnviada: 1 })
-              .where(eq(prazosProcessuais.id, prazo.id));
             notificacoesEnviadas++;
           }
         }
+
         return { notificacoesEnviadas, prazosVencidos, totalVerificados: pendentes.length };
       }),
    }),
@@ -6142,10 +6166,28 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
         const all = await db.select().from(publicacoes)
           .orderBy(sql`tratada ASC, urgencia DESC, dataPublicacao DESC`)
           .limit(filters.limit || 50);
-        let filtered = all;
+        let filtered = all as any[];
         if (filters.fonte) filtered = filtered.filter((p: any) => p.fonte === filters.fonte);
         if (filters.tratada !== undefined) filtered = filtered.filter((p: any) => p.tratada === filters.tratada);
-        return filtered;
+        // Enriquecer com nome das partes para identificação
+        const procs = await db.select().from(processos);
+        const clis = await db.select().from(clientes);
+        const partesAll = await db.select().from(partesProcessuais);
+        const enriched = filtered.map((pub: any) => {
+          const proc = (procs as any[]).find((pr: any) => pr.id === pub.processoId);
+          const cli = (clis as any[]).find((c: any) => c.id === pub.clienteId);
+          const partesDoProcesso = (partesAll as any[]).filter((pt: any) => pt.processoId === pub.processoId);
+          const autores = partesDoProcesso.filter((pt: any) => pt.tipo === 'Autor').map((pt: any) => pt.nome);
+          const reus = partesDoProcesso.filter((pt: any) => pt.tipo === 'Reu').map((pt: any) => pt.nome);
+          return {
+            ...pub,
+            nomeCliente: cli?.nomeCompleto || '',
+            poloAtivo: proc?.poloAtivo || autores.join(', ') || cli?.nomeCompleto || '',
+            poloPassivo: proc?.poloPassivo || reus.join(', ') || '',
+            tipoAcao: proc?.tipoAcao || '',
+          };
+        });
+        return enriched;
       }),
 
     // Marcar publicação como tratada

@@ -323,6 +323,14 @@ export default function PublicacoesPage() {
                           {new Date(pub.dataPublicacao).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
+                      {(pub.poloAtivo || pub.poloPassivo || pub.nomeCliente) && (
+                        <div className="text-xs mt-0.5">
+                          <span className="font-medium text-blue-600 dark:text-blue-400">{pub.poloAtivo || pub.nomeCliente}</span>
+                          {pub.poloPassivo && <span className="text-muted-foreground"> × </span>}
+                          {pub.poloPassivo && <span className="font-medium text-red-600 dark:text-red-400">{pub.poloPassivo}</span>}
+                          {pub.tipoAcao && <span className="text-muted-foreground ml-2">({pub.tipoAcao})</span>}
+                        </div>
+                      )}
                       <p className="text-sm line-clamp-3">{pub.conteudo || pub.resumo || 'Sem conteúdo'}</p>
                       {pub.diarioOficial && <p className="text-xs text-muted-foreground">Diário: {pub.diarioOficial} {pub.caderno && `| Caderno: ${pub.caderno}`} {pub.pagina && `| Pág: ${pub.pagina}`}</p>}
                       {pub.tratadaPor && <p className="text-xs text-muted-foreground">Tratada por: {pub.tratadaPor} em {pub.tratadaEm ? new Date(pub.tratadaEm).toLocaleDateString('pt-BR') : ''}</p>}

@@ -624,3 +624,9 @@
 - [x] AGENTE FLUTUANTE: Omnipresente com todos os conhecimentos do escritório
 - [x] AGENTE FLUTUANTE: Capaz de gerar petições, organizar plataforma, analisar processos
 - [x] AGENTE FLUTUANTE: Contexto da página atual para respostas inteligentes
+
+## v5.1 — 20/03/2026
+- [x] BUG: Timeout na mutação de Prazos - corrigido com batch UPDATE otimizado
+- [x] PRAZOS: Adicionar nome das partes para identificação (polo ativo × polo passivo com cores)
+- [x] PUBLICAÇÕES: Adicionar nome das partes para identificação (enriquecido via processos)
+- [x] Implementar aba "Petições Geradas" na pasta do cliente (Baixar, Exportar DOCX, Ver no Peticionamento)

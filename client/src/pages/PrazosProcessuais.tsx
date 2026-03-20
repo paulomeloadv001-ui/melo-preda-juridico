@@ -397,9 +397,14 @@ export default function PrazosProcessuais() {
                                   {TIPOS_PRAZO.find(t => t.value === prazo.tipo)?.label || prazo.tipo}
                                 </Badge>
                               </div>
-                              {prazo.nomeCliente && (
+                              {(prazo.poloAtivo || prazo.poloPassivo) ? (
+                                <p className="text-[11px] text-muted-foreground mt-1 truncate">
+                                  <span className="font-medium text-blue-600 dark:text-blue-400">{prazo.poloAtivo || prazo.nomeCliente}</span>
+                                  {prazo.poloPassivo && <span> × <span className="text-red-600 dark:text-red-400">{prazo.poloPassivo}</span></span>}
+                                </p>
+                              ) : prazo.nomeCliente ? (
                                 <p className="text-[11px] text-muted-foreground mt-1 truncate">{prazo.nomeCliente}</p>
-                              )}
+                              ) : null}
                             </div>
                             <div className="text-right flex-shrink-0">
                               <p className="text-xs font-medium">
