@@ -630,3 +630,6 @@
 - [x] PRAZOS: Adicionar nome das partes para identificação (polo ativo × polo passivo com cores)
 - [x] PUBLICAÇÕES: Adicionar nome das partes para identificação (enriquecido via processos)
 - [x] Implementar aba "Petições Geradas" na pasta do cliente (Baixar, Exportar DOCX, Ver no Peticionamento)
+
+- [ ] BUG: Timeout no Agente IA (/agente) - mutation demora para responder
+- [ ] Gerar ZIPs desacoplados para exportação do código-fonte completo

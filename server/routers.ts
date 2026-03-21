@@ -4682,63 +4682,30 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
         // 2i. Petições geradas
         const todasPeticoes = await db.select().from(peticoesGeradas).orderBy(desc(peticoesGeradas.createdAt));
 
-        // 3. MONTAR PANORAMA GLOBAL DO ESCRITÓRIO (SEMPRE CARREGADO)
+        // 3. MONTAR PANORAMA GLOBAL OTIMIZADO (resumo compacto para não estourar tokens)
         const totalValorCausas = todosProcessos.reduce((acc, p) => acc + Number(p.valorCausa || 0), 0);
         const totalHonorarios = todosProcessos.reduce((acc, p) => acc + Number(p.honorariosValor || 0), 0);
-        const prazosUrgentes = todosPrazos.filter(p => !p.status || p.status !== 'cumprido').slice(0, 30);
+        const prazosUrgentes = todosPrazos.filter(p => !p.status || p.status !== 'cumprido').slice(0, 15);
         const emprestimosAtivos = todosEmprestimos.filter(e => !e.status || e.status !== 'Quitado');
         const totalParcelasEmprestimos = emprestimosAtivos.reduce((acc, e) => acc + Number(e.valorParcela || 0), 0);
 
         const panoramaGlobal = `
-=== PANORAMA COMPLETO DO ESCRITÓRIO MELO & PREDA ===
-Você estudou e conhece TODOS os dados abaixo. Responda qualquer pergunta com base neles.
+=== PANORAMA DO ESCRITÓRIO MELO & PREDA ===
+RESUMO: ${todosClientes.length} clientes | ${todosProcessos.length} processos | ${todasEstrategias.length} estratégias | ${todosConhecimentos.length} conhecimentos | ${todasPeticoes.length} petições
+Valor causas: R$ ${totalValorCausas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | Honorários: R$ ${totalHonorarios.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+${emprestimosAtivos.length} empréstimos ativos (R$ ${totalParcelasEmprestimos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês) | ${prazosUrgentes.length} prazos pendentes
 
-RESUMO GERAL:
-- ${todosClientes.length} clientes ativos
-- ${todosProcessos.length} processos judiciais
-- ${todasEstrategias.length} estratégias processuais definidas
-- ${todosConhecimentos.length} conhecimentos na base
-- ${todasPeticoes.length} petições geradas
-- Valor total em causas: R$ ${totalValorCausas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-- Honorários totais: R$ ${totalHonorarios.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-- ${emprestimosAtivos.length} empréstimos consignados ativos (total parcelas: R$ ${totalParcelasEmprestimos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês)
-- ${prazosUrgentes.length} prazos pendentes/urgentes
-
-TODOS OS CLIENTES (${todosClientes.length}):
+CLIENTES (resumo — use tool buscar_cliente para detalhes):
 ${todosClientes.map(c => {
   const procsCliente = todosProcessos.filter(p => p.clienteId === c.id);
-  const finCliente = todosDadosFin.filter(d => d.clienteId === c.id);
-  const empCliente = todosEmprestimos.filter(e => e.clienteId === c.id);
-  const estratsCliente = procsCliente.flatMap(p => todasEstrategias.filter(e => e.processoId === p.id));
-  return `• ${c.nomeCompleto} | CPF: ${c.cpfCnpj || 'N/A'} | ${c.profissao || 'N/A'} | ${c.orgaoEmpregador || 'N/A'} | ${c.cidade || ''}-${c.estado || ''}
-  Processos (${procsCliente.length}): ${procsCliente.map(p => `${p.numeroCnj} (${p.tipoAcao}, R$ ${p.valorCausa}, ${p.faseAtual})`).join('; ')}
-  Financeiro: ${finCliente.map(d => `Bruto R$ ${d.remuneracaoBruta || '?'} | Líq R$ ${d.remuneracaoLiquida || '?'} | Margem R$ ${d.margemConsignavelValor || '?'} (${d.margemConsignavelPerc || '?'}%)`).join('; ') || 'N/A'}
-  Empréstimos (${empCliente.length}): ${empCliente.map(e => `${e.banco}: R$ ${e.valorParcela}/mês, ${e.totalParcelas || '?'} parcelas`).join('; ') || 'Nenhum'}
-  Estratégias: ${estratsCliente.map(e => e.tesePrincipal?.substring(0, 150)).join(' | ') || 'Nenhuma'}`;
+  return `• ID:${c.id} ${c.nomeCompleto} | CPF: ${c.cpfCnpj || 'N/A'} | ${procsCliente.length} proc(s): ${procsCliente.map(p => p.numeroCnj).join(', ')}`;
 }).join('\n')}
 
-TODOS OS PROCESSOS DETALHADOS (${todosProcessos.length}):
-${todosProcessos.map(p => {
-  const estrats = todasEstrategias.filter(e => e.processoId === p.id);
-  const cumps = todosCumprimentos.filter(c => c.processoId === p.id);
-  const movFin = todasMovFin.filter(m => m.processoId === p.id);
-  return `• ${p.numeroCnj} | ${p.tipoAcao} | ${p.classeProcessual || ''}
-  Polo Ativo: ${p.poloAtivo} | Polo Passivo: ${p.poloPassivo}
-  Vara: ${p.vara}, ${p.comarca} | Tribunal: ${p.tribunal} | Juiz: ${p.juiz || 'N/A'}
-  Valor: R$ ${p.valorCausa} | Fase: ${p.faseAtual} | Status: ${p.statusProcesso}
-  Sentença: ${p.resumoSentenca?.substring(0, 200) || 'N/A'}
-  Condenação: R$ ${p.valorCondenacao || 'N/A'} | Honorários: ${p.honorariosPerc || 'N/A'}% = R$ ${p.honorariosValor || 'N/A'}
-  Tutela: ${p.tutelaTipo || 'N/A'} (${p.tutelaStatus || 'N/A'})
-  Estratégias: ${estrats.map(e => `[${e.tesePrincipal?.substring(0, 120)}] Fund: ${e.fundamentacaoLegal?.substring(0, 100)} | Jurisp: ${e.jurisprudenciaCitada?.substring(0, 80) || 'N/A'} | Fortes: ${e.pontosFortes?.substring(0, 80) || 'N/A'} | Riscos: ${e.riscosIdentificados?.substring(0, 80) || 'N/A'}`).join('\n    ') || 'Nenhuma'}
-  Cumprimentos: ${cumps.map(c => `${c.tipo}: Exec R$ ${c.valorExecucao}, Princ R$ ${c.valorPrincipal}, Juros R$ ${c.valorJuros}, Hon R$ ${c.valorHonorarios}`).join('; ') || 'Nenhum'}
-  Financeiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ') || 'N/A'}`;
-}).join('\n')}
+PROCESSOS (resumo — use tool buscar_processo para detalhes):
+${todosProcessos.map(p => `• ID:${p.id} ${p.numeroCnj} | ${p.tipoAcao} | ${p.poloAtivo} × ${p.poloPassivo} | R$ ${p.valorCausa} | ${p.faseAtual} | ${p.statusProcesso}`).join('\n')}
 
-PRAZOS PROCESSUAIS PENDENTES (${prazosUrgentes.length}):
-${prazosUrgentes.map(p => `• ${p.titulo} | Vencimento: ${p.dataVencimento} | Status: ${p.status} | Tipo: ${p.tipo} | Processo: ${p.processoId || 'N/A'}`).join('\n')}
-
-PETIÇÕES GERADAS (${todasPeticoes.length}):
-${todasPeticoes.slice(0, 30).map(p => `• ${p.titulo} | Tipo: ${p.tipo} | Status: ${p.status} | Cliente: ${p.clienteId || 'N/A'}`).join('\n')}
+PRAZOS URGENTES (${prazosUrgentes.length}):
+${prazosUrgentes.map(p => `• ${p.titulo} | Venc: ${p.dataVencimento} | ${p.status} | Proc: ${p.processoId || 'N/A'}`).join('\n')}
 `;
 
         // 4. Buscar contexto DETALHADO do cliente/processo selecionado (ALÉM do global)
@@ -4820,24 +4787,15 @@ Prazos: ${prazos.map(p => `${p.titulo} | ${p.dataVencimento} | ${p.status}`).joi
           }
         }
 
-        // 5. Montar base de conhecimento COMPLETA (sem truncar)
+        // 5. Montar base de conhecimento RESUMIDA (títulos + início do conteúdo — tools buscam detalhes)
+        const truncConteudo = (c: string | null, max: number = 200) => c ? c.substring(0, max) + (c.length > max ? '...' : '') : '';
         const baseConhecimento = `
-=== BASE DE CONHECIMENTO JURÍDICO COMPLETA (${todosConhecimentos.length} registros) ===
-
-TESES CENTRAIS (${teses.length}):
-${teses.map(t => `• ${t.titulo}:\n${t.conteudo || ''}`).join('\n\n')}
-
-JURISPRUDÊNCIA ÂNCORA (${jurisprudencias.length}):
-${jurisprudencias.map(j => `• ${j.titulo}:\n${j.conteudo || ''}`).join('\n\n')}
-
-ESTRATÉGIAS PROCESSUAIS (${estrategiasConhec.length}):
-${estrategiasConhec.map(e => `• ${e.titulo}:\n${e.conteudo || ''}`).join('\n\n')}
-
-LEGISLAÇÃO FUNDAMENTAL (${legislacoes.length}):
-${legislacoes.map(l => `• ${l.titulo}:\n${l.conteudo || ''}`).join('\n\n')}
-
-MODELOS E GUIAS (${modelos.length}):
-${modelos.map(m => `• ${m.titulo}:\n${m.conteudo || ''}`).join('\n\n')}
+=== BASE DE CONHECIMENTO (${todosConhecimentos.length} registros — use buscar_conhecimento para detalhes) ===
+TESES (${teses.length}): ${teses.map(t => `${t.titulo}`).join(' | ')}
+JURISPRUDÊNCIA (${jurisprudencias.length}): ${jurisprudencias.map(j => `${j.titulo}`).join(' | ')}
+ESTRATÉGIAS (${estrategiasConhec.length}): ${estrategiasConhec.map(e => `${e.titulo}`).join(' | ')}
+LEGISLAÇÃO (${legislacoes.length}): ${legislacoes.map(l => `${l.titulo}`).join(' | ')}
+MODELOS (${modelos.length}): ${modelos.map(m => `${m.titulo}`).join(' | ')}
 `;
 
         // 5. Buscar TODAS as configurações de expertise do agente

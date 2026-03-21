@@ -1225,7 +1225,7 @@ export async function executarAgenteCompleto(params: {
   contextoProcesso: string;
 }): Promise<AgentExecutionResult> {
   const acoesExecutadas: AgentExecutionResult['acoesExecutadas'] = [];
-  const MAX_ITERATIONS = 8; // Máximo de ciclos de tool calling
+  const MAX_ITERATIONS = 5; // Máximo de ciclos de tool calling (otimizado para evitar timeout)
 
   // System prompt PROATIVO — sempre consulta o banco antes de responder
   const systemPrompt = `Você é o Agente Jurídico Expert EXECUTOR do escritório Melo & Preda Advogados.
