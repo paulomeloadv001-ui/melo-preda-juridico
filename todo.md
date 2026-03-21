@@ -631,5 +631,6 @@
 - [x] PUBLICAÇÕES: Adicionar nome das partes para identificação (enriquecido via processos)
 - [x] Implementar aba "Petições Geradas" na pasta do cliente (Baixar, Exportar DOCX, Ver no Peticionamento)
 
-- [ ] BUG: Timeout no Agente IA (/agente) - mutation demora para responder
-- [ ] Gerar ZIPs desacoplados para exportação do código-fonte completo
+- [x] BUG: Timeout no Agente IA (/agente) - otimizado prompt ~90%, splitLink 120s, MAX_ITERATIONS 8→5
+- [x] Gerar ZIPs desacoplados para exportação do código-fonte completo (8 ZIPs)
+- [x] Mover DATAJUD API Key de hardcoded para variável de ambiente (ENV) - 6 ocorrências substituídas, 3 testes passando

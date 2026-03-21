@@ -13,6 +13,7 @@
  */
 
 import { invokeLLM } from "./_core/llm";
+import { ENV } from "./_core/env";
 import type { Tool, Message, InvokeResult, ToolCall } from "./_core/llm";
 import { getDb } from "./db";
 import {
@@ -688,12 +689,12 @@ async function toolCompletarMovimentacoes(args: any): Promise<string> {
 
   const numLimpo = proc.numeroCnj.replace(/[^0-9]/g, '');
   const DATAJUD_API = 'https://api-publica.datajud.cnj.jus.br/api_publica_tjgo/_search';
-  const DATAJUD_KEY = 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RZ0NhVlpFSQ==';
+
 
   try {
     const resp = await fetch(DATAJUD_API, {
       method: 'POST',
-      headers: { 'Authorization': `APIKey ${DATAJUD_KEY}`, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': `APIKey ${ENV.datajudApiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: { match: { numeroProcesso: numLimpo } }, size: 1 }),
     });
 

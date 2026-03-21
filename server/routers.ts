@@ -21,6 +21,7 @@ import { invokeLLM } from "./_core/llm";
 import { storagePut, storageGet } from "./storage";
 import { gerarPeticaoDocx } from "./docxGenerator";
 import { executarAgenteCompleto } from "./agenteExecutor";
+import { ENV } from "./_core/env";
 
 // Helper: sanitize name for folder path
 function sanitizeName(name: string): string {
@@ -5955,12 +5956,10 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
         if (tribunaisMap[chave]) alias = `api_publica_${tribunaisMap[chave]}`;
         
         const url = `https://api-publica.datajud.cnj.jus.br/${alias}/_search`;
-        const apiKey = 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==';
-        
         const resp = await fetch(url, {
           method: 'POST',
           headers: {
-            'Authorization': `APIKey ${apiKey}`,
+            'Authorization': `APIKey ${ENV.datajudApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -6014,7 +6013,6 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
         clienteId: processos.clienteId,
       }).from(processos).where(sql`${processos.numeroCnj} IS NOT NULL AND ${processos.numeroCnj} != ''`);
       
-      const apiKey = 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==';
       const resultados: any[] = [];
       
       for (const proc of todosProcessos) {
@@ -6030,7 +6028,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
           const resp = await fetch(`https://api-publica.datajud.cnj.jus.br/${alias}/_search`, {
             method: 'POST',
             headers: {
-              'Authorization': `APIKey ${apiKey}`,
+              'Authorization': `APIKey ${ENV.datajudApiKey}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ query: { match: { numeroProcesso: numLimpo } } }),
@@ -6074,12 +6072,10 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
       .input(z.object({ numeroCnj: z.string(), ultimaDataConhecida: z.string().optional() }))
       .mutation(async ({ input }) => {
         const numLimpo = input.numeroCnj.replace(/[^0-9]/g, '');
-        const apiKey = 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==';
-        
         const resp = await fetch(`https://api-publica.datajud.cnj.jus.br/api_publica_tjgo/_search`, {
           method: 'POST',
           headers: {
-            'Authorization': `APIKey ${apiKey}`,
+            'Authorization': `APIKey ${ENV.datajudApiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ query: { match: { numeroProcesso: numLimpo } } }),
@@ -6208,7 +6204,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
       if (!db) throw new Error('DB indisponível');
 
       const DATAJUD_API = 'https://api-publica.datajud.cnj.jus.br/api_publica_tjgo/_search';
-      const DATAJUD_KEY = 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RZ0NhVlpFSQ==';
+
 
       // Buscar todos os processos do escritório
       const todosProcessos = await db.select({
@@ -6226,7 +6222,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
           const numLimpo = proc.numeroCnj.replace(/[^0-9]/g, '');
           const resp = await fetch(DATAJUD_API, {
             method: 'POST',
-            headers: { 'Authorization': `APIKey ${DATAJUD_KEY}`, 'Content-Type': 'application/json' },
+            headers: { 'Authorization': `APIKey ${ENV.datajudApiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: { match: { numeroProcesso: numLimpo } }, size: 1 }),
           });
           if (!resp.ok) { erros++; continue; }
@@ -6535,7 +6531,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
       let novasMovs = 0;
       let erros = 0;
       const DATAJUD_API = 'https://api-publica.datajud.cnj.jus.br/api_publica_tjgo/_search';
-      const DATAJUD_KEY = 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RZ0NhVlpFSQ==';
+
 
       for (const proc of todosProcessos) {
         if (!proc.numeroCnj || proc.numeroCnj.length < 10) continue;
@@ -6543,7 +6539,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
           const numLimpo = proc.numeroCnj.replace(/[^0-9]/g, '');
           const resp = await fetch(DATAJUD_API, {
             method: 'POST',
-            headers: { 'Authorization': `APIKey ${DATAJUD_KEY}`, 'Content-Type': 'application/json' },
+            headers: { 'Authorization': `APIKey ${ENV.datajudApiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: { match: { numeroProcesso: numLimpo } }, size: 1 }),
           });
           if (!resp.ok) { erros++; continue; }
