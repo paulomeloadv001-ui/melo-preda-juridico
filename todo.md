@@ -662,3 +662,7 @@
 - [x] Implementar sincronização automática TiDB → D1 no fluxo de deploy/publicação de versão (GitHub Actions + sync-data.mjs)
 - [x] Rebuild e redeploy frontend atualizado no Cloudflare
 - [x] Bug Cloudflare: env.ASSETS undefined - CORRIGIDO: fallback para proxy Manus quando ASSETS não disponível
+- [ ] Configurar secrets no GitHub via CLI (gh) para deploy automático
+- [ ] Finalizar sincronização D1 (publicações, agente_ia_historico, etc)
+- [ ] Testar deploy automático via GitHub Actions
+- [ ] Testar login e funcionalidades no Cloudflare
