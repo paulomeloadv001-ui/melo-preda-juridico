@@ -634,3 +634,8 @@
 - [x] BUG: Timeout no Agente IA (/agente) - otimizado prompt ~90%, splitLink 120s, MAX_ITERATIONS 8→5
 - [x] Gerar ZIPs desacoplados para exportação do código-fonte completo (8 ZIPs)
 - [x] Mover DATAJUD API Key de hardcoded para variável de ambiente (ENV) - 6 ocorrências substituídas, 3 testes passando
+
+## v5.4 — Deploy GitHub + Cloudflare — 21/03/2026
+- [ ] Sincronizar projeto com GitHub (push completo)
+- [ ] Preparar projeto para deploy no Cloudflare
+- [ ] Configurar Cloudflare Pages + Workers
