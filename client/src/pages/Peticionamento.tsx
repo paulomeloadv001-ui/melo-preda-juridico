@@ -13,7 +13,8 @@ import {
   FileText, Download, Plus, Search, Edit, Trash2, Copy,
   CheckCircle, Clock, FileCheck, Archive, Send, RefreshCw,
   ChevronRight, Loader2, Eye, RotateCcw, Paperclip, Upload, X,
-  History, GitBranch, ArrowLeft, ChevronDown, ChevronUp, Diff
+  History, GitBranch, ArrowLeft, ChevronDown, ChevronUp, Diff,
+  Brain, Sparkles, GraduationCap, BookOpen
 } from "lucide-react";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
@@ -191,6 +192,22 @@ export default function Peticionamento() {
     },
   });
 
+  // Aprendizado do agente
+  const aprovarEEnsinar = trpc.agente.aprovarEEnsinar.useMutation({
+    onSuccess: (data) => {
+      refetchPeticoes();
+      refetchAprendizado();
+      toast.success(data.mensagem);
+    },
+    onError: (err) => toast.error(`Erro: ${err.message}`),
+  });
+
+  const { data: aprendizadoStats, refetch: refetchAprendizado } = trpc.agente.estatisticasAprendizado.useQuery();
+
+  const [feedbackDialog, setFeedbackDialog] = useState(false);
+  const [feedbackPeticaoId, setFeedbackPeticaoId] = useState<number | null>(null);
+  const [feedbackTexto, setFeedbackTexto] = useState("");
+
   // Filtered petições
   const peticoesFiltradas = useMemo(() => {
     if (!peticoes) return [];
@@ -287,14 +304,20 @@ export default function Peticionamento() {
             <FileText className="h-6 w-6 text-amber-600" />
             Peticionamento
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 flex items-center gap-3">
             Gere, edite, exporte e gerencie petições com timbrado oficial do escritório
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <Badge variant="outline" className="text-sm">
             {peticoes?.length || 0} petições
           </Badge>
+          {aprendizadoStats && aprendizadoStats.totalReferencias > 0 && (
+            <Badge variant="outline" className="text-sm border-emerald-300 text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+              <Brain className="h-3 w-3" />
+              {aprendizadoStats.totalReferencias} ref. aprendidas
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -653,6 +676,23 @@ export default function Peticionamento() {
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Nova Petição
                     </Button>
+                    {peticaoGerada.id && (
+                      <Button
+                        onClick={() => {
+                          setFeedbackPeticaoId(peticaoGerada.id);
+                          setFeedbackTexto("");
+                          setFeedbackDialog(true);
+                        }}
+                        disabled={aprovarEEnsinar.isPending}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                      >
+                        {aprovarEEnsinar.isPending ? (
+                          <><Loader2 className="h-4 w-4 animate-spin mr-2" />Analisando...</>
+                        ) : (
+                          <><Brain className="h-4 w-4 mr-2" />Aprovar e Ensinar IA</>
+                        )}
+                      </Button>
+                    )}
                   </div>
 
                   {/* Preview inline */}
@@ -838,6 +878,26 @@ export default function Peticionamento() {
                           <RefreshCw className="h-3.5 w-3.5" />
                           Refinar esta petição
                         </button>
+                        {pet.status !== 'aprovado' && (
+                          <button
+                            onClick={() => {
+                              setFeedbackPeticaoId(pet.id);
+                              setFeedbackTexto("");
+                              setFeedbackDialog(true);
+                            }}
+                            disabled={aprovarEEnsinar.isPending}
+                            className="w-full flex items-center justify-center gap-2 py-2 text-xs font-medium text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 rounded-md transition-colors dark:text-emerald-300 dark:hover:bg-emerald-950/30"
+                          >
+                            <Brain className="h-3.5 w-3.5" />
+                            {aprovarEEnsinar.isPending ? 'Analisando...' : 'Aprovar e Ensinar IA'}
+                          </button>
+                        )}
+                        {pet.status === 'aprovado' && (
+                          <div className="w-full flex items-center justify-center gap-2 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            Aprovada — IA aprendeu com esta petição
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -1029,6 +1089,73 @@ export default function Peticionamento() {
             >
               {excluirPeticao.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Aprovar e Ensinar IA */}
+      <Dialog open={feedbackDialog} onOpenChange={setFeedbackDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-emerald-600" />
+              Aprovar e Ensinar IA
+            </DialogTitle>
+            <DialogDescription>
+              Ao aprovar, o agente analisa a petição e extrai padrões de estilo, estratégia e fundamentação para usar como referência em futuras gerações — sem copiar, apenas se inspirando.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-4 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                <Sparkles className="h-4 w-4" />
+                O que o agente vai aprender:
+              </div>
+              <ul className="text-xs text-emerald-700 dark:text-emerald-300 space-y-1 ml-6 list-disc">
+                <li>Estilo de redação e tom utilizado</li>
+                <li>Estrutura argumentativa e encadeamento</li>
+                <li>Teses jurídicas e como foram fundamentadas</li>
+                <li>Jurisprudência citada e estratégia processual</li>
+                <li>Pontos fortes que tornam a peça eficaz</li>
+              </ul>
+            </div>
+            <Textarea
+              placeholder="(Opcional) Feedback: o que ficou especialmente bom nesta petição? Ex: 'A fundamentação sobre abusividade ficou excelente', 'O tom combativo foi perfeito para este caso'..."
+              value={feedbackTexto}
+              onChange={(e) => setFeedbackTexto(e.target.value)}
+              rows={3}
+              className="resize-none"
+            />
+            {aprendizadoStats && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <GraduationCap className="h-3.5 w-3.5" />
+                O agente já aprendeu com {aprendizadoStats.totalReferencias} petição(es) aprovada(s)
+                {aprendizadoStats.totalConhecimentos > 0 && ` • ${aprendizadoStats.totalConhecimentos} conhecimentos na base`}
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setFeedbackDialog(false)}>Cancelar</Button>
+            <Button
+              onClick={() => {
+                if (feedbackPeticaoId) {
+                  aprovarEEnsinar.mutate({
+                    peticaoId: feedbackPeticaoId,
+                    feedback: feedbackTexto || undefined,
+                  }, {
+                    onSuccess: () => setFeedbackDialog(false),
+                  });
+                }
+              }}
+              disabled={aprovarEEnsinar.isPending}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {aprovarEEnsinar.isPending ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Analisando petição...</>
+              ) : (
+                <><Brain className="h-4 w-4 mr-2" />Aprovar e Ensinar</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

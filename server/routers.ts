@@ -5062,6 +5062,14 @@ Financeiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; 
         const estratRelevantes = conhecimentosOrdenados.filter(c => c.categoria === 'Estrategia').slice(0, 10);
         const estratTxt = estratRelevantes.map(e => `- [Rel:${e.relevancia}] ${e.titulo}: ${e.conteudo?.substring(0, 200)}`).join('\n');
 
+        // REFERÊNCIAS DE PETIÇÕES APROVADAS (aprendizado do agente)
+        const referenciasAprovadas = conhecimentosOrdenados
+          .filter(c => c.tags?.includes('referencia_aprovada'))
+          .slice(0, 5);
+        const refAprovTxt = referenciasAprovadas.length > 0
+          ? referenciasAprovadas.map(r => `\n[REF ${r.tipoAcao || 'Geral'}] ${r.titulo}:\n${r.conteudo?.substring(0, 600)}`).join('\n---')
+          : '';
+
         const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
 Advogado: PAULO DA SILVA MELO FILHO
 
@@ -5104,8 +5112,11 @@ ${legTxt}
 ${templateInfo}${contextoCliente}${contextoProcesso}
 
 ${input.instrucoes ? `INSTRUÇÕES ADICIONAIS DO ADVOGADO: ${input.instrucoes}` : ''}
+${refAprovTxt ? `
+REFERÊNCIAS DE PETIÇÕES APROVADAS ANTERIORMENTE (use como inspiração de estilo e estratégia, NÃO copie — desenvolva de forma única para este caso):
+${refAprovTxt}` : ''}
 
-IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação Markdown com títulos em negrito, numeração romana para seções, e letras para pedidos.`;
+IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação Markdown com títulos em negrito, numeração romana para seções, e letras para pedidos. Se houver referências de petições aprovadas, inspire-se no estilo e estratégia mas SEMPRE desenvolva argumentação original e adaptada ao caso específico.`;
 
         const result = await invokeLLM({
           messages: [
@@ -5756,6 +5767,226 @@ Refine a petição aplicando as instruções acima. Retorne a petição COMPLETA
           novaVersao: ultimaVersao + 1,
           conteudo: versao.conteudoTexto,
         };
+      }),
+
+    // ==================== APRENDIZADO DO AGENTE: APROVAR E ENSINAR ====================
+    aprovarEEnsinar: protectedProcedure
+      .input(z.object({
+        peticaoId: z.number(),
+        feedback: z.string().optional(), // feedback do advogado sobre o que ficou bom
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+
+        const [pet] = await db.select().from(peticoesGeradas).where(eq(peticoesGeradas.id, input.peticaoId));
+        if (!pet) throw new Error('Petição não encontrada');
+
+        // Buscar contexto do processo e cliente
+        let contextoProcesso = '';
+        let tipoAcaoProcesso = '';
+        if (pet.processoId) {
+          const [proc] = await db.select().from(processos).where(eq(processos.id, pet.processoId));
+          if (proc) {
+            contextoProcesso = `Processo: ${proc.numeroCnj} - ${proc.tipoAcao} - ${proc.statusProcesso}`;
+            tipoAcaoProcesso = proc.tipoAcao || '';
+          }
+        }
+        let nomeCliente = '';
+        if (pet.clienteId) {
+          const [cli] = await db.select().from(clientes).where(eq(clientes.id, pet.clienteId));
+          if (cli) nomeCliente = cli.nomeCompleto;
+        }
+
+        // Usar LLM para extrair padrões de estilo, estratégia e estrutura da petição aprovada
+        const extractResult = await invokeLLM({
+          messages: [
+            {
+              role: 'system',
+              content: `Você é um analista jurídico expert. Analise a petição aprovada abaixo e extraia:
+1. ESTILO DE REDAÇÃO: Tom, voz, expressões características, nível de formalidade, combatividade
+2. ESTRUTURA ARGUMENTATIVA: Como os argumentos são encadeados, ordem das seções, técnicas de persuasão
+3. TESES UTILIZADAS: Quais teses jurídicas foram empregadas e como foram fundamentadas
+4. JURISPRUDÊNCIA CITADA: Quais decisões foram referenciadas e como
+5. ESTRATÉGIA PROCESSUAL: Qual a estratégia geral adotada (ofensiva, defensiva, cautelar, etc.)
+6. PONTOS FORTES: O que torna esta petição eficaz e digna de ser referência
+
+Retorne em formato JSON com as chaves: estilo, estrutura, teses, jurisprudencia, estrategia, pontosFortes, resumoExecutivo`
+            },
+            {
+              role: 'user',
+              content: `PETIÇÃO APROVADA (${pet.tipo}):
+${contextoProcesso}
+Cliente: ${nomeCliente}
+${input.feedback ? `\nFEEDBACK DO ADVOGADO: ${input.feedback}` : ''}
+
+--- CONTEÚDO ---
+${pet.conteudoTexto || ''}
+--- FIM ---`
+            }
+          ],
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: 'peticao_analise',
+              strict: true,
+              schema: {
+                type: 'object',
+                properties: {
+                  estilo: { type: 'string', description: 'Descrição do estilo de redação' },
+                  estrutura: { type: 'string', description: 'Estrutura argumentativa utilizada' },
+                  teses: { type: 'string', description: 'Teses jurídicas empregadas' },
+                  jurisprudencia: { type: 'string', description: 'Jurisprudência citada' },
+                  estrategia: { type: 'string', description: 'Estratégia processual adotada' },
+                  pontosFortes: { type: 'string', description: 'Pontos fortes da petição' },
+                  resumoExecutivo: { type: 'string', description: 'Resumo executivo da petição como referência' },
+                },
+                required: ['estilo', 'estrutura', 'teses', 'jurisprudencia', 'estrategia', 'pontosFortes', 'resumoExecutivo'],
+                additionalProperties: false,
+              },
+            },
+          },
+        });
+
+        let analise: any = {};
+        try {
+          const rawContent = extractResult.choices?.[0]?.message?.content;
+          analise = JSON.parse((typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent)) || '{}');
+        } catch {
+          analise = { resumoExecutivo: 'Petição aprovada como referência', estilo: '', estrutura: '', teses: '', jurisprudencia: '', estrategia: '', pontosFortes: '' };
+        }
+
+        // Salvar como referência de aprendizado na base de conhecimentos
+        const conteudoReferencia = [
+          `RESUMO: ${analise.resumoExecutivo}`,
+          `\nESTILO DE REDAÇÃO: ${analise.estilo}`,
+          `\nESTRUTURA ARGUMENTATIVA: ${analise.estrutura}`,
+          `\nTESES UTILIZADAS: ${analise.teses}`,
+          `\nJURISPRUDÊNCIA CITADA: ${analise.jurisprudencia}`,
+          `\nESTRATÉGIA PROCESSUAL: ${analise.estrategia}`,
+          `\nPONTOS FORTES: ${analise.pontosFortes}`,
+          input.feedback ? `\nFEEDBACK DO ADVOGADO: ${input.feedback}` : '',
+          `\n\n--- TRECHO REFERÊNCIA (primeiros 2000 caracteres) ---\n${(pet.conteudoTexto || '').substring(0, 2000)}`,
+        ].filter(Boolean).join('');
+
+        const [ref] = await db.insert(conhecimentos).values({
+          categoria: 'Estrategia',
+          titulo: `[REF APROVADA] ${pet.tipo} - ${nomeCliente || pet.titulo} (${new Date().toLocaleDateString('pt-BR')})`,
+          conteudo: conteudoReferencia,
+          tipoAcao: tipoAcaoProcesso || pet.tipo,
+          tags: `referencia_aprovada,aprendizado_ia,${pet.tipo.toLowerCase().replace(/\s+/g, '_')}`,
+          processoOrigemId: pet.processoId || null,
+        });
+
+        // Atualizar status da petição para "aprovado"
+        const jsonAtual = typeof pet.conteudoJson === 'string' ? JSON.parse(pet.conteudoJson) : (pet.conteudoJson as any) || {};
+        jsonAtual.aprovadoEm = new Date().toISOString();
+        jsonAtual.aprovadoPor = ctx.user?.name || 'advogado';
+        jsonAtual.referenciaConhecimentoId = ref.insertId;
+        jsonAtual.analiseAprendizado = analise;
+
+        await db.update(peticoesGeradas).set({
+          status: 'aprovado',
+          revisadoPor: ctx.user?.name || 'advogado',
+          conteudoJson: JSON.stringify(jsonAtual),
+        }).where(eq(peticoesGeradas.id, input.peticaoId));
+
+        // Contar total de referências aprendidas
+        const totalRefs = await db.select().from(conhecimentos)
+          .where(like(conhecimentos.tags, '%referencia_aprovada%'));
+
+        return {
+          success: true,
+          referenciaId: ref.insertId,
+          analise,
+          totalReferenciasAprendidas: totalRefs.length,
+          mensagem: `Petição aprovada! O agente aprendeu padrões de estilo, estratégia e fundamentação desta peça. Total de referências: ${totalRefs.length}`,
+        };
+      }),
+
+    // ==================== ESTATÍSTICAS DE APRENDIZADO DO AGENTE ====================
+    estatisticasAprendizado: protectedProcedure
+      .query(async () => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+
+        const todasRefs = await db.select().from(conhecimentos)
+          .where(like(conhecimentos.tags, '%referencia_aprovada%'));
+
+        // Agrupar por tipo de ação
+        const porTipo: Record<string, number> = {};
+        for (const ref of todasRefs) {
+          const tipo = ref.tipoAcao || 'Outros';
+          porTipo[tipo] = (porTipo[tipo] || 0) + 1;
+        }
+
+        // Total de conhecimentos gerais
+        const totalConhecimentos = await db.select().from(conhecimentos);
+
+        return {
+          totalReferencias: todasRefs.length,
+          porTipoAcao: porTipo,
+          ultimaReferencia: todasRefs.length > 0 ? {
+            titulo: todasRefs[todasRefs.length - 1].titulo,
+            data: todasRefs[todasRefs.length - 1].createdAt,
+          } : null,
+          totalConhecimentos: totalConhecimentos.length,
+          categorias: {
+            teses: totalConhecimentos.filter(c => c.categoria === 'Tese').length,
+            jurisprudencias: totalConhecimentos.filter(c => c.categoria === 'Jurisprudencia').length,
+            estrategias: totalConhecimentos.filter(c => c.categoria === 'Estrategia').length,
+            legislacoes: totalConhecimentos.filter(c => c.categoria === 'Legislacao').length,
+            modelos: totalConhecimentos.filter(c => c.categoria === 'Modelo').length,
+          },
+        };
+      }),
+
+    // ==================== LISTAR REFERÊNCIAS APRENDIDAS ====================
+    listarReferencias: protectedProcedure
+      .input(z.object({
+        tipoAcao: z.string().optional(),
+        limite: z.number().default(20),
+      }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+
+        let query = db.select().from(conhecimentos)
+          .where(like(conhecimentos.tags, '%referencia_aprovada%'))
+          .orderBy(desc(conhecimentos.createdAt))
+          .limit(input.limite);
+
+        const refs = await query;
+
+        // Filtrar por tipo se especificado
+        const resultado = input.tipoAcao
+          ? refs.filter(r => (r.tipoAcao || '').toLowerCase().includes(input.tipoAcao!.toLowerCase()))
+          : refs;
+
+        return resultado.map(r => ({
+          id: r.id,
+          titulo: r.titulo,
+          tipoAcao: r.tipoAcao,
+          conteudo: r.conteudo?.substring(0, 500),
+          tags: r.tags,
+          createdAt: r.createdAt,
+        }));
+      }),
+
+    // ==================== REMOVER REFERÊNCIA APRENDIDA ====================
+    removerReferencia: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+
+        const [ref] = await db.select().from(conhecimentos).where(eq(conhecimentos.id, input.id));
+        if (!ref || !ref.tags?.includes('referencia_aprovada')) {
+          throw new Error('Referência não encontrada');
+        }
+
+        await db.delete(conhecimentos).where(eq(conhecimentos.id, input.id));
+        return { success: true };
       }),
 
     // ==================== ANÁLISE AUTOMÁTICA DE DOCUMENTO NA PASTA DO CLIENTE ====================

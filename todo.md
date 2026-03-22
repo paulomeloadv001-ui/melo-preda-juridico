@@ -698,3 +698,11 @@
 - [x] Atualizar DOCX após cada refinamento (geração automática com timbrado)
 - [x] Manter histórico de versões da petição (original → v1 → v2... com diff visual e comparação)
 - [x] Botão "Refinar esta petição" no histórico de petições (abre refinamento direto)
+- [x] Implementar aprendizado do agente a partir de petições aprovadas (referências de estilo/estratégia)
+- [x] Backend: rota aprovarEEnsinar com LLM para extrair padrões (estilo, teses, estrutura, estratégia, pontos fortes)
+- [x] Backend: agente consulta referências aprovadas ao gerar novas petições (inspiração, não cópia)
+- [x] Backend: rotas estatisticasAprendizado, listarReferencias, removerReferencia
+- [x] Frontend: botão "Aprovar e Ensinar IA" no Step 5 (resultado) e no histórico
+- [x] Frontend: dialog de feedback com descrição do que o agente aprende
+- [x] Frontend: badge indicador de referências aprendidas no header
+- [x] Frontend: status "Aprovada — IA aprendeu" no histórico para petições já aprovadas
