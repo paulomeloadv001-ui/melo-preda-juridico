@@ -5,10 +5,13 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: Deploy to Cloudflare Workers
+    name: Deploy Worker + Sync D1
     
     steps:
       - name: Checkout
@@ -27,10 +30,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Frontend
+      - name: Build Frontend (Vite)
         run: npx vite build
+        env:
+          VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
+          VITE_OAUTH_PORTAL_URL: ${{ secrets.VITE_OAUTH_PORTAL_URL }}
+          VITE_APP_TITLE: ${{ secrets.VITE_APP_TITLE }}
+          VITE_APP_LOGO: ${{ secrets.VITE_APP_LOGO }}
+          VITE_FRONTEND_FORGE_API_URL: ${{ secrets.VITE_FRONTEND_FORGE_API_URL }}
+          VITE_FRONTEND_FORGE_API_KEY: ${{ secrets.VITE_FRONTEND_FORGE_API_KEY }}
 
-      - name: Prepare Cloudflare build
+      - name: Prepare Cloudflare dist
         run: |
           rm -rf dist-cf
           mkdir -p dist-cf
@@ -39,14 +49,9 @@ jobs:
       - name: Build Worker
         run: |
           npx esbuild cloudflare/worker.ts \
-            --platform=node \
             --bundle \
-            --format=esm \
             --outfile=dist-cf/worker.js \
-            --external:cloudflare:workers \
-            --external:cloudflare:node \
-            --external:@aws-sdk/client-s3 \
-            --external:@aws-sdk/s3-request-presigner \
+            --format=esm \
             --target=es2022 \
             --minify
 
@@ -55,3 +60,16 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --no-bundle
+
+      - name: Sync Data TiDB → D1
+        if: success()
+        env:
+          CF_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
+          CF_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "Sincronizando dados TiDB → D1..."
+          node cloudflare/sync-data.mjs

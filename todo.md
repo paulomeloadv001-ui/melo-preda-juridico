@@ -651,10 +651,14 @@
 - [x] Deploy Cloudflare: Criar README do Cloudflare (cloudflare/README.md)
 - [x] Deploy Cloudflare: Build do Worker: 3.5MB minificado (dentro do limite 10MB)
 - [x] Deploy Cloudflare: Build do Frontend: 18MB assets estáticos
-- [ ] Deploy Cloudflare: Aguardando novo API Token para deploy
+- [x] Deploy Cloudflare: Deploy completo realizado com sucesso
 - [x] Deploy Cloudflare: Configurar secrets no Cloudflare (15 secrets configuradas via API)
 - [x] Deploy Cloudflare: Testar deploy completo (health, config, D1, auth, proxy OK)
 - [ ] Deploy Cloudflare: Configurar domínio personalizado (opcional)
 - [x] Bug: Erro na página /upload - agente retorna "processando sua solicitação" em vez de completar (CORRIGIDO: processar.uploadPdf adicionado ao LONG_TIMEOUT_PATHS, timeout aumentado para 300s)
 - [x] Configurar secrets no Cloudflare Workers para autenticação e APIs em produção
-- [ ] Bug: Erro ao entrar no site - investigar e corrigir
+- [x] Bug: Erro ao entrar no site - CORRIGIDO: OAuth relay Cloudflare ↔ Manus implementado (cf-login → Manus OAuth → cf-auth-relay)
+- [x] Verificação completa: comparar Manus vs Cloudflare e atualizar deploy (sincronização em andamento)
+- [x] Implementar sincronização automática TiDB → D1 no fluxo de deploy/publicação de versão (GitHub Actions + sync-data.mjs)
+- [x] Rebuild e redeploy frontend atualizado no Cloudflare
+- [x] Bug Cloudflare: env.ASSETS undefined - CORRIGIDO: fallback para proxy Manus quando ASSETS não disponível

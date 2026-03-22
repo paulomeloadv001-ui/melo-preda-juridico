@@ -28,7 +28,7 @@ interface Env {
   DATABASE_URL: string;
   VITE_APP_TITLE: string;
   VITE_APP_LOGO: string;
-  ASSETS: { fetch: (req: Request) => Promise<Response> };
+  ASSETS?: { fetch: (req: Request) => Promise<Response> };
 }
 
 const MANUS_DOMAIN = 'https://melopreda-4imsnkhw.manus.space';
@@ -266,18 +266,28 @@ export default {
       }
 
       // ==================== STATIC ASSETS (FRONTEND) ====================
-      try {
-        const assetResponse = await env.ASSETS.fetch(request);
-        if (assetResponse.status !== 404) {
-          return assetResponse;
+      // Verifica se ASSETS binding existe (pode não existir se deploy via wrangler.jsonc automático)
+      if (env.ASSETS && typeof env.ASSETS.fetch === 'function') {
+        try {
+          const assetResponse = await env.ASSETS.fetch(request);
+          if (assetResponse.status !== 404) {
+            return assetResponse;
+          }
+        } catch (e) {
+          // Asset not found, fall through to SPA fallback
         }
-      } catch (e) {
-        // Asset not found
+
+        // SPA fallback via ASSETS
+        try {
+          const indexRequest = new Request(new URL('/', request.url).toString(), request);
+          return env.ASSETS.fetch(indexRequest);
+        } catch (e) {
+          // ASSETS fallback failed
+        }
       }
 
-      // SPA fallback
-      const indexRequest = new Request(new URL('/', request.url).toString(), request);
-      return env.ASSETS.fetch(indexRequest);
+      // Fallback: proxy para o Manus para servir o frontend
+      return proxyToManus(request, env, corsHeaders);
 
     } catch (error: any) {
       console.error('Worker error:', error);
