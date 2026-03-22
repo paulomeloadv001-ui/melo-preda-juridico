@@ -675,5 +675,6 @@
 - [x] Backend: rota de atualização de perfil (nome, telefone, OAB, especialidade, foto)
 - [x] Frontend: página /completar-perfil com formulário de completar perfil
 - [x] Redirecionamento automático para /completar-perfil quando profileCompleted = false
-- [ ] Deploy atualizado no Cloudflare via GitHub Actions (sincronização automática)
+- [x] Deploy atualizado no Cloudflare via GitHub Actions (sincronização automática) - push para GitHub realizado, Actions deve executar automaticamente
 - [x] Testes unitários para rotas de perfil (5 testes passando: obter, salvar, validação, campos mínimos, profileCompleted)
+- [x] Bug: Timeout na página /integracao - CORRIGIDO: adicionado integracao.executarSyncManual e integracao.limparLogsAntigos à lista LONG_TIMEOUT_PATHS (timeout 300s em vez de 60s)

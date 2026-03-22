@@ -82,6 +82,7 @@ const LONG_TIMEOUT_PATHS = [
   'processar.uploadPdf', 'processar.uploadContracheque', 'processar.analiseProfunda',
   'jobs.uploadPdf', 'jobs.iniciarLote', 'jobs.processarLoteCompleto',
   'jobs.uploadArquivoLote',
+  'integracao.executarSyncManual', 'integracao.limparLogsAntigos',
 ];
 
 const trpcClient = trpc.createClient({
