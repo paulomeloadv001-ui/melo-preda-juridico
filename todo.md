@@ -746,3 +746,68 @@
 - [x] Rota processosRouter.recentes criada (JOIN com clientes, retorna nome, CNJ, tipo, status, valor, tribunal, vara, timestamps)
 - [x] Seção "Últimas Atualizações de Processos" implementada no Dashboard com status colorido, tempo relativo, valor da causa
 - [x] 211/211 testes passando, 0 erros TypeScript
+
+## REDESENHO COMPLETO DO FLUXO - VISÃO DO USUÁRIO (Mar 2026)
+
+### FASE 1 - UPLOAD COM EXTRAÇÃO AUTOMÁTICA
+- [ ] Upload de PDF extrai automaticamente dados cadastrais do cliente
+- [ ] Análise completa e aprofundada do processo no momento do upload
+- [ ] Identificar natureza/objeto da ação, petição inicial, contestação, decisão liminar, impugnação, sentença, recursos
+- [ ] Detectar litisconsórcio, preclusão, trânsito em julgado parcial
+- [ ] Antiduplicidade: mesmo cliente pode ter múltiplos processos
+- [ ] Fluxo direto: upload → extração → pasta do cliente preenchida
+
+### FASE 2 - PASTA DO CLIENTE REDESENHADA
+- [ ] Processos vinculados com conexão/dependência (principal + cumprimento provisório/definitivo)
+- [ ] Subpastas para cada processo no mesmo padrão de leitura técnica
+- [ ] Linha do tempo completa de cada processo (movimentações reais)
+- [ ] Última movimentação/intimação com diagnóstico do agente (o que fazer)
+- [ ] Separação por competência: Tribunal, Juizado Especial, Fazenda Pública, UPJs Cíveis
+- [ ] Espelhar organização do PROJUDI/TJGO
+
+### FASE 3 - PETICIONAMENTO INTEGRADO NA PASTA DO CLIENTE
+- [ ] Botão "Gerar Petição" abaixo da análise da última movimentação
+- [ ] Agente gera petição com base na análise completa do processo
+- [ ] Visualização da petição com edição via chat em tempo real
+- [ ] Botão "Gerar Petição Final" no papel timbrado do escritório
+- [ ] Exportar em Word e PDF
+- [ ] Histórico de Petições dentro da pasta do cliente
+- [ ] Petição gerada integra a linha do tempo do processo
+
+### FASE 4 - PUBLICAÇÕES E PRAZOS
+- [ ] Monitoramento automático de publicações (varredura a cada 1h)
+- [ ] Publicações ordenadas: mais recentes primeiro
+- [ ] Tratamento de prazo: direcionar tarefa via email para colaborador
+- [ ] Publicações remetidas para dentro da pasta do cliente
+- [ ] Integração com linha do tempo do processo
+- [ ] Aba de prazos ampla e visível com dados do Diário Oficial
+
+### FASE 5 - RELATÓRIOS DIÁRIOS
+- [ ] Relatório do dia: tudo que foi feito
+- [ ] Relatório de Petições: status, quantas feitas, etc
+- [ ] Publicações Diárias: prazos e teor
+- [ ] Relatórios individualizados para compliance e dados do escritório
+
+### FASE 6 - AGENTE IA COMO ADVOGADO DO ESCRITÓRIO
+- [ ] Agente incorpora estilo argumentativo do usuário a cada análise
+- [ ] Base técnica aprofundada em múltiplas áreas do direito
+- [ ] Responder perguntas aleatórias sobre qualquer processo
+- [ ] Informar datas de audiência, fase processual, diagnósticos
+- [ ] Banco de conhecimento crescente com jurisprudência STJ/TJGO atualizada
+
+## CORREÇÃO FLUXO UPLOAD → PASTA DO CLIENTE (v3)
+- [ ] Backend: extração preenche TODOS os campos cadastrais sem erro (nome, CPF, RG, endereço, profissão, cargo, órgão, vínculo, cidade, estado, CEP, nacionalidade, telefone, email, estado civil)
+- [ ] Backend: se cliente já existe, ATUALIZAR todos os campos vazios com dados novos extraídos (merge inteligente)
+- [ ] Backend: análise completa de ponta a ponta — não resumo, análise exaustiva
+- [ ] Frontend: após upload, redirecionar DIRETO para pasta do cliente (não ficar na tela de upload)
+- [ ] Frontend: pasta do cliente mostra dados completos desde o início, sem campos vazios se o processo tem a informação
+- [ ] Reescrever ClientePerfil com seções organizadas e dados completos
+
+## CORREÇÃO AGENTE: PETIÇÕES COMPLETAS SEM TEMPLATES (Mar 2026)
+- [x] Auditar prompts atuais do agente de peticionamento e análise
+- [x] Reescrever prompt do agente para gerar petições COMPLETAS sem lacunas/templates
+- [x] Injetar TODOS os dados do processo no prompt (partes, movimentações, valores, estratégias, conhecimentos)
+- [x] Agente deve atuar como advogado expert: fundamentação robusta, jurisprudência, doutrina, legislação
+- [x] Relatórios com riqueza de detalhes técnicos, não resumos superficiais
+- [x] Proibir uso de [COMPLETAR], [INSERIR], modelos genéricos
+- [x] Testar geração de petição com dados reais (211/211 testes passando)

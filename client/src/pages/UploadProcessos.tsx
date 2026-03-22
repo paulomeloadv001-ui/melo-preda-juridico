@@ -148,11 +148,17 @@ function ProcessoUpload() {
     utils.clientes.list.invalidate();
     utils.clientes.stats.invalidate();
 
-    // Redirecionar automaticamente para Clientes após processamento bem-sucedido
-    const successCount = files.filter(f => f.status === "done").length;
-    if (successCount > 0) {
-      toast.success(`${successCount} processo(s) importado(s) com sucesso! Redirecionando para Clientes...`, { duration: 3000 });
-      setTimeout(() => setLocation('/clientes'), 2500);
+    // Redirecionar direto para a PASTA DO CLIENTE após upload
+    const doneItems = files.filter(f => f.status === "done" && f.result);
+    if (doneItems.length === 1 && doneItems[0].result?.clienteId) {
+      // Upload único: vai direto para a pasta do cliente
+      toast.success(`Processo importado com sucesso! Abrindo pasta do cliente...`, { duration: 3000 });
+      setTimeout(() => setLocation(`/cliente/${doneItems[0].result.clienteId}`), 2000);
+    } else if (doneItems.length > 1) {
+      // Upload múltiplo: vai para o último cliente importado
+      const lastClient = doneItems[doneItems.length - 1];
+      toast.success(`${doneItems.length} processo(s) importado(s)! Abrindo pasta do último cliente...`, { duration: 3000 });
+      setTimeout(() => setLocation(`/cliente/${lastClient.result.clienteId}`), 2000);
     }
   };
 
@@ -432,11 +438,15 @@ function ContrachequeUpload() {
     utils.clientes.list.invalidate();
     utils.clientes.stats.invalidate();
 
-    // Redirecionar automaticamente para Clientes após processamento bem-sucedido
-    const successCount = files.filter(f => f.status === "done").length;
-    if (successCount > 0) {
-      toast.success(`${successCount} contracheque(s) processado(s)! Redirecionando para Clientes...`, { duration: 3000 });
-      setTimeout(() => setLocation('/clientes'), 2500);
+    // Redirecionar direto para a PASTA DO CLIENTE
+    const doneItems2 = files.filter(f => f.status === "done" && f.result);
+    if (doneItems2.length === 1 && doneItems2[0].result?.clienteId) {
+      toast.success(`Contracheque processado! Abrindo pasta do cliente...`, { duration: 3000 });
+      setTimeout(() => setLocation(`/cliente/${doneItems2[0].result.clienteId}`), 2000);
+    } else if (doneItems2.length > 1) {
+      const lastClient2 = doneItems2[doneItems2.length - 1];
+      toast.success(`${doneItems2.length} contracheque(s) processado(s)! Abrindo pasta do último cliente...`, { duration: 3000 });
+      setTimeout(() => setLocation(`/cliente/${lastClient2.result.clienteId}`), 2000);
     }
   };
 

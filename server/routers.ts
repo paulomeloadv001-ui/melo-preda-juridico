@@ -900,7 +900,11 @@ Retorne um JSON com esta estrutura exata:
     "cidade": "string ou null",
     "estado": "string ou null",
     "cep": "string ou null",
-    "nacionalidade": "string ou null"
+    "nacionalidade": "string ou null",
+    "telefone": "string ou null",
+    "email": "string ou null",
+    "dataNascimento": "DD/MM/YYYY ou null",
+    "estadoCivil": "solteiro|casado|divorciado|viuvo|uniao estavel ou null"
   },
   "processo": {
     "numeroCnj": "string",
@@ -1061,30 +1065,47 @@ ${textoExtraido}`;
           const existing = await db.select().from(clientes).where(eq(clientes.cpfCnpj, cpf)).limit(1);
           if (existing.length > 0) {
             clienteId = existing[0].id;
+            // MERGE INTELIGENTE: preenche TODOS os campos vazios com dados novos extraídos
+            const ex = existing[0];
+            const cl = dadosExtraidos.cliente || {};
             await db.update(clientes).set({
-              profissao: dadosExtraidos.cliente?.profissao || existing[0].profissao,
-              cargo: dadosExtraidos.cliente?.cargo || existing[0].cargo,
-              orgaoEmpregador: dadosExtraidos.cliente?.orgaoEmpregador || existing[0].orgaoEmpregador,
-              endereco: dadosExtraidos.cliente?.endereco || existing[0].endereco,
-              cidade: dadosExtraidos.cliente?.cidade || existing[0].cidade,
-              estado: dadosExtraidos.cliente?.estado || existing[0].estado,
-              cep: dadosExtraidos.cliente?.cep || existing[0].cep,
+              nomeCompleto: cl.nomeCompleto || ex.nomeCompleto,
+              tipoPessoa: cl.tipoPessoa === 'PJ' ? 'PJ' : (ex.tipoPessoa || 'PF'),
+              rg: cl.rg || ex.rg,
+              profissao: cl.profissao || ex.profissao,
+              cargo: cl.cargo || ex.cargo,
+              orgaoEmpregador: cl.orgaoEmpregador || ex.orgaoEmpregador,
+              vinculoFuncional: cl.vinculoFuncional || ex.vinculoFuncional,
+              endereco: cl.endereco || ex.endereco,
+              cidade: cl.cidade || ex.cidade,
+              estado: cl.estado || ex.estado,
+              cep: cl.cep || ex.cep,
+              nacionalidade: cl.nacionalidade || ex.nacionalidade,
+              telefone: cl.telefone || ex.telefone,
+              email: cl.email || ex.email,
+              dataNascimento: cl.dataNascimento || ex.dataNascimento,
+              estadoCivil: cl.estadoCivil || ex.estadoCivil,
             }).where(eq(clientes.id, clienteId));
           } else {
+            const cl = dadosExtraidos.cliente || {};
             const [inserted] = await db.insert(clientes).values({
               cpfCnpj: cpf,
               nomeCompleto: nome,
-              tipoPessoa: dadosExtraidos.cliente?.tipoPessoa === "PJ" ? "PJ" : "PF",
-              rg: dadosExtraidos.cliente?.rg,
-              profissao: dadosExtraidos.cliente?.profissao,
-              cargo: dadosExtraidos.cliente?.cargo,
-              orgaoEmpregador: dadosExtraidos.cliente?.orgaoEmpregador,
-              vinculoFuncional: dadosExtraidos.cliente?.vinculoFuncional,
-              endereco: dadosExtraidos.cliente?.endereco,
-              cidade: dadosExtraidos.cliente?.cidade,
-              estado: dadosExtraidos.cliente?.estado,
-              cep: dadosExtraidos.cliente?.cep,
-              nacionalidade: dadosExtraidos.cliente?.nacionalidade,
+              tipoPessoa: cl.tipoPessoa === "PJ" ? "PJ" : "PF",
+              rg: cl.rg || null,
+              profissao: cl.profissao || null,
+              cargo: cl.cargo || null,
+              orgaoEmpregador: cl.orgaoEmpregador || null,
+              vinculoFuncional: cl.vinculoFuncional || null,
+              endereco: cl.endereco || null,
+              cidade: cl.cidade || null,
+              estado: cl.estado || null,
+              cep: cl.cep || null,
+              nacionalidade: cl.nacionalidade || null,
+              telefone: cl.telefone || null,
+              email: cl.email || null,
+              dataNascimento: cl.dataNascimento || null,
+              estadoCivil: cl.estadoCivil || null,
             }).$returningId();
             clienteId = inserted.id;
           }
@@ -1113,14 +1134,29 @@ ${textoExtraido}`;
             clienteId = clienteExistente.id;
             console.log(`[Upload] Cliente encontrado por nome similar: ${clienteExistente.nomeCompleto} (ID: ${clienteId})`);
           } else {
+             const cl = dadosExtraidos.cliente || {};
             const [inserted] = await db.insert(clientes).values({
               cpfCnpj: `PEND_${Date.now().toString(36)}`,
               nomeCompleto: nome,
+              tipoPessoa: cl.tipoPessoa === 'PJ' ? 'PJ' : 'PF',
+              rg: cl.rg || null,
+              profissao: cl.profissao || null,
+              cargo: cl.cargo || null,
+              orgaoEmpregador: cl.orgaoEmpregador || null,
+              vinculoFuncional: cl.vinculoFuncional || null,
+              endereco: cl.endereco || null,
+              cidade: cl.cidade || null,
+              estado: cl.estado || null,
+              cep: cl.cep || null,
+              nacionalidade: cl.nacionalidade || null,
+              telefone: cl.telefone || null,
+              email: cl.email || null,
+              dataNascimento: cl.dataNascimento || null,
+              estadoCivil: cl.estadoCivil || null,
             }).$returningId();
             clienteId = inserted.id;
           }
         }
-
         // 4. Upload PDF to client folder in S3
         const clienteCpf = cpf || `PEND_${Date.now().toString(36)}`;
         const folder = clientFolderKey(nome, clienteCpf);
@@ -1543,16 +1579,25 @@ ${textoExtraido}`;
           const existing = await db.select().from(clientes).where(eq(clientes.cpfCnpj, cpf)).limit(1);
           if (existing.length > 0) {
             clienteId = existing[0].id;
-            // Update client data
+            // MERGE INTELIGENTE: preenche TODOS os campos vazios
             const serv = dadosExtraidos.servidor || {};
-            const updateData: Record<string, any> = {};
-            if (serv.cargo) updateData.cargo = serv.cargo;
-            if (serv.orgaoEmpregador) updateData.orgaoEmpregador = serv.orgaoEmpregador;
-            if (serv.vinculoFuncional) updateData.vinculoFuncional = serv.vinculoFuncional;
-            if (serv.rg) updateData.rg = serv.rg;
-            if (Object.keys(updateData).length > 0) {
-              await db.update(clientes).set(updateData).where(eq(clientes.id, clienteId));
-            }
+            const exC = existing[0];
+            await db.update(clientes).set({
+              rg: serv.rg || exC.rg,
+              cargo: serv.cargo || exC.cargo,
+              orgaoEmpregador: serv.orgaoEmpregador || exC.orgaoEmpregador,
+              vinculoFuncional: serv.vinculoFuncional || exC.vinculoFuncional,
+              profissao: serv.cargo || exC.profissao,
+              endereco: serv.endereco || exC.endereco,
+              cidade: serv.cidade || exC.cidade,
+              estado: serv.estado || exC.estado,
+              cep: serv.cep || exC.cep,
+              nacionalidade: serv.nacionalidade || exC.nacionalidade,
+              telefone: serv.telefone || exC.telefone,
+              email: serv.email || exC.email,
+              dataNascimento: serv.dataNascimento || exC.dataNascimento,
+              estadoCivil: serv.estadoCivil || exC.estadoCivil,
+            }).where(eq(clientes.id, clienteId));
           } else {
             // Create new client from contracheque
             const serv = dadosExtraidos.servidor || {};
@@ -1560,11 +1605,20 @@ ${textoExtraido}`;
               cpfCnpj: cpf,
               nomeCompleto: nome,
               tipoPessoa: "PF",
-              rg: serv.rg,
-              cargo: serv.cargo,
-              orgaoEmpregador: serv.orgaoEmpregador,
-              vinculoFuncional: serv.vinculoFuncional,
+              rg: serv.rg || null,
+              cargo: serv.cargo || null,
+              orgaoEmpregador: serv.orgaoEmpregador || null,
+              vinculoFuncional: serv.vinculoFuncional || null,
               profissao: serv.cargo || "Servidor Público",
+              endereco: serv.endereco || null,
+              cidade: serv.cidade || null,
+              estado: serv.estado || null,
+              cep: serv.cep || null,
+              nacionalidade: serv.nacionalidade || null,
+              telefone: serv.telefone || null,
+              email: serv.email || null,
+              dataNascimento: serv.dataNascimento || null,
+              estadoCivil: serv.estadoCivil || null,
             }).$returningId();
             clienteId = inserted.id;
           }
@@ -4839,9 +4893,50 @@ MODELOS (${modelos.length}): ${modelos.map(m => `${m.titulo}`).join(' | ')}
         // 6. System prompt expert com TODOS os dados da plataforma
         const modoInstrucao: Record<string, string> = {
           chat: 'Responda como consultor jurídico expert. Fundamente TODAS as respostas com legislação específica (artigo, parágrafo, inciso), jurisprudência (tribunal, número, relator) e doutrina. Você ESTUDOU todos os processos do escritório e conhece cada detalhe. Use tom assertivo e técnico. Expressões características: "consoante entendimento pacificado", "nos termos do artigo [X], que é cristalino ao dispor que".',
-          analise: 'Realize uma ANÁLISE TÉCNICA APROFUNDADA seguindo o workflow de 5 fases: (1) IMERSÃO: Identificar sentença, recursos, acórdãos, trânsito em julgado, preclusão lógica e trânsito parcial em litisconsórcio simples. (2) TESES: Mapear teses aplicáveis da base de conhecimentos. (3) ESTRATÉGIA: Definir tipo de ação (cumprimento provisório/definitivo, ação autônoma, agravo). (4) CÁLCULOS: Valores com INPC + juros 1% a.m. + multa art. 523. (5) RISCOS: Pontos fracos, teses adversárias, mitigações. Use dados reais dos processos.',
-          peticao: 'Gere uma PETIÇÃO COMPLETA no padrão do escritório. ESTILO: Tom assertivo, combativo e técnico. Expressões: "flagrante ilegalidade", "abuso manifesto", "violação frontal". ESTRUTURA: Endereçamento → Qualificação → I-DOS FATOS (cronológico) → II-DO DIREITO (Legislação → Jurisprudência → Doutrina, com artigos específicos e ementas completas) → III-DOS PEDIDOS (numerados a,b,c com valores exatos) → IV-VALOR DA CAUSA → Fecho. NUNCA usar "etc.", arcaismos, parágrafos > 5 linhas. Pedidos: tutela primeiro, honorários no final, incluir subsidiários.',
-          estrategia: 'Elabore uma ESTRATÉGIA PROCESSUAL COMPLETA e AVANÇADA. Analise: (1) Fase atual e cronograma de ações, (2) Teses centrais a sustentar (buscar na base de conhecimentos), (3) Teses adversárias a refutar preventivamente, (4) Jurisprudência âncora (TJ-GO e STJ), (5) Riscos identificados e mitigações, (6) Táticas avançadas: coisa julgada progressiva, tutela cautelar antecedente, penhora via SISBAJUD, cumulacão de pedidos. Use dados reais dos processos.',
+          analise: `Realize uma ANÁLISE TÉCNICA EXAUSTIVA E APROFUNDADA. NÃO resuma — DESENVOLVA cada ponto com riqueza de detalhes.
+
+WORKFLOW OBRIGATÓRIO DE 5 FASES:
+
+**FASE 1 — IMERSÃO PROCESSUAL COMPLETA:**
+Analise CADA movimentação do processo cronologicamente. Identifique: sentença (dispositivo completo), recursos interpostos (tipo, fundamento, resultado), acórdãos, trânsito em julgado (data exata), preclusão lógica, trânsito parcial em litisconsórcio simples. Mapeie TODAS as partes e sua situação individual.
+
+**FASE 2 — MAPEAMENTO DE TESES:**
+Para CADA tese aplicável: (a) fundamento legal com artigo específico, (b) jurisprudência âncora com ementa, (c) probabilidade de êxito, (d) como se aplica especificamente a ESTE caso com dados reais.
+
+**FASE 3 — ESTRATÉGIA PROCESSUAL DETALHADA:**
+Defina: tipo de ação recomendada (cumprimento provisório/definitivo, ação autônoma, agravo, etc.), cronograma de ações com prazos, táticas avançadas (coisa julgada progressiva, tutela cautelar antecedente, penhora SISBAJUD, cumulação de pedidos), teses adversárias a refutar preventivamente.
+
+**FASE 4 — CÁLCULOS DETALHADOS:**
+Demonstrativo completo (art. 524 CPC): Principal → Correção Monetária (INPC) → Juros Mora (1% a.m., art. 406 CC) → Multa 10% (art. 523 §1º CPC) → Honorários → TOTAL. Use valores REAIS do processo.
+
+**FASE 5 — RISCOS E MITIGAÇÕES:**
+Pontos fracos do caso, teses adversárias prováveis, estratégias de mitigação para cada risco.
+
+REGRA: Use EXCLUSIVAMENTE dados reais dos processos. NUNCA use placeholders ou lacunas. Cada afirmação deve ser fundamentada.`,
+          peticao: `Gere uma PETIÇÃO COMPLETA, PRONTA PARA PROTOCOLO, no padrão do escritório.
+
+PROIBIÇÕES ABSOLUTAS:
+- NUNCA usar placeholders como [COMPLETAR], [INSERIR], [NOME], [DATA], [VALOR] ou qualquer lacuna
+- NUNCA gerar modelo/template para preenchimento posterior
+- NUNCA omitir dados disponíveis no contexto
+- NUNCA usar "etc.", "e outros", "entre outros"
+- NUNCA usar parágrafos genéricos que servem para qualquer caso
+
+ESTILO: Tom assertivo, combativo e técnico. Expressões: "flagrante ilegalidade", "abuso manifesto", "violação frontal".
+ESTRUTURA: Endereçamento (vara/comarca REAIS) → Número CNJ REAL → Qualificação COMPLETA (todos os dados do cliente) → I-DOS FATOS (cronológico com datas e eventos REAIS) → II-DO DIREITO (SEÇÃO MAIS EXTENSA: Legislação com transcrição de artigos → Jurisprudência com ementas completas → Doutrina com referência) → III-DOS PEDIDOS (numerados a,b,c com valores EXATOS calculados) → IV-VALOR DA CAUSA (real, por extenso) → Fecho.
+Pedidos: tutela primeiro, honorários no final, incluir subsidiários. Fundamentação deve ser EXAUSTIVA, não resumida.`,
+          estrategia: `Elabore uma ESTRATÉGIA PROCESSUAL COMPLETA, AVANÇADA e DETALHADA. NÃO resuma — DESENVOLVA cada ponto.
+
+PROIBIÇÕES: NUNCA usar placeholders, lacunas ou modelos genéricos. Use EXCLUSIVAMENTE dados reais.
+
+ESTRUTURA OBRIGATÓRIA:
+1. **DIAGNÓSTICO DA FASE ATUAL**: Situação processual exata com base nas movimentações reais, prazos em curso, última decisão
+2. **TESES CENTRAIS A SUSTENTAR**: Para cada tese: fundamento legal (artigo específico), jurisprudência âncora (TJ-GO e STJ com número), probabilidade de êxito, aplicação ao caso concreto
+3. **TESES ADVERSÁRIAS A REFUTAR**: Antecipar argumentos da parte contrária e preparar contra-argumentação
+4. **CRONOGRAMA DE AÇÕES**: Passo a passo com prazos, peças a protocolar, providências
+5. **TÁTICAS AVANÇADAS**: Coisa julgada progressiva, tutela cautelar antecedente, penhora SISBAJUD, cumulação de pedidos, litisconsórcio, trânsito parcial
+6. **RISCOS E MITIGAÇÕES**: Para cada risco identificado, estratégia de mitigação específica
+7. **RECOMENDAÇÃO FINAL**: Ação imediata recomendada com fundamentação`,
           calculo: 'Realize CÁLCULOS JURÍDICOS precisos. CORREÇÃO MONETÁRIA: INPC mensal sobre principal (desde vencimento ou sentença). JUROS MORA: 1% a.m. (art. 406 CC + art. 161 §1º CTN) desde citação. MULTA: 10% sobre débito total após 15 dias (art. 523 §1º CPC). HONORÁRIOS: 10% sobre débito. Apresente DEMONSTRATIVO completo (art. 524 CPC): Principal → Correção → Juros → Multa → Honorários → TOTAL. Use valores reais dos processos.',
         };
 
@@ -4856,22 +4951,29 @@ ${panoramaGlobal}
 
 ${baseConhecimento}${configExpertise}${contextoCliente}${contextoProcesso}
 
-REGRAS ABSOLUTAS:
-1. SEMPRE usar os dados REAIS dos processos que você estudou — nunca inventar dados
-2. SEMPRE fundamentar com artigos de lei específicos (artigo, parágrafo, inciso)
-3. SEMPRE citar jurisprudência com número completo (preferencialmente TJ-GO e STJ)
-4. NUNCA prometer resultados específicos ao cliente
+=== PROIBIÇÕES ABSOLUTAS (VIOLAÇÃO INVALIDA A RESPOSTA) ===
+1. NUNCA usar placeholders como [COMPLETAR], [INSERIR], [NOME], [DATA], [VALOR], [COMARCA] ou qualquer texto entre colchetes que indique lacuna
+2. NUNCA gerar modelo/template para preenchimento posterior — tudo deve sair COMPLETO e PRONTO
+3. NUNCA omitir dados disponíveis no contexto — USE TODOS os dados reais fornecidos
+4. NUNCA inventar dados que não existem no contexto — se não tem o dado, OMITA a seção
+5. NUNCA usar "etc.", "e outros", "entre outros" — seja ESPECÍFICO
+6. NUNCA usar parágrafos genéricos que servem para qualquer caso
+7. NUNCA resumir quando puder DESENVOLVER com profundidade
+
+=== REGRAS DE QUALIDADE ===
+1. SEMPRE usar os dados REAIS dos processos que você estudou — nomes, CPFs, valores, datas, varas, comarcas REAIS
+2. SEMPRE fundamentar com artigos de lei específicos (artigo, parágrafo, inciso) com TRANSCRIÇÃO do dispositivo
+3. SEMPRE citar jurisprudência com número completo, relator, turma/câmara, data (preferencialmente TJ-GO e STJ)
+4. SEMPRE citar doutrina com autor, obra, edição, página
 5. SEMPRE verificar prazos processuais antes de recomendar ações
-6. SEMPRE usar o vocabulário característico do escritório: "flagrante ilegalidade", "abuso manifesto", "violação frontal", "consoante entendimento pacificado"
+6. SEMPRE usar o vocabulário característico: "flagrante ilegalidade", "abuso manifesto", "violação frontal", "consoante entendimento pacificado"
 7. Responder em português brasileiro com linguagem técnica jurídica assertiva e combativa
-8. Quando gerar petições, seguir RIGOROSAMENTE a estrutura: Endereçamento → Qualificação → Fatos → Direito → Pedidos → Valor → Fecho
-9. Em análises, seguir o WORKFLOW DE 5 FASES: Imersão → Tese → Estratégia → Cálculos → Revisão
-10. Em litisconsórcio, verificar INDIVIDUALMENTE a situação recursal de cada réu (recurso de um NÃO aproveita aos demais em litisconsórcio simples)
+8. Petições: RIGOROSAMENTE Endereçamento (vara/comarca REAIS) → Qualificação COMPLETA → Fatos (cronológico com datas REAIS) → Direito (SEÇÃO MAIS EXTENSA com fundamentação exaustiva) → Pedidos (valores EXATOS) → Valor → Fecho
+9. Análises: WORKFLOW DE 5 FASES com riqueza de detalhes em cada fase
+10. Em litisconsórcio, verificar INDIVIDUALMENTE a situação recursal de cada réu
 11. SEMPRE verificar preclusão lógica e trânsito em julgado parcial
-12. Quando perguntarem sobre um cliente ou processo específico, buscar nos dados acima e responder com TODOS os detalhes disponíveis
-13. Quando perguntarem sobre totais, métricas ou estatísticas, calcular com base nos dados reais acima
-14. NUNCA usar "etc.", arcaismos, parágrafos com mais de 5 linhas
-15. Pedidos: SEMPRE numerar (a,b,c), tutela primeiro, honorários no final, incluir subsidiários`;
+12. Quando perguntarem sobre um cliente ou processo, responder com TODOS os detalhes disponíveis
+13. Pedidos: SEMPRE numerar (a,b,c), tutela primeiro, honorários no final, incluir subsidiários`;
 
         // 7. EXECUTAR AGENTE COM TOOLS (loop de execução)
         const executorResult = await executarAgenteCompleto({
@@ -4995,14 +5097,16 @@ REGRAS ABSOLUTAS:
               const mf = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, p.id));
               movFin.push(...mf);
             }
-            contextoCliente = `\nCLIENTE: ${cliente.nomeCompleto}, CPF: ${cliente.cpfCnpj}
-Profissão: ${cliente.profissao || 'N/A'} | Órgão: ${cliente.orgaoEmpregador || 'N/A'}
-Endereço: ${cliente.endereco || 'N/A'}, ${cliente.cidade || ''} - ${cliente.estado || ''}
-Dados Financeiros: ${dadosFin.map(d => `Bruto: R$ ${d.remuneracaoBruta} | Líquido: R$ ${d.remuneracaoLiquida} | Margem: R$ ${d.margemConsignavelValor}`).join('; ')}
-Empréstimos: ${emprestimos.map(e => `${e.banco}: R$ ${e.valorParcela}/mês (${e.totalParcelas || '?'} parcelas)`).join('; ')}
-Processos: ${procs.map(p => `${p.numeroCnj} (${p.tipoAcao} - ${p.statusProcesso})`).join('; ')}
-Estratégias: ${estrats.map(e => `${e.tesePrincipal?.substring(0, 200)}`).join('\n')}
-Financeiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ')}`;
+            contextoCliente = `\nCLIENTE: ${cliente.nomeCompleto}
+CPF: ${cliente.cpfCnpj}${cliente.rg ? ` | RG: ${cliente.rg}` : ''}
+Nacionalidade: brasileiro(a) | Estado Civil: ${cliente.estadoCivil || 'N/I'}${cliente.dataNascimento ? ` | Data Nasc.: ${cliente.dataNascimento}` : ''}
+Profissão: ${cliente.profissao || 'N/I'} | Cargo: ${cliente.cargo || 'N/I'} | Órgão Empregador: ${cliente.orgaoEmpregador || 'N/I'}
+Endereço: ${cliente.endereco || 'N/I'}, ${cliente.cidade || ''} - ${cliente.estado || ''}, CEP: ${cliente.cep || 'N/I'}${cliente.telefone ? ` | Telefone: ${cliente.telefone}` : ''}${cliente.email ? ` | Email: ${cliente.email}` : ''}
+Dados Financeiros: ${dadosFin.length > 0 ? dadosFin.map(d => `Bruto: R$ ${d.remuneracaoBruta} | Líquido: R$ ${d.remuneracaoLiquida} | Margem Consignável: R$ ${d.margemConsignavelValor} (${d.margemConsignavelPerc}%)`).join('; ') : 'Não informado'}
+Empréstimos Consignados: ${emprestimos.length > 0 ? emprestimos.map(e => `${e.banco}: R$ ${e.valorParcela}/mês (${e.totalParcelas || '?'} parcelas, contrato ${e.contrato || 'N/I'})`).join('; ') : 'Nenhum registrado'}
+Processos Vinculados: ${procs.map(p => `${p.numeroCnj} (${p.tipoAcao} - ${p.statusProcesso} - Valor: R$ ${p.valorCausa || '0'})`).join('; ')}
+Estratégias: ${estrats.length > 0 ? estrats.map(e => `Tese: ${e.tesePrincipal}\nFundamentação: ${e.fundamentacaoLegal || 'N/I'}\nJurisprudência: ${e.jurisprudenciaCitada || 'N/I'}`).join('\n---\n') : 'Nenhuma registrada'}
+Movimentações Financeiras: ${movFin.length > 0 ? movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ') : 'Nenhuma registrada'}`;
           }
         }
 
@@ -5015,20 +5119,35 @@ Financeiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; 
             const movFin = await db.select().from(movimentacoesFinanceiras).where(eq(movimentacoesFinanceiras.processoId, proc.id));
             const partes = await db.select().from(partesProcessuais).where(eq(partesProcessuais.processoId, proc.id));
             const cumprimentos = await db.select().from(cumprimentosSentenca).where(eq(cumprimentosSentenca.processoId, proc.id));
-            contextoProcesso = `\nPROCESSO: ${proc.numeroCnj}
-Tipo: ${proc.tipoAcao} | Natureza: ${proc.natureza || 'N/A'}
-Vara: ${proc.vara}, Comarca: ${proc.comarca}, Tribunal: ${proc.tribunal}
-Valor da Causa: R$ ${proc.valorCausa} | Fase: ${proc.faseAtual} | Status: ${proc.statusProcesso}
+            // Buscar conhecimentos vinculados ao processo
+            const conhecimentosProc = await db.select().from(conhecimentos).where(eq(conhecimentos.processoOrigemId, proc.id));
+            contextoProcesso = `\n=== PROCESSO COMPLETO ===
+Número CNJ: ${proc.numeroCnj}
+Tipo de Ação: ${proc.tipoAcao} | Natureza: ${proc.natureza || 'N/I'}
+Vara: ${proc.vara} | Comarca: ${proc.comarca} | Tribunal: ${proc.tribunal}
+Valor da Causa: R$ ${proc.valorCausa} | Fase Atual: ${proc.faseAtual} | Status: ${proc.statusProcesso}
 Polo Ativo: ${proc.poloAtivo}
 Polo Passivo: ${proc.poloPassivo}
-Partes: ${partes.map(p => `${p.tipo}: ${p.nome}`).join('; ')}
-Sentença: ${proc.resumoSentenca || 'N/A'}
-Condenação: R$ ${proc.valorCondenacao || 'N/A'} | Honorários: ${proc.honorariosPerc || 'N/A'}% = R$ ${proc.honorariosValor || 'N/A'}
-Tutela: ${proc.tutelaTipo || 'N/A'} (${proc.tutelaStatus || 'N/A'})
-Cumprimentos: ${cumprimentos.map(c => `${c.tipo}: R$ ${c.valorExecucao}`).join('; ')}
-Estratégias: ${estrats.map(e => `Tese: ${e.tesePrincipal}\nFund: ${e.fundamentacaoLegal}\nJurisp: ${e.jurisprudenciaCitada}\nFortes: ${e.pontosFortes}`).join('\n---\n')}
-Movimentações (últimas 10): ${movs.slice(0, 10).map(m => `${m.data}: ${m.evento}`).join('\n')}
-Financeiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; ')}`;
+Partes Processuais: ${partes.map(p => `${p.tipo}: ${p.nome}${p.cpfCnpj ? ` (CPF/CNPJ: ${p.cpfCnpj})` : ''}${p.categoria ? ` (${p.categoria})` : ''}`).join('; ')}
+
+SENTENÇA: ${proc.resumoSentenca || 'Não informada'}
+Valor Condenação: R$ ${proc.valorCondenacao || 'N/I'}
+Honorários: ${proc.honorariosPerc || 'N/I'}% = R$ ${proc.honorariosValor || 'N/I'}
+Tutela: ${proc.tutelaTipo || 'N/I'} (Status: ${proc.tutelaStatus || 'N/I'})
+Classe Processual: ${proc.classeProcessual || 'N/I'}
+
+CUMPRIMENTOS DE SENTENÇA: ${cumprimentos.length > 0 ? cumprimentos.map(c => `${c.tipo}: R$ ${c.valorExecucao} (Correção: ${c.indiceCorrecao || 'N/I'}, Juros: ${c.jurosMora || 'N/I'})`).join('; ') : 'Nenhum'}
+
+ESTRATÉGIAS PROCESSUAIS DETALHADAS:
+${estrats.length > 0 ? estrats.map(e => `Tese Principal: ${e.tesePrincipal}\nFundamentação Legal: ${e.fundamentacaoLegal || 'N/I'}\nJurisprudência Citada: ${e.jurisprudenciaCitada || 'N/I'}\nPontos Fortes: ${e.pontosFortes || 'N/I'}\nTeses Refutadas: ${e.tesesRefutadas || 'N/I'}\nRiscos: ${e.riscosIdentificados || 'N/I'}\nObservações: ${e.observacoes || 'N/I'}`).join('\n---\n') : 'Nenhuma registrada'}
+
+MOVIMENTAÇÕES PROCESSUAIS COMPLETAS (todas):
+${movs.map(m => `[${m.data}] ${m.evento}${m.descricao ? ` — ${m.descricao}` : ''}`).join('\n')}
+
+MOVIMENTAÇÕES FINANCEIRAS: ${movFin.length > 0 ? movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status}${m.descricao ? ` — ${m.descricao}` : ''})`).join('; ') : 'Nenhuma'}
+
+CONHECIMENTOS JURÍDICOS VINCULADOS AO PROCESSO:
+${conhecimentosProc.length > 0 ? conhecimentosProc.map(c => `[${c.categoria}] ${c.titulo}: ${c.conteudo?.substring(0, 500)}`).join('\n---\n') : 'Nenhum'}`;
           }
         }
 
@@ -5101,53 +5220,68 @@ Advogado: PAULO DA SILVA MELO FILHO
 
 Gere a petição completa do tipo "${input.tipoPeticao}" seguindo RIGOROSAMENTE o padrão do escritório.
 
-INSTRUÇÃO CRÍTICA: Analise os templates e modelos disponíveis abaixo. ESCOLHA AUTOMATICAMENTE o que mais se adequa ao caso e USE como base de referência, adaptando ao caso específico. Não copie literalmente — use a inteligência para melhorar, aprofundar a fundamentação e adaptar ao contexto real do cliente e processo.
+=== PROIBIÇÕES ABSOLUTAS — VIOLAÇÃO DESTAS REGRAS INVALIDA A PETIÇÃO ===
+1. NUNCA usar placeholders como [COMPLETAR], [INSERIR], [NOME DO CLIENTE], [NÚMERO], [DATA], [VALOR], [COMARCA], [VARA], [ENDEREÇO] ou qualquer texto entre colchetes que indique lacuna
+2. NUNCA gerar modelo/template para preenchimento posterior — a petição deve sair PRONTA PARA PROTOCOLO
+3. NUNCA omitir dados que estão disponíveis no contexto abaixo — USE TODOS OS DADOS REAIS fornecidos
+4. NUNCA inventar dados que não existem no contexto — se um dado não foi fornecido, OMITA a seção ou use formulação que não dependa dele
+5. NUNCA usar "etc.", "e outros", "entre outros" — seja ESPECÍFICO
+6. NUNCA usar parágrafos genéricos que poderiam servir para qualquer caso — CADA parágrafo deve conter dados ESPECÍFICOS deste processo
 
-ESTILO DE REDAÇÃO OBRIGATÓRIO:
-- Tom assertivo, combativo e técnico — sem hesitação
-- Fundamentação ROBUSTA com artigos de lei, doutrina e jurisprudência
-- Uso de expressões fortes: "flagrante ilegalidade", "abuso manifesto", "violação frontal ao ordenamento jurídico"
-- Parágrafos densos com argumentação encadeada e progressiva
-- Pedidos específicos, detalhados e numerados
-- Citações jurisprudenciais completas (tribunal, número, relator, câmara, data)
+=== DADOS REAIS DO CASO (USE OBRIGATORIAMENTE) ===
+${contextoCliente}
+${contextoProcesso}
 
-ESTRUTURA OBRIGATÓRIA DA PETIÇÃO:
-1. ENDEREÇAMENTO (EXCELENTÍSSIMO(A) SENHOR(A) DOUTOR(A) JUIZ(A) DE DIREITO DA [Nº] VARA CÍVEL DA COMARCA DE [CIDADE] — ESTADO DE GOIÁS)
-2. QUALIFICAÇÃO DAS PARTES (completa com CPF, profissão, endereço)
-3. I — DOS FATOS (narrativa processual cronológica e detalhada)
-4. II — DO DIREITO (fundamentação legal, doutrinária e jurisprudencial — SEÇÃO MAIS IMPORTANTE)
-   - Cite artigos específicos com transcrição quando relevante
-   - Cite jurisprudência com número completo do processo
-   - Use doutrina quando aplicável
-5. III — DOS PEDIDOS (numerados com letras: a), b), c)... — específicos e detalhados)
-6. IV — DO VALOR DA CAUSA (com valor por extenso)
-7. REQUERIMENTOS FINAIS
-8. FECHO (Nestes termos, pede deferimento. [Cidade], [data]. PAULO DA SILVA MELO FILHO — OAB/GO 40.559)
+=== ESTILO DE REDAÇÃO OBRIGATÓRIO ===
+- Tom assertivo, combativo e técnico — sem hesitação, sem linguagem genérica
+- Fundamentação ROBUSTA e EXAUSTIVA: transcreva artigos de lei relevantes, cite ementas jurisprudenciais completas, referencie doutrinadores
+- Expressões fortes e características: "flagrante ilegalidade", "abuso manifesto", "violação frontal ao ordenamento jurídico", "consoante entendimento pacificado", "cristalino ao dispor que"
+- Parágrafos densos com argumentação encadeada e progressiva — cada parágrafo deve avançar o argumento
+- Pedidos ESPECÍFICOS com valores EXATOS calculados a partir dos dados do processo
+- Citações jurisprudenciais COMPLETAS: tribunal, turma/câmara, número do processo, relator, data do julgamento
+- Doutrina com autor, obra, edição, página
 
-ESTRATÉGIAS PROCESSUAIS RELEVANTES PARA ESTE TIPO DE AÇÃO:
+=== ESTRUTURA OBRIGATÓRIA ===
+1. ENDEREÇAMENTO — Use a vara e comarca REAIS do processo fornecido acima. Ex: "EXCELENTÍSSIMO(A) SENHOR(A) DOUTOR(A) JUIZ(A) DE DIREITO DA ${contextoProcesso.includes('Vara') ? '' : '__ '}VARA CÍVEL DA COMARCA DE ${contextoProcesso.includes('Comarca') ? '' : 'GOIÂNIA'} — ESTADO DE GOIÁS"
+2. NÚMERO DO PROCESSO — Usar o número CNJ REAL fornecido
+3. QUALIFICAÇÃO COMPLETA — Nome, CPF, profissão, endereço, cargo, órgão — TUDO que estiver nos dados do cliente
+4. **I — DOS FATOS** — Narrativa cronológica DETALHADA baseada nas movimentações REAIS do processo, com datas e eventos específicos
+5. **II — DO DIREITO** (SEÇÃO MAIS IMPORTANTE — mínimo 60% da petição)
+   a) Fundamentação LEGAL: artigos específicos com transcrição do dispositivo
+   b) Fundamentação JURISPRUDENCIAL: ementas completas com dados de identificação
+   c) Fundamentação DOUTRINÁRIA: autores, obras, páginas
+   d) Teses centrais desenvolvidas com profundidade argumentativa
+6. **III — DOS PEDIDOS** — Numerados (a, b, c...), ESPECÍFICOS, com valores EXATOS quando aplicável. Tutela de urgência primeiro, honorários no final, incluir pedidos subsidiários
+7. **IV — DO VALOR DA CAUSA** — Valor REAL por extenso
+8. FECHO — "Nestes termos, pede deferimento. Goiânia/GO, [data atual]. PAULO DA SILVA MELO FILHO — OAB/GO 40.559"
+
+=== BASE DE CONHECIMENTO JURÍDICO DO ESCRITÓRIO ===
+
+ESTRATÉGIAS PROCESSUAIS:
 ${estratTxt}
 
-TESES DISPONÍVEIS (ordenadas por relevância ao tipo de petição):
+TESES JURÍDICAS (use as mais relevantes ao caso):
 ${tesesTxt}
 
-JURISPRUDÊNCIA APLICÁVEL (ordenada por relevância):
+JURISPRUDÊNCIA (cite as mais pertinentes com ementa completa):
 ${jurispTxt}
 
-LEGISLAÇÃO APLICÁVEL:
+LEGISLAÇÃO:
 ${legTxt}
-${templateInfo}${contextoCliente}${contextoProcesso}
+${templateInfo}
 
 ${input.instrucoes ? `INSTRUÇÕES ADICIONAIS DO ADVOGADO: ${input.instrucoes}` : ''}
-${refAprovTxt ? `
-REFERÊNCIAS DE PETIÇÕES APROVADAS ANTERIORMENTE (use como inspiração de estilo e estratégia, NÃO copie — desenvolva de forma única para este caso):
-${refAprovTxt}` : ''}
+${refAprovTxt ? `\nREFERÊNCIAS DE PETIÇÕES APROVADAS (inspire-se no estilo, desenvolva argumentação ORIGINAL):\n${refAprovTxt}` : ''}
 
-IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação Markdown com títulos em negrito, numeração romana para seções, e letras para pedidos. Se houver referências de petições aprovadas, inspire-se no estilo e estratégia mas SEMPRE desenvolva argumentação original e adaptada ao caso específico.`;
+=== INSTRUÇÃO FINAL ===
+Gere a petição COMPLETA, PRONTA PARA PROTOCOLO, sem NENHUMA lacuna. Cada dado disponível no contexto DEVE aparecer na petição. A fundamentação jurídica deve ser EXAUSTIVA — não resuma, DESENVOLVA cada argumento com profundidade. Use formatação Markdown com títulos em negrito, numeração romana para seções, e letras para pedidos.`;
 
         const result = await invokeLLM({
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Gere a petição de ${input.tipoPeticao} completa para o caso.` }
+            { role: 'user', content: `Gere AGORA a petição de ${input.tipoPeticao} COMPLETA e PRONTA PARA PROTOCOLO para o caso de ${nomeCliente}${numeroProcesso ? ` (processo nº ${numeroProcesso})` : ''}.
+
+REGRA ABSOLUTA: Não use NENHUM placeholder como [COMPLETAR], [INSERIR], [NOME], etc. Use TODOS os dados reais fornecidos no contexto. A petição deve sair pronta, sem lacunas, com fundamentação jurídica EXAUSTIVA (artigos de lei transcritos, jurisprudência com ementas completas, doutrina com referência). Desenvolva cada argumento com profundidade técnica. A seção DO DIREITO deve ser a mais extensa da petição.` }
           ]
         });
 
@@ -8282,7 +8416,11 @@ Retorne um JSON com esta estrutura exata:
     "cidade": "string ou null",
     "estado": "string ou null",
     "cep": "string ou null",
-    "nacionalidade": "string ou null"
+    "nacionalidade": "string ou null",
+    "telefone": "string ou null",
+    "email": "string ou null",
+    "dataNascimento": "DD/MM/YYYY ou null",
+    "estadoCivil": "solteiro|casado|divorciado|viuvo|uniao estavel ou null"
   },
   "processo": {
     "numeroCnj": "string",
@@ -8457,34 +8595,46 @@ ${textoTruncado}`;
       const existing = await db.select().from(clientes).where(eq(clientes.cpfCnpj, cpf)).limit(1);
       if (existing.length > 0) {
         clienteId = existing[0].id;
-        // Atualizar dados do cliente existente
+        // MERGE INTELIGENTE: preenche TODOS os campos vazios com dados novos
+        const ex = existing[0];
+        const cl = dadosExtraidos.cliente || {} as any;
         await db.update(clientes).set({
-          profissao: dadosExtraidos.cliente?.profissao || existing[0].profissao,
-          cargo: dadosExtraidos.cliente?.cargo || existing[0].cargo,
-          orgaoEmpregador: dadosExtraidos.cliente?.orgaoEmpregador || existing[0].orgaoEmpregador,
-          vinculoFuncional: dadosExtraidos.cliente?.vinculoFuncional || existing[0].vinculoFuncional,
-          endereco: dadosExtraidos.cliente?.endereco || existing[0].endereco,
-          cidade: dadosExtraidos.cliente?.cidade || existing[0].cidade,
-          estado: dadosExtraidos.cliente?.estado || existing[0].estado,
-          cep: dadosExtraidos.cliente?.cep || existing[0].cep,
-          rg: dadosExtraidos.cliente?.rg || existing[0].rg,
-          nacionalidade: dadosExtraidos.cliente?.nacionalidade || existing[0].nacionalidade,
+          nomeCompleto: cl.nomeCompleto || ex.nomeCompleto,
+          rg: cl.rg || ex.rg,
+          profissao: cl.profissao || ex.profissao,
+          cargo: cl.cargo || ex.cargo,
+          orgaoEmpregador: cl.orgaoEmpregador || ex.orgaoEmpregador,
+          vinculoFuncional: cl.vinculoFuncional || ex.vinculoFuncional,
+          endereco: cl.endereco || ex.endereco,
+          cidade: cl.cidade || ex.cidade,
+          estado: cl.estado || ex.estado,
+          cep: cl.cep || ex.cep,
+          nacionalidade: cl.nacionalidade || ex.nacionalidade,
+          telefone: cl.telefone || ex.telefone,
+          email: cl.email || ex.email,
+          dataNascimento: cl.dataNascimento || ex.dataNascimento,
+          estadoCivil: cl.estadoCivil || ex.estadoCivil,
         }).where(eq(clientes.id, clienteId));
       } else {
+        const cl2 = dadosExtraidos.cliente || {} as any;
         const [inserted] = await db.insert(clientes).values({
           cpfCnpj: cpf,
           nomeCompleto: nome,
-          tipoPessoa: dadosExtraidos.cliente?.tipoPessoa === 'PJ' ? 'PJ' : 'PF',
-          rg: dadosExtraidos.cliente?.rg,
-          profissao: dadosExtraidos.cliente?.profissao,
-          cargo: dadosExtraidos.cliente?.cargo,
-          orgaoEmpregador: dadosExtraidos.cliente?.orgaoEmpregador,
-          vinculoFuncional: dadosExtraidos.cliente?.vinculoFuncional,
-          endereco: dadosExtraidos.cliente?.endereco,
-          cidade: dadosExtraidos.cliente?.cidade,
-          estado: dadosExtraidos.cliente?.estado,
-          cep: dadosExtraidos.cliente?.cep,
-          nacionalidade: dadosExtraidos.cliente?.nacionalidade,
+          tipoPessoa: cl2.tipoPessoa === 'PJ' ? 'PJ' : 'PF',
+          rg: cl2.rg || null,
+          profissao: cl2.profissao || null,
+          cargo: cl2.cargo || null,
+          orgaoEmpregador: cl2.orgaoEmpregador || null,
+          vinculoFuncional: cl2.vinculoFuncional || null,
+          endereco: cl2.endereco || null,
+          cidade: cl2.cidade || null,
+          estado: cl2.estado || null,
+          cep: cl2.cep || null,
+          nacionalidade: cl2.nacionalidade || null,
+          telefone: cl2.telefone || null,
+          email: cl2.email || null,
+          dataNascimento: cl2.dataNascimento || null,
+          estadoCivil: cl2.estadoCivil || null,
         }).$returningId();
         clienteId = inserted.id;
       }
@@ -8508,20 +8658,25 @@ ${textoTruncado}`;
         clienteId = clienteExistente.id;
         console.log(`[Job] Cliente encontrado por nome similar: ${clienteExistente.nomeCompleto} (ID: ${clienteId})`);
       } else {
+        const cl3 = dadosExtraidos.cliente || {} as any;
         const [inserted] = await db.insert(clientes).values({
           cpfCnpj: `PEND_${Date.now().toString(36)}`,
           nomeCompleto: nome,
-          tipoPessoa: dadosExtraidos.cliente?.tipoPessoa === 'PJ' ? 'PJ' : 'PF',
-          rg: dadosExtraidos.cliente?.rg,
-          profissao: dadosExtraidos.cliente?.profissao,
-          cargo: dadosExtraidos.cliente?.cargo,
-          orgaoEmpregador: dadosExtraidos.cliente?.orgaoEmpregador,
-          vinculoFuncional: dadosExtraidos.cliente?.vinculoFuncional,
-          endereco: dadosExtraidos.cliente?.endereco,
-          cidade: dadosExtraidos.cliente?.cidade,
-          estado: dadosExtraidos.cliente?.estado,
-          cep: dadosExtraidos.cliente?.cep,
-          nacionalidade: dadosExtraidos.cliente?.nacionalidade,
+          tipoPessoa: cl3.tipoPessoa === 'PJ' ? 'PJ' : 'PF',
+          rg: cl3.rg || null,
+          profissao: cl3.profissao || null,
+          cargo: cl3.cargo || null,
+          orgaoEmpregador: cl3.orgaoEmpregador || null,
+          vinculoFuncional: cl3.vinculoFuncional || null,
+          endereco: cl3.endereco || null,
+          cidade: cl3.cidade || null,
+          estado: cl3.estado || null,
+          cep: cl3.cep || null,
+          nacionalidade: cl3.nacionalidade || null,
+          telefone: cl3.telefone || null,
+          email: cl3.email || null,
+          dataNascimento: cl3.dataNascimento || null,
+          estadoCivil: cl3.estadoCivil || null,
         }).$returningId();
         clienteId = inserted.id;
       }
@@ -9012,16 +9167,25 @@ ${textoExtraido.substring(0, 50000)}`;
       const existing = await db.select().from(clientes).where(eq(clientes.cpfCnpj, cpf)).limit(1);
       if (existing.length > 0) {
         clienteId = existing[0].id;
-        // Update client data from contracheque
+        // MERGE INTELIGENTE: preenche TODOS os campos vazios
         const serv = dadosExtraidos.servidor || {};
-        const updateData: Record<string, any> = {};
-        if (serv.cargo) updateData.cargo = serv.cargo;
-        if (serv.orgaoEmpregador) updateData.orgaoEmpregador = serv.orgaoEmpregador;
-        if (serv.vinculoFuncional) updateData.vinculoFuncional = serv.vinculoFuncional;
-        if (serv.rg) updateData.rg = serv.rg;
-        if (Object.keys(updateData).length > 0) {
-          await db.update(clientes).set(updateData).where(eq(clientes.id, clienteId));
-        }
+        const exC = existing[0];
+        await db.update(clientes).set({
+          rg: serv.rg || exC.rg,
+          cargo: serv.cargo || exC.cargo,
+          orgaoEmpregador: serv.orgaoEmpregador || exC.orgaoEmpregador,
+          vinculoFuncional: serv.vinculoFuncional || exC.vinculoFuncional,
+          profissao: serv.cargo || exC.profissao,
+          endereco: serv.endereco || exC.endereco,
+          cidade: serv.cidade || exC.cidade,
+          estado: serv.estado || exC.estado,
+          cep: serv.cep || exC.cep,
+          nacionalidade: serv.nacionalidade || exC.nacionalidade,
+          telefone: serv.telefone || exC.telefone,
+          email: serv.email || exC.email,
+          dataNascimento: serv.dataNascimento || exC.dataNascimento,
+          estadoCivil: serv.estadoCivil || exC.estadoCivil,
+        }).where(eq(clientes.id, clienteId));
       } else {
         // Create new client from contracheque
         const serv = dadosExtraidos.servidor || {};
@@ -9029,11 +9193,20 @@ ${textoExtraido.substring(0, 50000)}`;
           cpfCnpj: cpf,
           nomeCompleto: nome,
           tipoPessoa: 'PF',
-          rg: serv.rg,
-          cargo: serv.cargo,
-          orgaoEmpregador: serv.orgaoEmpregador,
-          vinculoFuncional: serv.vinculoFuncional,
+          rg: serv.rg || null,
+          cargo: serv.cargo || null,
+          orgaoEmpregador: serv.orgaoEmpregador || null,
+          vinculoFuncional: serv.vinculoFuncional || null,
           profissao: serv.cargo || 'Servidor Público',
+          endereco: serv.endereco || null,
+          cidade: serv.cidade || null,
+          estado: serv.estado || null,
+          cep: serv.cep || null,
+          nacionalidade: serv.nacionalidade || null,
+          telefone: serv.telefone || null,
+          email: serv.email || null,
+          dataNascimento: serv.dataNascimento || null,
+          estadoCivil: serv.estadoCivil || null,
         }).$returningId();
         clienteId = inserted.id;
       }
@@ -9056,11 +9229,25 @@ ${textoExtraido.substring(0, 50000)}`;
       if (clienteExistente) {
         clienteId = clienteExistente.id;
       } else {
+        const serv2 = dadosExtraidos.servidor || {};
         const [inserted] = await db.insert(clientes).values({
           cpfCnpj: `PEND_${Date.now().toString(36)}`,
           nomeCompleto: nome,
           tipoPessoa: 'PF',
-          profissao: dadosExtraidos.servidor?.cargo || 'Servidor Público',
+          profissao: serv2.cargo || 'Servidor Público',
+          rg: serv2.rg || null,
+          cargo: serv2.cargo || null,
+          orgaoEmpregador: serv2.orgaoEmpregador || null,
+          vinculoFuncional: serv2.vinculoFuncional || null,
+          endereco: serv2.endereco || null,
+          cidade: serv2.cidade || null,
+          estado: serv2.estado || null,
+          cep: serv2.cep || null,
+          nacionalidade: serv2.nacionalidade || null,
+          telefone: serv2.telefone || null,
+          email: serv2.email || null,
+          dataNascimento: serv2.dataNascimento || null,
+          estadoCivil: serv2.estadoCivil || null,
         }).$returningId();
         clienteId = inserted.id;
       }
