@@ -1,0 +1,110 @@
+{
+  "query": "SELECT tipoAcao, categoria, COUNT(*) as total FROM conhecimentos WHERE tipoAcao IS NOT NULL GROUP BY tipoAcao, categoria HAVING COUNT(*) > 3 ORDER BY total DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT tipoAcao, categoria, COUNT(*) as total FROM conhecimentos WHERE tipoAcao IS NOT NULL GROUP BY tipoAcao, categoria HAVING COUNT(*) > 3 ORDER BY total DESC LIMIT 20;",
+  "rows": [
+    {
+      "tipoAcao": "Revisional de Contrato",
+      "categoria": "Estrategia",
+      "total": "20"
+    },
+    {
+      "tipoAcao": "Revisional de Contrato",
+      "categoria": "Tese",
+      "total": "20"
+    },
+    {
+      "tipoAcao": "Revisional de Contrato",
+      "categoria": "Jurisprudencia",
+      "total": "20"
+    },
+    {
+      "tipoAcao": "Obrigação de Fazer",
+      "categoria": "Tese",
+      "total": "15"
+    },
+    {
+      "tipoAcao": "Obrigação de Fazer",
+      "categoria": "Jurisprudencia",
+      "total": "13"
+    },
+    {
+      "tipoAcao": "Obrigação de Fazer",
+      "categoria": "Estrategia",
+      "total": "13"
+    },
+    {
+      "tipoAcao": "Todas",
+      "categoria": "Modelo",
+      "total": "9"
+    },
+    {
+      "tipoAcao": "Todas",
+      "categoria": "Legislacao",
+      "total": "8"
+    },
+    {
+      "tipoAcao": "Todas",
+      "categoria": "Estrategia",
+      "total": "8"
+    },
+    {
+      "tipoAcao": "Cumprimento de Sentença",
+      "categoria": "Estrategia",
+      "total": "7"
+    },
+    {
+      "tipoAcao": "Cumprimento de Sentença",
+      "categoria": "Tese",
+      "total": "7"
+    },
+    {
+      "tipoAcao": "Todas",
+      "categoria": "Jurisprudencia",
+      "total": "6"
+    },
+    {
+      "tipoAcao": "Cumprimento de Sentença",
+      "categoria": "Jurisprudencia",
+      "total": "6"
+    },
+    {
+      "tipoAcao": "Ação Penal",
+      "categoria": "Estrategia",
+      "total": "5"
+    },
+    {
+      "tipoAcao": "Ação Penal",
+      "categoria": "Jurisprudencia",
+      "total": "5"
+    },
+    {
+      "tipoAcao": "Todos",
+      "categoria": "Modelo",
+      "total": "5"
+    },
+    {
+      "tipoAcao": "Ação Penal",
+      "categoria": "Tese",
+      "total": "5"
+    },
+    {
+      "tipoAcao": "Ação de Indenização",
+      "categoria": "Tese",
+      "total": "4"
+    },
+    {
+      "tipoAcao": "Superendividamento",
+      "categoria": "Estrategia",
+      "total": "4"
+    },
+    {
+      "tipoAcao": "Ação de Indenização",
+      "categoria": "Jurisprudencia",
+      "total": "4"
+    }
+  ],
+  "messages": [],
+  "stdout": "tipoAcao\tcategoria\ttotal\nRevisional de Contrato\tEstrategia\t20\nRevisional de Contrato\tTese\t20\nRevisional de Contrato\tJurisprudencia\t20\nObrigação de Fazer\tTese\t15\nObrigação de Fazer\tJurisprudencia\t13\nObrigação de Fazer\tEstrategia\t13\nTodas\tModelo\t9\nTodas\tLegislacao\t8\nTodas\tEstrategia\t8\nCumprimento de Sentença\tEstrategia\t7\nCumprimento de Sentença\tTese\t7\nTodas\tJurisprudencia\t6\nCumprimento de Sentença\tJurisprudencia\t6\nAção Penal\tEstrategia\t5\nAção Penal\tJurisprudencia\t5\nTodos\tModelo\t5\nAção Penal\tTese\t5\nAção de Indenização\tTese\t4\nSuperendividamento\tEstrategia\t4\nAção de Indenização\tJurisprudencia\t4\n",
+  "stderr": "",
+  "execution_time_ms": 357
+}

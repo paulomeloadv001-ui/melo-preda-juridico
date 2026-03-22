@@ -1,0 +1,45 @@
+{
+  "query": "SELECT id, nome, tipo, descricao, ativo FROM templates_peticao ORDER BY tipo, nome;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, nome, tipo, descricao, ativo FROM templates_peticao ORDER BY tipo, nome;",
+  "rows": [
+    {
+      "id": "1",
+      "nome": "Agravo de Instrumento",
+      "tipo": "agravo_instrumento",
+      "descricao": "Recurso de agravo de instrumento contra decisão interlocutória, com pedido de efeito suspensivo/ativo e fundamentação em urgência.",
+      "ativo": "1"
+    },
+    {
+      "id": "2",
+      "nome": "Cumprimento Provisório de Sentença",
+      "tipo": "cumprimento_provisorio",
+      "descricao": "Petição de cumprimento provisório de sentença com cálculo de débito, fundamentação em coisa julgada progressiva e pedido de penhora.",
+      "ativo": "1"
+    },
+    {
+      "id": "3",
+      "nome": "Embargos de Declaração com Efeitos Infringentes",
+      "tipo": "embargos_declaracao",
+      "descricao": "Embargos de declaração com pedido de efeitos infringentes por omissão, contradição ou obscuridade determinante para o dispositivo.",
+      "ativo": "1"
+    },
+    {
+      "id": "4",
+      "nome": "Exceção de Pré-Executividade",
+      "tipo": "excecao_pre_executividade",
+      "descricao": "Exceção de pré-executividade para arguir matérias de ordem pública sem necessidade de penhora prévia.",
+      "ativo": "1"
+    },
+    {
+      "id": "5",
+      "nome": "Querela Nullitatis Incidental",
+      "tipo": "querela_nullitatis",
+      "descricao": "Ação declaratória de nulidade de sentença por vício insanável (citação inválida ou ausente), imprescritível.",
+      "ativo": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tnome\ttipo\tdescricao\tativo\n1\tAgravo de Instrumento\tagravo_instrumento\tRecurso de agravo de instrumento contra decisão interlocutória, com pedido de efeito suspensivo/ativo e fundamentação em urgência.\t1\n2\tCumprimento Provisório de Sentença\tcumprimento_provisorio\tPetição de cumprimento provisório de sentença com cálculo de débito, fundamentação em coisa julgada progressiva e pedido de penhora.\t1\n3\tEmbargos de Declaração com Efeitos Infringentes\tembargos_declaracao\tEmbargos de declaração com pedido de efeitos infringentes por omissão, contradição ou obscuridade determinante para o dispositivo.\t1\n4\tExceção de Pré-Executividade\texcecao_pre_executividade\tExceção de pré-executividade para arguir matérias de ordem pública sem necessidade de penhora prévia.\t1\n5\tQuerela Nullitatis Incidental\tquerela_nullitatis\tAção declaratória de nulidade de sentença por vício insanável (citação inválida ou ausente), imprescritível.\t1\n",
+  "stderr": "",
+  "execution_time_ms": 361
+}

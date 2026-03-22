@@ -343,28 +343,56 @@ export default function Peticionamento() {
             <Card>
               <CardHeader>
                 <CardTitle>Selecione o Tipo de Petição</CardTitle>
-                <CardDescription>Escolha o tipo de peça processual a ser gerada</CardDescription>
+                <CardDescription>Escolha o tipo de peça processual a ser gerada — organizado por categoria</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {tipos?.map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => { setTipoPeticao(t.nome); setStep(2); }}
-                      className={`p-4 rounded-lg border text-left transition-all hover:shadow-md ${
-                        tipoPeticao === t.nome
-                          ? "border-amber-500 bg-amber-50 dark:bg-amber-950"
-                          : "border-border hover:border-amber-300"
-                      }`}
-                    >
-                      <div className="font-medium text-sm">{t.nome}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{t.descricao}</div>
-                    </button>
-                  ))}
-                </div>
+              <CardContent className="space-y-6">
+                {/* Agrupar tipos por categoria */}
+                {(() => {
+                  const categorias = tipos?.reduce((acc: Record<string, typeof tipos>, t: any) => {
+                    const cat = t.categoria || 'Outros';
+                    if (!acc[cat]) acc[cat] = [];
+                    acc[cat].push(t);
+                    return acc;
+                  }, {} as Record<string, typeof tipos>) || {};
+                  
+                  const catIcons: Record<string, string> = {
+                    'Ações Iniciais': '⚖️',
+                    'Cumprimento e Execução': '💰',
+                    'Recursos': '📄',
+                    'Defesa': '🛡️',
+                    'Intermediárias': '📝',
+                  };
+                  
+                  return Object.entries(categorias).map(([cat, items]) => (
+                    <div key={cat}>
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span>{catIcons[cat] || '📁'}</span> {cat}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {(items as any[])?.map((t: any) => (
+                          <button
+                            key={t.id}
+                            onClick={() => { setTipoPeticao(t.nome); setStep(2); }}
+                            className={`p-4 rounded-lg border text-left transition-all hover:shadow-md ${
+                              tipoPeticao === t.nome
+                                ? "border-amber-500 bg-amber-50 dark:bg-amber-950"
+                                : "border-border hover:border-amber-300"
+                            }`}
+                          >
+                            <div className="font-medium text-sm">{t.nome}</div>
+                            <div className="text-xs text-muted-foreground mt-1">{t.descricao}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ));
+                })()}
+
                 {templates && templates.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="text-sm font-medium mb-2">Templates Especializados (opcional)</h3>
+                  <div className="border-t pt-4">
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                      📚 Templates Especializados (opcional)
+                    </h3>
                     <Select
                       value={templateId?.toString() || "none"}
                       onValueChange={(v) => setTemplateId(v === "none" ? undefined : Number(v))}
@@ -373,14 +401,17 @@ export default function Peticionamento() {
                         <SelectValue placeholder="Usar template base..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Sem template específico</SelectItem>
-                        {templates.map((t) => (
+                        <SelectItem value="none">IA escolhe automaticamente o melhor template</SelectItem>
+                        {templates.map((t: any) => (
                           <SelectItem key={t.id} value={t.id.toString()}>
                             {t.nome} — {t.tipo}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Se não selecionar, a IA analisa automaticamente todos os {templates.length} templates e escolhe o mais adequado ao caso.
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -500,6 +531,42 @@ export default function Peticionamento() {
                         ? processos?.find((p: any) => p.id === processoId)?.numeroCnj || `ID ${processoId}`
                         : "Nenhum"}
                     </p>
+                  </div>
+                </div>
+
+                {/* Sugestões rápidas baseadas no tipo de petição */}
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Sugestões rápidas (clique para adicionar):</p>
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {[
+                      tipoPeticao.includes('Obrigação') && 'Focar na tese de abusividade de consignações',
+                      tipoPeticao.includes('Obrigação') && 'Incluir pedido de tutela antecipada de urgência',
+                      tipoPeticao.includes('Obrigação') && 'Mencionar margem consignável excedida',
+                      tipoPeticao.includes('Cumprimento') && 'Incluir cálculo com INPC + juros 1% a.m.',
+                      tipoPeticao.includes('Cumprimento') && 'Aplicar multa e honorários art. 523 §1º CPC',
+                      tipoPeticao.includes('Honorários') && 'Fundamentar natureza alimentar dos honorários',
+                      tipoPeticao.includes('Honorários') && 'Citar art. 85 §14 CPC e Lei 8.906/94',
+                      tipoPeticao.includes('Agravo') && 'Pedir efeito suspensivo/ativo',
+                      tipoPeticao.includes('Agravo') && 'Demonstrar periculum in mora e fumus boni iuris',
+                      tipoPeticao.includes('Declaratória') && 'Incluir pedido de dano moral in re ipsa',
+                      tipoPeticao.includes('Declaratória') && 'Pedir restituição em dobro (art. 42 CDC)',
+                      tipoPeticao.includes('Repactuação') && 'Fundamentar mínimo existencial e Lei 14.181/2021',
+                      tipoPeticao.includes('Querela') && 'Demonstrar vício insanável de citação',
+                      tipoPeticao.includes('Embargos de Declaração') && 'Apontar omissão específica na decisão',
+                      tipoPeticao.includes('Contrarrazões') && 'Reforçar fundamentação da sentença',
+                      'Incluir jurisprudência do TJ-GO',
+                      'Citar jurisprudência do STJ',
+                      'Tom mais combativo e assertivo',
+                      'Incluir pedido de honorários de sucumbência',
+                    ].filter(Boolean).map((sug, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setInstrucoes(prev => prev ? `${prev}. ${sug}` : sug as string)}
+                        className="text-xs px-2.5 py-1 rounded-full border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800"
+                      >
+                        + {sug}
+                      </button>
+                    ))}
                   </div>
                 </div>
 

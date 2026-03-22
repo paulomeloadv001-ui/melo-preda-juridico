@@ -900,11 +900,38 @@ Movimentações: ${movs.map(m => `${m.data}: ${m.evento}`).join('\n')}`;
     }
   }
 
-  // Buscar templates e conhecimentos
+  // Buscar templates e conhecimentos com busca semântica
   const templates = await db.select().from(templatesPeticao).where(eq(templatesPeticao.ativo, 1));
   const conhecs = await db.select().from(conhecimentos);
-  const teses = conhecs.filter(c => c.categoria === 'Tese').map(t => `- ${t.titulo}: ${t.conteudo?.substring(0, 250)}`).join('\n');
-  const jurisp = conhecs.filter(c => c.categoria === 'Jurisprudencia').map(j => `- ${j.titulo}: ${j.conteudo?.substring(0, 200)}`).join('\n');
+  
+  // Busca semântica por relevância ao tipo de petição
+  const termosMap: Record<string, string[]> = {
+    'obrigacao': ['obrigação', 'fazer', 'consignado', 'margem', 'tutela', 'CDC'],
+    'declaratoria': ['inexistência', 'débito', 'desconto', 'indevido', 'restituição'],
+    'cumprimento': ['cumprimento', 'sentença', 'execução', '523', 'multa'],
+    'honorarios': ['honorários', 'sucumbência', 'autônomo', '85'],
+    'agravo': ['agravo', 'instrumento', 'efeito suspensivo'],
+    'contrarrazoes': ['contrarrazões', 'apelação', 'manutenção'],
+    'querela': ['querela', 'nullitatis', 'nulidade', 'citação'],
+    'embargos': ['embargos', 'declaração', 'omissão'],
+    'repactuacao': ['superendividamento', 'repactuação', 'mínimo existencial'],
+    'execucao': ['execução', 'título', 'penhora'],
+    'impugnacao': ['impugnação', 'excesso', 'prescrição'],
+  };
+  const tipoKey = Object.keys(termosMap).find(k => args.tipoPeticao.toLowerCase().includes(k)) || '';
+  const termos = termosMap[tipoKey] || [];
+  
+  function calcRelevancia(c: any): number {
+    if (!termos.length) return 1;
+    const txt = `${c.titulo || ''} ${c.conteudo || ''} ${c.tipoAcao || ''}`.toLowerCase();
+    return termos.filter(t => txt.includes(t.toLowerCase())).length;
+  }
+  
+  const ordenados = conhecs.map(c => ({ ...c, rel: calcRelevancia(c) })).sort((a, b) => b.rel - a.rel);
+  const teses = ordenados.filter(c => c.categoria === 'Tese').slice(0, 25).map(t => `- ${t.titulo}: ${t.conteudo?.substring(0, 300)}`).join('\n');
+  const jurisp = ordenados.filter(c => c.categoria === 'Jurisprudencia').slice(0, 20).map(j => `- ${j.titulo}: ${j.conteudo?.substring(0, 250)}`).join('\n');
+  const estrats = ordenados.filter(c => c.categoria === 'Estrategia').slice(0, 10).map(e => `- ${e.titulo}: ${e.conteudo?.substring(0, 200)}`).join('\n');
+  const legs = ordenados.filter(c => c.categoria === 'Legislacao').slice(0, 15).map(l => `- ${l.titulo}: ${l.conteudo?.substring(0, 200)}`).join('\n');
 
   const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
 Advogado: PAULO DA SILVA MELO FILHO
@@ -933,13 +960,19 @@ ESTRUTURA OBRIGATÓRIA:
 7. REQUERIMENTOS FINAIS
 8. FECHO (Nestes termos, pede deferimento. [Cidade], [data]. PAULO DA SILVA MELO FILHO — OAB/GO 40.559)
 
-TESES DISPONÍVEIS:
+ESTRATÉGIAS PROCESSUAIS RELEVANTES:
+${estrats}
+
+TESES DISPONÍVEIS (ordenadas por relevância):
 ${teses}
 
-JURISPRUDÊNCIA:
+JURISPRUDÊNCIA APLICÁVEL (ordenada por relevância):
 ${jurisp}
 
-TEMPLATES DISPONÍVEIS:
+LEGISLAÇÃO APLICÁVEL:
+${legs}
+
+TEMPLATES DISPONÍVEIS (escolha o mais adequado):
 ${templates.map(t => `[${t.nome}] ${t.tipo}: ${t.descricao}`).join('\n')}
 
 ${contextoCliente}

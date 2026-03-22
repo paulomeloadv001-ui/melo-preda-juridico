@@ -683,3 +683,12 @@
 - [x] Atualizar agente de IA com workflow de 5 fases, estilo de redação avançado e regras absolutas de peticionamento
 - [x] Integrar skills de peticionamento (melo-preda-juridico, peticionamento-juridico-avancado, analise-processual-peticionamento) no agente
 - [x] Exportar/sincronizar com Cloudflare via GitHub Actions (211/211 testes passando)
+- [ ] Revisão completa do fluxo da plataforma - identificar e corrigir problemas visuais, navegação e funcionalidades
+- [ ] Verificar todas as páginas no navegador e catalogar problemas
+- [ ] Corrigir fluxo de navegação e sidebar
+- [ ] Corrigir problemas visuais e de UX
+- [ ] Corrigir funcionalidades quebradas ou estranhas
+- [x] Adaptar novos conhecimentos de peticionamento e resumir fluxo
+- [x] Consolidar e otimizar base de conhecimentos (busca semântica por tipo de petição implementada)
+- [x] Melhorar página de peticionamento no frontend (categorias, sugestões rápidas, 8 novos templates)
+- [x] Integrar conhecimentos avançados no backend de geração de petições (busca semântica + estratégias)

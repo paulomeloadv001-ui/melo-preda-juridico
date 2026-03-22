@@ -5006,11 +5006,61 @@ Financeiro: ${movFin.map(m => `${m.tipo}: R$ ${m.valor} (${m.status})`).join('; 
           }
         }
 
-        // Buscar base de conhecimento relevante
+        // Buscar base de conhecimento relevante — busca semântica por tipo de petição
         const todosConhecimentos = await db.select().from(conhecimentos);
-        const tesesTxt = todosConhecimentos.filter(c => c.categoria === 'Tese').map(t => `- ${t.titulo}: ${t.conteudo?.substring(0, 250)}`).join('\n');
-        const jurispTxt = todosConhecimentos.filter(c => c.categoria === 'Jurisprudencia').map(j => `- ${j.titulo}: ${j.conteudo?.substring(0, 200)}`).join('\n');
-        const legTxt = todosConhecimentos.filter(c => c.categoria === 'Legislacao').map(l => `- ${l.titulo}: ${l.conteudo?.substring(0, 200)}`).join('\n');
+        
+        // Mapeamento de tipo de petição → termos de busca para filtrar conhecimentos relevantes
+        const termosRelevantes: Record<string, string[]> = {
+          'obrigacao_fazer': ['obrigação', 'fazer', 'consignado', 'margem', 'tutela', 'CDC', 'bancário'],
+          'obrigacao_fazer_tutela': ['obrigação', 'fazer', 'tutela', 'antecipada', 'consignado', 'margem', 'urgência'],
+          'declaratoria_inexistencia': ['inexistência', 'débito', 'desconto', 'indevido', 'restituição', 'dano moral'],
+          'repactuacao_dividas': ['superendividamento', 'repactuação', 'mínimo existencial', 'dignidade', '14.181'],
+          'cumprimento_provisorio': ['cumprimento', 'provisório', 'sentença', 'execução', '523', '520', 'multa'],
+          'cumprimento_definitivo': ['cumprimento', 'definitivo', 'trânsito', 'julgado', 'execução', '523'],
+          'cumprimento_provisorio_honorarios': ['honorários', 'sucumbência', 'autônomo', 'alimentar', '85', '8.906'],
+          'agravo_instrumento': ['agravo', 'instrumento', 'interlocutória', 'efeito suspensivo', 'gravame'],
+          'contrarrazoes_apelacao': ['contrarrazões', 'apelação', 'manutenção', 'sentença', 'reformatio'],
+          'querela_nullitatis': ['querela', 'nullitatis', 'nulidade', 'citação', 'vício', 'insanável'],
+          'embargos_declaracao': ['embargos', 'declaração', 'omissão', 'contradição', 'obscuridade'],
+          'embargos_execucao': ['embargos', 'execução', 'excesso', 'nulidade', 'prescrição'],
+          'impugnacao': ['impugnação', 'cumprimento', 'excesso', 'prescrição'],
+          'execucao_titulo_extrajudicial': ['execução', 'título', 'extrajudicial', 'liquidez', 'penhora'],
+          'excecao_pre_executividade': ['exceção', 'pré-executividade', 'ordem pública', 'prescrição'],
+          'tutela_urgencia_antecedente': ['tutela', 'urgência', 'antecedente', 'periculum', 'fumus'],
+          'penhora_online': ['penhora', 'SISBAJUD', 'bloqueio', 'constrição'],
+          'alvara_levantamento': ['alvará', 'levantamento', 'depósito', 'valores'],
+          'recurso_especial': ['recurso', 'especial', 'STJ', 'lei federal', 'divergência'],
+          'mandado_seguranca': ['mandado', 'segurança', 'autoridade', 'ilegalidade', 'direito líquido'],
+          'habeas_corpus': ['habeas', 'corpus', 'liberdade', 'coação'],
+        };
+        const termos = termosRelevantes[input.tipoPeticao] || [];
+        
+        // Filtro inteligente: prioriza conhecimentos específicos ao tipo de ação, depois genéricos
+        function relevanciaPorTermo(c: any): number {
+          if (!termos.length) return 1;
+          const texto = `${c.titulo || ''} ${c.conteudo || ''} ${c.tipoAcao || ''}`.toLowerCase();
+          return termos.filter(t => texto.includes(t.toLowerCase())).length;
+        }
+        
+        const conhecimentosOrdenados = todosConhecimentos
+          .map(c => ({ ...c, relevancia: relevanciaPorTermo(c) }))
+          .sort((a, b) => b.relevancia - a.relevancia);
+        
+        // Teses: top 25 mais relevantes
+        const tesesRelevantes = conhecimentosOrdenados.filter(c => c.categoria === 'Tese').slice(0, 25);
+        const tesesTxt = tesesRelevantes.map(t => `- [Rel:${t.relevancia}] ${t.titulo}: ${t.conteudo?.substring(0, 300)}`).join('\n');
+        
+        // Jurisprudência: top 20 mais relevantes
+        const jurispRelevantes = conhecimentosOrdenados.filter(c => c.categoria === 'Jurisprudencia').slice(0, 20);
+        const jurispTxt = jurispRelevantes.map(j => `- [Rel:${j.relevancia}] ${j.titulo}: ${j.conteudo?.substring(0, 250)}`).join('\n');
+        
+        // Legislação: top 15 mais relevantes
+        const legRelevantes = conhecimentosOrdenados.filter(c => c.categoria === 'Legislacao').slice(0, 15);
+        const legTxt = legRelevantes.map(l => `- [Rel:${l.relevancia}] ${l.titulo}: ${l.conteudo?.substring(0, 250)}`).join('\n');
+        
+        // Estratégias: top 10 mais relevantes
+        const estratRelevantes = conhecimentosOrdenados.filter(c => c.categoria === 'Estrategia').slice(0, 10);
+        const estratTxt = estratRelevantes.map(e => `- [Rel:${e.relevancia}] ${e.titulo}: ${e.conteudo?.substring(0, 200)}`).join('\n');
 
         const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
 Advogado: PAULO DA SILVA MELO FILHO
@@ -5040,13 +5090,16 @@ ESTRUTURA OBRIGATÓRIA DA PETIÇÃO:
 7. REQUERIMENTOS FINAIS
 8. FECHO (Nestes termos, pede deferimento. [Cidade], [data]. PAULO DA SILVA MELO FILHO — OAB/GO 40.559)
 
-TESES DISPONÍVEIS:
+ESTRATÉGIAS PROCESSUAIS RELEVANTES PARA ESTE TIPO DE AÇÃO:
+${estratTxt}
+
+TESES DISPONÍVEIS (ordenadas por relevância ao tipo de petição):
 ${tesesTxt}
 
-JURISPRUDÊNCIA:
+JURISPRUDÊNCIA APLICÁVEL (ordenada por relevância):
 ${jurispTxt}
 
-LEGISLAÇÃO:
+LEGISLAÇÃO APLICÁVEL:
 ${legTxt}
 ${templateInfo}${contextoCliente}${contextoProcesso}
 
@@ -5347,25 +5400,37 @@ IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação M
         await db.update(peticoesGeradas).set(updateData).where(eq(peticoesGeradas.id, input.id));
         return { success: true };
       }),
-    // Listar todos os tipos de petição disponíveis
+    // Listar todos os tipos de petição disponíveis — organizados por categoria
     tiposPeticao: protectedProcedure.query(async () => {
       return [
-        { id: 'agravo_instrumento', nome: 'Agravo de Instrumento', descricao: 'Recurso contra decisão interlocutória' },
-        { id: 'contrarrazoes_apelacao', nome: 'Contrarrazões à Apelação', descricao: 'Resposta ao recurso de apelação' },
-        { id: 'cumprimento_provisorio', nome: 'Cumprimento Provisório de Sentença', descricao: 'Execução provisória antes do trânsito em julgado' },
-        { id: 'cumprimento_definitivo', nome: 'Cumprimento Definitivo de Sentença', descricao: 'Execução após trânsito em julgado' },
-        { id: 'querela_nullitatis', nome: 'Querela Nullitatis', descricao: 'Ação declaratória de nulidade de sentença' },
-        { id: 'obrigacao_fazer', nome: 'Obrigação de Fazer', descricao: 'Ação para compelir cumprimento de obrigação' },
-        { id: 'embargos_declaracao', nome: 'Embargos de Declaração', descricao: 'Recurso para esclarecer obscuridade, contradição ou omissão' },
-        { id: 'embargos_execucao', nome: 'Embargos à Execução', descricao: 'Defesa do executado na fase de execução' },
-        { id: 'recurso_especial', nome: 'Recurso Especial (REsp)', descricao: 'Recurso ao STJ por violação de lei federal' },
-        { id: 'habeas_corpus', nome: 'Habeas Corpus', descricao: 'Remédio constitucional contra restrição de liberdade' },
-        { id: 'mandado_seguranca', nome: 'Mandado de Segurança', descricao: 'Remédio constitucional contra ato ilegal de autoridade' },
-        { id: 'peticao_simples', nome: 'Petição Simples', descricao: 'Petição intermediária genérica' },
-        { id: 'peticao_juntada', nome: 'Petição de Juntada de Documentos', descricao: 'Juntada de documentos aos autos' },
-        { id: 'impugnacao', nome: 'Impugnação ao Cumprimento de Sentença', descricao: 'Defesa do devedor no cumprimento de sentença' },
-        { id: 'penhora_online', nome: 'Pedido de Penhora Online (SISBAJUD)', descricao: 'Solicitação de bloqueio via sistema bancário' },
-        { id: 'alvara_levantamento', nome: 'Alvará de Levantamento', descricao: 'Solicitação de levantamento de valores depositados' },
+        // === AÇÕES INICIAIS ===
+        { id: 'obrigacao_fazer', nome: 'Ação de Obrigação de Fazer', descricao: 'Ação para compelir cumprimento de obrigação com tutela antecipada', categoria: 'Ações Iniciais' },
+        { id: 'obrigacao_fazer_tutela', nome: 'Obrigação de Fazer + Tutela Antecipada', descricao: 'Contra instituições financeiras por abusividade de consignações', categoria: 'Ações Iniciais' },
+        { id: 'declaratoria_inexistencia', nome: 'Declaratória de Inexistência de Débito', descricao: 'Cessação de descontos indevidos e restituição de valores', categoria: 'Ações Iniciais' },
+        { id: 'repactuacao_dividas', nome: 'Repactuação de Dívidas (Superendividamento)', descricao: 'Preservação do mínimo existencial — Lei 14.181/2021', categoria: 'Ações Iniciais' },
+        { id: 'querela_nullitatis', nome: 'Querela Nullitatis', descricao: 'Ação declaratória de nulidade de sentença por vício insanável', categoria: 'Ações Iniciais' },
+        { id: 'tutela_urgencia_antecedente', nome: 'Tutela de Urgência Antecedente', descricao: 'Cautelar para situações de extrema urgência', categoria: 'Ações Iniciais' },
+        { id: 'mandado_seguranca', nome: 'Mandado de Segurança', descricao: 'Remédio constitucional contra ato ilegal de autoridade', categoria: 'Ações Iniciais' },
+        // === CUMPRIMENTO E EXECUÇÃO ===
+        { id: 'cumprimento_provisorio', nome: 'Cumprimento Provisório de Sentença', descricao: 'Execução provisória antes do trânsito em julgado', categoria: 'Cumprimento e Execução' },
+        { id: 'cumprimento_definitivo', nome: 'Cumprimento Definitivo de Sentença', descricao: 'Execução após trânsito em julgado', categoria: 'Cumprimento e Execução' },
+        { id: 'cumprimento_provisorio_honorarios', nome: 'Cumprimento Provisório — Honorários', descricao: 'Cobrança de honorários advocatícios de sucumbência', categoria: 'Cumprimento e Execução' },
+        { id: 'execucao_titulo_extrajudicial', nome: 'Execução de Título Extrajudicial', descricao: 'Cobrança com base em documento com força executiva', categoria: 'Cumprimento e Execução' },
+        { id: 'penhora_online', nome: 'Pedido de Penhora Online (SISBAJUD)', descricao: 'Solicitação de bloqueio via sistema bancário', categoria: 'Cumprimento e Execução' },
+        { id: 'alvara_levantamento', nome: 'Alvará de Levantamento', descricao: 'Solicitação de levantamento de valores depositados', categoria: 'Cumprimento e Execução' },
+        // === RECURSOS ===
+        { id: 'agravo_instrumento', nome: 'Agravo de Instrumento', descricao: 'Recurso contra decisão interlocutória com pedido de efeito suspensivo', categoria: 'Recursos' },
+        { id: 'contrarrazoes_apelacao', nome: 'Contrarrazões à Apelação', descricao: 'Resposta ao recurso de apelação para manutenção da sentença', categoria: 'Recursos' },
+        { id: 'embargos_declaracao', nome: 'Embargos de Declaração', descricao: 'Recurso para esclarecer obscuridade, contradição ou omissão', categoria: 'Recursos' },
+        { id: 'recurso_especial', nome: 'Recurso Especial (REsp)', descricao: 'Recurso ao STJ por violação de lei federal', categoria: 'Recursos' },
+        // === DEFESA ===
+        { id: 'embargos_execucao', nome: 'Embargos à Execução', descricao: 'Defesa do executado na fase de execução', categoria: 'Defesa' },
+        { id: 'impugnacao', nome: 'Impugnação ao Cumprimento de Sentença', descricao: 'Defesa do devedor no cumprimento de sentença', categoria: 'Defesa' },
+        { id: 'excecao_pre_executividade', nome: 'Exceção de Pré-Executividade', descricao: 'Matérias de ordem pública sem necessidade de penhora', categoria: 'Defesa' },
+        // === PETIÇÕES INTERMEDIÁRIAS ===
+        { id: 'peticao_simples', nome: 'Petição Simples', descricao: 'Petição intermediária genérica', categoria: 'Intermediárias' },
+        { id: 'peticao_juntada', nome: 'Petição de Juntada de Documentos', descricao: 'Juntada de documentos aos autos', categoria: 'Intermediárias' },
+        { id: 'habeas_corpus', nome: 'Habeas Corpus', descricao: 'Remédio constitucional contra restrição de liberdade', categoria: 'Intermediárias' },
       ];
     }),
     // ==================== ANEXOS DE PETIÇÕES ====================
