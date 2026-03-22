@@ -6,6 +6,7 @@
  * - API requests são proxied para o Manus backend
  * - D1 serve como banco de dados de leitura local (cache)
  * - Health check e status via Worker direto
+ * - Secrets configuradas para autenticação e APIs
  */
 
 interface Env {
@@ -13,7 +14,24 @@ interface Env {
   MANUS_APP_URL: string;
   NODE_ENV: string;
   CLOUDFLARE_WORKER: string;
-  JWT_SECRET?: string;
+  // Auth & Security
+  JWT_SECRET: string;
+  VITE_APP_ID: string;
+  OAUTH_SERVER_URL: string;
+  VITE_OAUTH_PORTAL_URL: string;
+  OWNER_OPEN_ID: string;
+  OWNER_NAME: string;
+  // APIs
+  BUILT_IN_FORGE_API_URL: string;
+  BUILT_IN_FORGE_API_KEY: string;
+  VITE_FRONTEND_FORGE_API_URL: string;
+  VITE_FRONTEND_FORGE_API_KEY: string;
+  DATAJUD_API_KEY: string;
+  JUSCONSIG_API_KEY: string;
+  DATABASE_URL: string;
+  VITE_APP_TITLE: string;
+  VITE_APP_LOGO: string;
+  // Assets
   ASSETS: { fetch: (req: Request) => Promise<Response> };
 }
 
@@ -45,6 +63,32 @@ export default {
           timestamp: new Date().toISOString(),
           database: dbCheck,
           manus_url: env.MANUS_APP_URL || 'https://melopreda-4imsnkhw.manus.space',
+          auth: {
+            jwt_secret: env.JWT_SECRET ? 'configured' : 'missing',
+            app_id: env.VITE_APP_ID ? 'configured' : 'missing',
+            oauth_server: env.OAUTH_SERVER_URL ? 'configured' : 'missing',
+            oauth_portal: env.VITE_OAUTH_PORTAL_URL ? 'configured' : 'missing',
+            owner: env.OWNER_OPEN_ID ? 'configured' : 'missing',
+          },
+          apis: {
+            forge: env.BUILT_IN_FORGE_API_KEY ? 'configured' : 'missing',
+            datajud: env.DATAJUD_API_KEY ? 'configured' : 'missing',
+            jusconsig: env.JUSCONSIG_API_KEY ? 'configured' : 'missing',
+            database: env.DATABASE_URL ? 'configured' : 'missing',
+          },
+        }, corsHeaders);
+      }
+
+      // ==================== CONFIG ENDPOINT ====================
+      // Serve configuração pública para o frontend (VITE_ vars)
+      if (path === '/api/config') {
+        return jsonResponse({
+          VITE_APP_ID: env.VITE_APP_ID,
+          VITE_OAUTH_PORTAL_URL: env.VITE_OAUTH_PORTAL_URL,
+          VITE_APP_TITLE: env.VITE_APP_TITLE || 'Melo & Preda - Sistema Jurídico Integrado',
+          VITE_APP_LOGO: env.VITE_APP_LOGO || '',
+          VITE_FRONTEND_FORGE_API_URL: env.VITE_FRONTEND_FORGE_API_URL,
+          VITE_FRONTEND_FORGE_API_KEY: env.VITE_FRONTEND_FORGE_API_KEY,
         }, corsHeaders);
       }
 
@@ -57,7 +101,7 @@ export default {
       // ==================== PROXY API TO MANUS ====================
       // Todas as chamadas /api/* são proxied para o Manus backend
       if (path.startsWith('/api/')) {
-        return proxyToManus(request, env.MANUS_APP_URL || 'https://melopreda-4imsnkhw.manus.space', corsHeaders);
+        return proxyToManus(request, env, corsHeaders);
       }
 
       // ==================== STATIC ASSETS (FRONTEND) ====================
@@ -248,8 +292,9 @@ async function handleD1ReadAPI(path: string, url: URL, db: D1Database, corsHeade
 }
 
 // ==================== PROXY TO MANUS ====================
-async function proxyToManus(request: Request, manusUrl: string, corsHeaders: Record<string, string>): Promise<Response> {
+async function proxyToManus(request: Request, env: Env, corsHeaders: Record<string, string>): Promise<Response> {
   const url = new URL(request.url);
+  const manusUrl = env.MANUS_APP_URL || 'https://melopreda-4imsnkhw.manus.space';
   const targetUrl = `${manusUrl}${url.pathname}${url.search}`;
 
   try {
@@ -257,6 +302,12 @@ async function proxyToManus(request: Request, manusUrl: string, corsHeaders: Rec
     proxyHeaders.set('X-Forwarded-For', request.headers.get('CF-Connecting-IP') || '');
     proxyHeaders.set('X-Forwarded-Proto', 'https');
     proxyHeaders.set('X-Original-Host', url.hostname);
+    
+    // Forward auth cookies for session persistence
+    const cookie = request.headers.get('Cookie');
+    if (cookie) {
+      proxyHeaders.set('Cookie', cookie);
+    }
 
     const proxyRequest = new Request(targetUrl, {
       method: request.method,
@@ -271,6 +322,14 @@ async function proxyToManus(request: Request, manusUrl: string, corsHeaders: Rec
     Object.entries(corsHeaders).forEach(([key, value]) => {
       newHeaders.set(key, value);
     });
+
+    // Forward Set-Cookie headers from Manus for auth
+    const setCookies = response.headers.getAll?.('Set-Cookie') || [];
+    if (setCookies.length > 0) {
+      for (const sc of setCookies) {
+        newHeaders.append('Set-Cookie', sc);
+      }
+    }
 
     return new Response(response.body, {
       status: response.status,

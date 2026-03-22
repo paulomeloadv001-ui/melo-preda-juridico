@@ -652,7 +652,8 @@
 - [x] Deploy Cloudflare: Build do Worker: 3.5MB minificado (dentro do limite 10MB)
 - [x] Deploy Cloudflare: Build do Frontend: 18MB assets estáticos
 - [ ] Deploy Cloudflare: Aguardando novo API Token para deploy
-- [ ] Deploy Cloudflare: Configurar secrets no Cloudflare
-- [ ] Deploy Cloudflare: Testar deploy completo
+- [x] Deploy Cloudflare: Configurar secrets no Cloudflare (15 secrets configuradas via API)
+- [x] Deploy Cloudflare: Testar deploy completo (health, config, D1, auth, proxy OK)
 - [ ] Deploy Cloudflare: Configurar domínio personalizado (opcional)
 - [x] Bug: Erro na página /upload - agente retorna "processando sua solicitação" em vez de completar (CORRIGIDO: processar.uploadPdf adicionado ao LONG_TIMEOUT_PATHS, timeout aumentado para 300s)
+- [x] Configurar secrets no Cloudflare Workers para autenticação e APIs em produção
