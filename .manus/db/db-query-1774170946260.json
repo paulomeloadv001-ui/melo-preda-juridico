@@ -1,0 +1,110 @@
+{
+  "query": "SELECT id, titulo, categoria FROM conhecimentos WHERE titulo LIKE '%peticion%' OR titulo LIKE '%workflow%' OR titulo LIKE '%estilo%redação%' OR titulo LIKE '%identidade%visual%' OR titulo LIKE '%cumprimento%provis%' OR titulo LIKE '%querela%' LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, titulo, categoria FROM conhecimentos WHERE titulo LIKE '%peticion%' OR titulo LIKE '%workflow%' OR titulo LIKE '%estilo%redação%' OR titulo LIKE '%identidade%visual%' OR titulo LIKE '%cumprimento%provis%' OR titulo LIKE '%querela%' LIMIT 20;",
+  "rows": [
+    {
+      "id": "7",
+      "titulo": "Tese: CUMPRIMENTO PROVISÓRIO DE SENTENÇA - ARIEL ANSELMO DE OLIVEIRA",
+      "categoria": "Tese"
+    },
+    {
+      "id": "8",
+      "titulo": "Jurisprudência: CUMPRIMENTO PROVISÓRIO DE SENTENÇA - ARIEL ANSELMO DE OLIVEIRA",
+      "categoria": "Jurisprudencia"
+    },
+    {
+      "id": "9",
+      "titulo": "Fundamentação: CUMPRIMENTO PROVISÓRIO DE SENTENÇA - ARIEL ANSELMO DE OLIVEIRA",
+      "categoria": "Legislacao"
+    },
+    {
+      "id": "30004",
+      "titulo": "Cumprimento Provisório - Honorários de Sucumbência (Leonardo)",
+      "categoria": "Tese"
+    },
+    {
+      "id": "90001",
+      "titulo": "Guia de Estilo e Redação Jurídica — Melo & Preda Advogados",
+      "categoria": "Modelo"
+    },
+    {
+      "id": "90002",
+      "titulo": "Guia de Identidade Visual — Papel Timbrado Melo & Preda",
+      "categoria": "Modelo"
+    },
+    {
+      "id": "90008",
+      "titulo": "TESE CENTRAL: Querela Nullitatis Incidental — Nulidade por Citação Inválida",
+      "categoria": "Tese"
+    },
+    {
+      "id": "90032",
+      "titulo": "Modelo de Petição: Cumprimento Provisório de Sentença — Template Completo",
+      "categoria": "Modelo"
+    },
+    {
+      "id": "90035",
+      "titulo": "Modelo de Petição: Querela Nullitatis Incidental — Template Completo",
+      "categoria": "Modelo"
+    },
+    {
+      "id": "120003",
+      "titulo": "Análise Profunda — 5607856-45.2025.8.09.0011 — CARLOS ANDRADE DOS SANTOS — Cumprimento Provisório de Sentença - Honorários Advocatícios de Sucumbência",
+      "categoria": "Estrategia"
+    },
+    {
+      "id": "150003",
+      "titulo": "Análise Profunda — 5806457-90.2025.8.09.0174 — ARIEL ANSELMO DE OLIVEIRA — CUMPRIMENTO PROVISÓRIO DE SENTENÇA",
+      "categoria": "Estrategia"
+    },
+    {
+      "id": "150020",
+      "titulo": "Análise Profunda — 5947078-21.2025.8.09.0051 — LEONARDO ROSA CORREIA — Cumprimento Provisório de Sentença - Honorários Advocatícios de Sucumbência",
+      "categoria": "Estrategia"
+    },
+    {
+      "id": "150021",
+      "titulo": "Jurisprudência — Cumprimento Provisório de Sentença - Honorários Advocatícios de Sucumbência — 5947078-21.2025.8.09.0051",
+      "categoria": "Jurisprudencia"
+    },
+    {
+      "id": "150038",
+      "titulo": "Tese: A tese principal para o polo ativo (cliente do Dr. Paulo Melo) é a busca pela efetivação da tutela jurisdicional concedida em sentença, por meio do cumprimento provisório, visando a satisfação do créd",
+      "categoria": "Tese"
+    },
+    {
+      "id": "150041",
+      "titulo": "Tese: Manutenção da decisão judicial que impôs a obrigação de fazer ao Itaú Unibanco S.A. e garantia da efetividade do cumprimento provisório da sentença, mesmo diante de recurso pendente.",
+      "categoria": "Tese"
+    },
+    {
+      "id": "150047",
+      "titulo": "Tese: Considerando a inconsistência entre 'Revisional de Contrato' e 'Cumprimento Provisório de Sentença', a tese principal não pode ser definida com precisão. Se for uma Ação Revisional de Contrato, a tese",
+      "categoria": "Tese"
+    },
+    {
+      "id": "150074",
+      "titulo": "Jurisprudência — Cumprimento Provisório de Sentença - Honorários Advocatícios de Sucumbência — 5607856-45.2025.8.09.0011",
+      "categoria": "Jurisprudencia"
+    },
+    {
+      "id": "150127",
+      "titulo": "Tese: Considerando a classe 'Cumprimento Provisório de Sentença' e o tipo 'Revisional de Contrato', a tese principal do cliente (a ser identificado) é a exigibilidade e o cumprimento das obrigações estabele",
+      "categoria": "Tese"
+    },
+    {
+      "id": "210001",
+      "titulo": "Análise Profunda: Processo - cumprimento provisorio leonardo (SEM_mmuyob5f)",
+      "categoria": "Estrategia"
+    },
+    {
+      "id": "210002",
+      "titulo": "Resumo Executivo: cumprimento provisorio leonardo - SEM_mmuyob5f",
+      "categoria": "Estrategia"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitulo\tcategoria\n7\tTese: CUMPRIMENTO PROVISÓRIO DE SENTENÇA - ARIEL ANSELMO DE OLIVEIRA\tTese\n8\tJurisprudência: CUMPRIMENTO PROVISÓRIO DE SENTENÇA - ARIEL ANSELMO DE OLIVEIRA\tJurisprudencia\n9\tFundamentação: CUMPRIMENTO PROVISÓRIO DE SENTENÇA - ARIEL ANSELMO DE OLIVEIRA\tLegislacao\n30004\tCumprimento Provisório - Honorários de Sucumbência (Leonardo)\tTese\n90001\tGuia de Estilo e Redação Jurídica — Melo & Preda Advogados\tModelo\n90002\tGuia de Identidade Visual — Papel Timbrado Melo & Preda\tModelo\n90008\tTESE CENTRAL: Querela Nullitatis Incidental — Nulidade por Citação Inválida\tTese\n90032\tModelo de Petição: Cumprimento Provisório de Sentença — Template Completo\tModelo\n90035\tModelo de Petição: Querela Nullitatis Incidental — Template Completo\tModelo\n120003\tAnálise Profunda — 5607856-45.2025.8.09.0011 — CARLOS ANDRADE DOS SANTOS — Cumprimento Provisório de Sentença - Honorários Advocatícios de Sucumbência\tEstrategia\n150003\tAnálise Profunda — 5806457-90.2025.8.09.0174 — ARIEL ANSELMO DE OLIVEIRA — CUMPRIMENTO PROVISÓRIO DE SENTENÇA\tEstrategia\n150020\tAnálise Profunda — 5947078-21.2025.8.09.0051 — LEONARDO ROSA CORREIA — Cumprimento Provisório de Sentença - Honorários Advocatícios de Sucumbência\tEstrategia\n150021\tJurisprudência — Cumprimento Provisório de Sentença - Honorários Advocatícios de Sucumbência — 5947078-21.2025.8.09.0051\tJurisprudencia\n150038\tTese: A tese principal para o polo ativo (cliente do Dr. Paulo Melo) é a busca pela efetivação da tutela jurisdicional concedida em sentença, por meio do cumprimento provisório, visando a satisfação do créd\tTese\n150041\tTese: Manutenção da decisão judicial que impôs a obrigação de fazer ao Itaú Unibanco S.A. e garantia da efetividade do cumprimento provisório da sentença, mesmo diante de recurso pendente.\tTese\n150047\tTese: Considerando a inconsistência entre 'Revisional de Contrato' e 'Cumprimento Provisório de Sentença', a tese principal não pode ser definida com precisão. Se for uma Ação Revisional de Contrato, a tese\tTese\n150074\tJurisprudência — Cumprimento Provisório de Sentença - Honorários Advocatícios de Sucumbência — 5607856-45.2025.8.09.0011\tJurisprudencia\n150127\tTese: Considerando a classe 'Cumprimento Provisório de Sentença' e o tipo 'Revisional de Contrato', a tese principal do cliente (a ser identificado) é a exigibilidade e o cumprimento das obrigações estabele\tTese\n210001\tAnálise Profunda: Processo - cumprimento provisorio leonardo (SEM_mmuyob5f)\tEstrategia\n210002\tResumo Executivo: cumprimento provisorio leonardo - SEM_mmuyob5f\tEstrategia\n",
+  "stderr": "",
+  "execution_time_ms": 356
+}

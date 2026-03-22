@@ -1,0 +1,13 @@
+{
+  "query": "SELECT MAX(id) as max_id FROM conhecimentos;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT MAX(id) as max_id FROM conhecimentos;",
+  "rows": [
+    {
+      "max_id": "270003"
+    }
+  ],
+  "messages": [],
+  "stdout": "max_id\n270003\n",
+  "stderr": "",
+  "execution_time_ms": 365
+}

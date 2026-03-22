@@ -678,3 +678,8 @@
 - [x] Deploy atualizado no Cloudflare via GitHub Actions (sincronização automática) - push para GitHub realizado, Actions deve executar automaticamente
 - [x] Testes unitários para rotas de perfil (5 testes passando: obter, salvar, validação, campos mínimos, profileCompleted)
 - [x] Bug: Timeout na página /integracao - CORRIGIDO: adicionado integracao.executarSyncManual e integracao.limparLogsAntigos à lista LONG_TIMEOUT_PATHS (timeout 300s em vez de 60s)
+- [x] Analisar skill analise-processual-peticionamento e extrair todo conhecimento jurídico
+- [x] Inserir 23 conhecimentos de peticionamento avançado na base de dados (386 total: 127 Estratégias, 109 Teses, 104 Jurisprudências, 23 Modelos, 23 Legislações)
+- [x] Atualizar agente de IA com workflow de 5 fases, estilo de redação avançado e regras absolutas de peticionamento
+- [x] Integrar skills de peticionamento (melo-preda-juridico, peticionamento-juridico-avancado, analise-processual-peticionamento) no agente
+- [x] Exportar/sincronizar com Cloudflare via GitHub Actions (211/211 testes passando)
