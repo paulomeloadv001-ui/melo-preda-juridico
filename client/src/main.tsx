@@ -68,7 +68,7 @@ const createFetchWithTimeout = (timeoutMs: number) => async (input: RequestInfo 
     clearTimeout(timer);
     if (err.name === 'AbortError') {
       return new Response(
-        JSON.stringify([{ error: { json: { message: 'O agente está processando sua solicitação. Aguarde mais alguns instantes...', code: -32000, data: { code: 'TIMEOUT', httpStatus: 408 } } } }]),
+        JSON.stringify([{ error: { json: { message: 'A operação demorou mais que o esperado. O processamento pode ter sido concluído em segundo plano. Verifique a aba Clientes ou tente novamente.', code: -32000, data: { code: 'TIMEOUT', httpStatus: 408 } } } }]),
         { status: 408, headers: { 'content-type': 'application/json' } }
       );
     }
@@ -76,8 +76,13 @@ const createFetchWithTimeout = (timeoutMs: number) => async (input: RequestInfo 
   }
 };
 
-// Rotas do agente que precisam de timeout maior (120s)
-const LONG_TIMEOUT_PATHS = ['agente.chat', 'agente.gerarPeticao', 'agente.analisarProcesso', 'agente.executarAcao', 'jobs.uploadPdf', 'jobs.iniciarLote', 'jobs.processarLoteCompleto'];
+// Rotas que precisam de timeout maior (upload + processamento IA)
+const LONG_TIMEOUT_PATHS = [
+  'agente.chat', 'agente.gerarPeticao', 'agente.analisarProcesso', 'agente.executarAcao',
+  'processar.uploadPdf', 'processar.uploadContracheque', 'processar.analiseProfunda',
+  'jobs.uploadPdf', 'jobs.iniciarLote', 'jobs.processarLoteCompleto',
+  'jobs.uploadArquivoLote',
+];
 
 const trpcClient = trpc.createClient({
   links: [
@@ -86,12 +91,12 @@ const trpcClient = trpc.createClient({
       true: httpLink({
         url: "/api/trpc",
         transformer: superjson,
-        fetch: createFetchWithTimeout(120_000), // 120s para agente/upload
+        fetch: createFetchWithTimeout(300_000), // 300s (5min) para agente/upload/processamento IA
       }),
       false: httpBatchLink({
         url: "/api/trpc",
         transformer: superjson,
-        fetch: createFetchWithTimeout(30_000), // 30s para rotas normais
+        fetch: createFetchWithTimeout(60_000), // 60s para rotas normais
       }),
     }),
   ],

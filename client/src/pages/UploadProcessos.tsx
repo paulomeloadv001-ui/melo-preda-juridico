@@ -115,7 +115,14 @@ function ProcessoUpload() {
         toast.success(`${fileItem.file.name} processado com sucesso`);
       } catch (error: any) {
         let friendlyError = error.message || "Erro desconhecido";
-        if (friendlyError.includes("grande demais") || friendlyError.includes("413")) {
+        if (friendlyError.includes("TIMEOUT") || friendlyError.includes("demorou mais") || friendlyError.includes("processando sua solicita")) {
+          // Timeout - o processamento pode ter concluído em background
+          friendlyError = "O processamento demorou mais que o esperado, mas pode ter sido concluído. Verifique a aba Clientes.";
+          // Marcar como possível sucesso
+          setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "done", result: { timeout: true, message: 'Processamento em background' } } : f));
+          toast.warning(`${fileItem.file.name}: processamento pode ter concluído em background. Verifique a aba Clientes.`);
+          continue;
+        } else if (friendlyError.includes("grande demais") || friendlyError.includes("413")) {
           friendlyError = "Erro no envio do arquivo. Tente novamente.";
         } else if (friendlyError.includes("Data too long")) {
           friendlyError = "Dados extraídos excedem limite do campo. Tente novamente.";

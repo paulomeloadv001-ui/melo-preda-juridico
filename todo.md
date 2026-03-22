@@ -655,3 +655,4 @@
 - [ ] Deploy Cloudflare: Configurar secrets no Cloudflare
 - [ ] Deploy Cloudflare: Testar deploy completo
 - [ ] Deploy Cloudflare: Configurar domínio personalizado (opcional)
+- [x] Bug: Erro na página /upload - agente retorna "processando sua solicitação" em vez de completar (CORRIGIDO: processar.uploadPdf adicionado ao LONG_TIMEOUT_PATHS, timeout aumentado para 300s)
