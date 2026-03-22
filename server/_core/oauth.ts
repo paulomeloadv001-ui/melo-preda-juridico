@@ -9,6 +9,11 @@ function getQueryParam(req: Request, key: string): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+// Lista de domínios Cloudflare autorizados para relay de autenticação
+const ALLOWED_CF_DOMAINS = [
+  'melo-preda-juridico.paulomeloadv001.workers.dev',
+];
+
 export function registerOAuthRoutes(app: Express) {
   app.get("/api/oauth/callback", async (req: Request, res: Response) => {
     const code = getQueryParam(req, "code");
@@ -43,6 +48,24 @@ export function registerOAuthRoutes(app: Express) {
 
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+
+      // Verificar se há um cf_return (Cloudflare relay) no query
+      const cfReturn = getQueryParam(req, "cf_return");
+      if (cfReturn) {
+        try {
+          const cfUrl = new URL(cfReturn);
+          // Verificar se o domínio está na lista de autorizados
+          if (ALLOWED_CF_DOMAINS.includes(cfUrl.hostname)) {
+            // Redirecionar para o Cloudflare com o token JWT na URL
+            cfUrl.pathname = '/api/cf-auth-relay';
+            cfUrl.searchParams.set('token', sessionToken);
+            res.redirect(302, cfUrl.toString());
+            return;
+          }
+        } catch (e) {
+          // URL inválida, ignorar e redirecionar normalmente
+        }
+      }
 
       res.redirect(302, "/");
     } catch (error) {

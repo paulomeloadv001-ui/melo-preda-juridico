@@ -657,3 +657,4 @@
 - [ ] Deploy Cloudflare: Configurar domínio personalizado (opcional)
 - [x] Bug: Erro na página /upload - agente retorna "processando sua solicitação" em vez de completar (CORRIGIDO: processar.uploadPdf adicionado ao LONG_TIMEOUT_PATHS, timeout aumentado para 300s)
 - [x] Configurar secrets no Cloudflare Workers para autenticação e APIs em produção
+- [ ] Bug: Erro ao entrar no site - investigar e corrigir
