@@ -810,6 +810,35 @@ export default function Peticionamento() {
                           </Button>
                         </div>
                       </div>
+                      {/* Botão de Refinamento Inline no Histórico */}
+                      <div className="mt-3 pt-3 border-t">
+                        <button
+                          onClick={() => {
+                            // Carregar a petição no wizard de refinamento
+                            const conteudo = pet.conteudoTexto || '';
+                            let docxUrl = '';
+                            try {
+                              const json = typeof pet.conteudoJson === 'string' ? JSON.parse(pet.conteudoJson) : pet.conteudoJson;
+                              docxUrl = json?.docxUrl || '';
+                            } catch {}
+                            setPeticaoGerada({
+                              id: pet.id,
+                              peticao: conteudo,
+                              tipoPeticao: pet.tipo,
+                              cliente: pet.titulo?.split(' - ')[1] || '',
+                              processo: '',
+                              url: pet.storageUrl,
+                              docxUrl,
+                            });
+                            setStep(5);
+                            setTab('gerar');
+                          }}
+                          className="w-full flex items-center justify-center gap-2 py-2 text-xs font-medium text-amber-700 hover:text-amber-800 hover:bg-amber-50 rounded-md transition-colors dark:text-amber-300 dark:hover:bg-amber-950/30"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          Refinar esta petição
+                        </button>
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -1078,7 +1107,8 @@ function RefinamentoPanel({ peticaoId, onRefined }: { peticaoId: number; onRefin
       <CardContent className="space-y-4">
         {/* ==================== ABA REFINAR ==================== */}
         {abaAtiva === 'refinar' && (
-          <>
+          <div className="space-y-4">
+            {/* Status da versão atual */}
             {versoes.length > 0 && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground bg-background rounded-lg px-3 py-2 border">
                 <GitBranch className="h-3.5 w-3.5" />
@@ -1095,6 +1125,56 @@ function RefinamentoPanel({ peticaoId, onRefined }: { peticaoId: number; onRefin
                 )}
               </div>
             )}
+
+            {/* Histórico conversacional de refinamentos */}
+            {versoes.filter((v: any) => v.instrucoes && v.versao > 1).length > 0 && (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="px-3 py-1.5 bg-muted/40 border-b">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Histórico de instruções</p>
+                </div>
+                <div className="max-h-32 overflow-y-auto divide-y">
+                  {versoes.filter((v: any) => v.instrucoes && v.versao > 1).map((v: any) => (
+                    <div key={v.id} className="px-3 py-2 flex items-start gap-2">
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 shrink-0 mt-0.5">v{v.versao}</Badge>
+                      <p className="text-xs text-muted-foreground">{v.instrucoes}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sugestões rápidas de refinamento */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Refinamentos rápidos (clique para adicionar):</p>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  'Aprofundar fundamentação jurídica com mais artigos de lei',
+                  'Adicionar jurisprudência do STJ sobre o tema',
+                  'Adicionar jurisprudência do TJ-GO',
+                  'Reforçar pedido de tutela de urgência',
+                  'Tornar pedidos mais específicos e detalhados',
+                  'Melhorar narrativa dos fatos com cronologia',
+                  'Incluir dano moral in re ipsa',
+                  'Reforçar tese de abusividade contratual',
+                  'Incluir pedido de restituição em dobro (art. 42 CDC)',
+                  'Adicionar fundamentação sobre mínimo existencial',
+                  'Tom mais combativo e assertivo',
+                  'Incluir cálculo detalhado do valor devido',
+                  'Melhorar a conclusão e requerimentos finais',
+                  'Corrigir formatação e estrutura da petição',
+                ].map((sug, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setInstrucoes(prev => prev ? `${prev}. ${sug}` : sug)}
+                    className="text-xs px-2.5 py-1 rounded-full border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-colors dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800"
+                  >
+                    + {sug}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Campo de instrução */}
             <Textarea
               placeholder="Ex: Reforce a fundamentação sobre abusividade das consignações, adicione jurisprudência do STJ sobre margem consignável, melhore a conclusão pedindo tutela de urgência..."
               value={instrucoes}
@@ -1102,23 +1182,34 @@ function RefinamentoPanel({ peticaoId, onRefined }: { peticaoId: number; onRefin
               rows={4}
               className="resize-none"
             />
+
             <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                {versoes.length > 1 ? `${versoes.length - 1} refinamento(s) realizado(s)` : 'Nenhum refinamento ainda'}
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-xs text-muted-foreground">
+                  {versoes.length > 1 ? `${versoes.length - 1} refinamento(s) realizado(s)` : 'Nenhum refinamento ainda'}
+                </p>
+                {instrucoes && (
+                  <button
+                    onClick={() => setInstrucoes('')}
+                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  >
+                    <X className="h-3 w-3" /> Limpar
+                  </button>
+                )}
+              </div>
               <Button
                 onClick={() => refinar.mutate({ peticaoId, instrucoes })}
                 disabled={refinar.isPending || instrucoes.length < 5}
                 className="bg-amber-600 hover:bg-amber-700 text-white"
               >
                 {refinar.isPending ? (
-                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Refinando...</>
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Refinando com IA...</>
                 ) : (
                   <><RefreshCw className="h-4 w-4 mr-2" /> Refinar Petição</>
                 )}
               </Button>
             </div>
-          </>
+          </div>
         )}
 
         {/* ==================== ABA VERSÕES ==================== */}

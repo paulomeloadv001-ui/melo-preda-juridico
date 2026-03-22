@@ -692,3 +692,9 @@
 - [x] Consolidar e otimizar base de conhecimentos (busca semântica por tipo de petição implementada)
 - [x] Melhorar página de peticionamento no frontend (categorias, sugestões rápidas, 8 novos templates)
 - [x] Integrar conhecimentos avançados no backend de geração de petições (busca semântica + estratégias)
+- [x] Implementar refinamento iterativo de petições (ajustes sem regerar do zero)
+- [x] Backend: rota refinarPeticao com busca semântica + histórico conversacional + estilo avançado
+- [x] Frontend: interface de refinamento com sugestões rápidas (14 opções), histórico de instruções, botão limpar
+- [x] Atualizar DOCX após cada refinamento (geração automática com timbrado)
+- [x] Manter histórico de versões da petição (original → v1 → v2... com diff visual e comparação)
+- [x] Botão "Refinar esta petição" no histórico de petições (abre refinamento direto)

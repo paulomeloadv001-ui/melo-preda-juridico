@@ -5527,38 +5527,71 @@ IMPORTANTE: Gere a petição COMPLETA, pronta para protocolo. Use formatação M
           if (cli) contextoProcesso += `\nCliente: ${cli.nomeCompleto}`;
         }
 
+        // Busca semântica de conhecimentos relevantes ao refinamento
         const todosConhecimentos = await db.select().from(conhecimentos);
-        const conhecimentosRelevantes = todosConhecimentos
-          .filter(c => {
-            const texto = (c.conteudo || '').toLowerCase();
-            const tipo = (pet.tipo || '').toLowerCase();
-            return texto.includes(tipo) || texto.includes('cumprimento') || texto.includes('sentença') || c.categoria === 'Tese' || c.categoria === 'Jurisprudencia';
-          })
-          .slice(0, 15)
+        
+        // Extrair termos da instrução do advogado + tipo de petição para busca semântica
+        const termosInstrucao = input.instrucoes.toLowerCase().split(/[\s,;.]+/).filter(t => t.length > 3);
+        const termosTipo = (pet.tipo || '').toLowerCase().split(/[\s_-]+/).filter(t => t.length > 3);
+        const todosTermos = Array.from(new Set([...termosInstrucao, ...termosTipo]));
+        
+        function calcRelevanciaRefinamento(c: any): number {
+          const texto = `${c.titulo || ''} ${c.conteudo || ''} ${c.tipoAcao || ''}`.toLowerCase();
+          return todosTermos.filter(t => texto.includes(t)).length;
+        }
+        
+        const conhecimentosOrdenados = todosConhecimentos
+          .map(c => ({ ...c, rel: calcRelevanciaRefinamento(c) }))
+          .sort((a, b) => b.rel - a.rel);
+        
+        const conhecimentosRelevantes = conhecimentosOrdenados
+          .slice(0, 20)
           .map(c => `[${c.categoria}] ${c.titulo}: ${c.conteudo?.substring(0, 500)}`)
+          .join('\n');
+        
+        // Buscar histórico de refinamentos anteriores para contexto conversacional
+        const historicoRefinamentos = versoesExistentes
+          .filter(v => v.instrucoes)
+          .slice(0, 5)
+          .map(v => `v${v.versao}: ${v.instrucoes}`)
+          .reverse()
           .join('\n');
 
         const configRows = await db.select().from(agenteIaConfig);
         const configExpertise = configRows.find(c => c.chave === 'expertise_juridica');
         const configEstilo = configRows.find(c => c.chave === 'estilo_redacao');
 
-        const systemPrompt = `Você é o Agente Jurídico Expert do escritório Melo & Preda Advogados, OAB/GO 40.559.
+        const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
+Advogado: PAULO DA SILVA MELO FILHO
 Você ESTUDOU todos os processos do escritório e conhece profundamente cada caso.
 
 ${configExpertise?.valor ? `EXPERTISE: ${configExpertise.valor}` : ''}
 ${configEstilo?.valor ? `ESTILO DE REDAÇÃO: ${configEstilo.valor}` : ''}
 
-CONHECIMENTOS JURÍDICOS RELEVANTES:
+ESTILO DE REDAÇÃO OBRIGATÓRIO:
+- Tom ASSERTIVO, COMBATIVO e TÉCNICO — sem hesitação
+- Expressões características: "flagrante ilegalidade", "abuso manifesto", "violação frontal ao ordenamento jurídico"
+- Fundamentação ROBUSTA com artigos de lei, doutrina e jurisprudência
+- Citações jurisprudenciais completas (tribunal, número, relator, câmara, data)
+- Parágrafos densos com argumentação encadeada e progressiva
+
+CONHECIMENTOS JURÍDICOS RELEVANTES AO REFINAMENTO:
 ${conhecimentosRelevantes || 'Nenhum conhecimento específico carregado.'}
 
+${historicoRefinamentos ? `HISTÓRICO DE REFINAMENTOS ANTERIORES (contexto conversacional):
+${historicoRefinamentos}
+` : ''}
 Você receberá uma petição já redigida e instruções do advogado sobre o que deve ser melhorado.
-Você DEVE:
-1. Manter a estrutura geral da petição
-2. Aplicar EXATAMENTE as melhorias solicitadas pelo advogado
-3. Manter o padrão de redação do escritório (tom assertivo, combativo, fundamentação robusta)
-4. Enriquecer com teses, jurisprudência e fundamentação da base de conhecimentos quando pertinente
-5. Retornar a petição COMPLETA refinada (não apenas as partes alteradas)
-6. Não inventar dados - usar apenas informações reais do processo`;
+
+REGRAS ABSOLUTAS DO REFINAMENTO:
+1. Manter a estrutura geral da petição (endereçamento, qualificação, fatos, direito, pedidos, fecho)
+2. Aplicar EXATAMENTE as melhorias solicitadas pelo advogado — não fazer alterações não solicitadas
+3. Quando o advogado pedir para "aprofundar" ou "reforçar", adicionar fundamentação da base de conhecimentos
+4. Quando o advogado pedir para "adicionar jurisprudência", buscar nos conhecimentos relevantes acima
+5. Quando o advogado pedir para "melhorar pedidos", tornar mais específicos e detalhados
+6. Retornar a petição COMPLETA refinada (não apenas as partes alteradas)
+7. NUNCA inventar dados, números de processo, nomes ou valores — usar apenas informações reais
+8. Manter formatação Markdown com títulos em negrito, numeração romana para seções, e letras para pedidos`;
 
         const userPrompt = `PETIÇÃO ATUAL (${pet.tipo} - ${pet.titulo}):
 ${contextoProcesso}
