@@ -25,7 +25,23 @@ export function registerOAuthRoutes(app: Express) {
     }
 
     try {
-      const tokenResponse = await sdk.exchangeCodeForToken(code, state);
+      // Decodificar state - pode ser JSON (com cf_return) ou string simples (redirectUri)
+      let cfReturn: string | null = null;
+      let decodedState = state;
+      
+      try {
+        const stateStr = atob(state);
+        const stateObj = JSON.parse(stateStr);
+        if (stateObj.cf_return) {
+          cfReturn = stateObj.cf_return;
+          // Recodificar o state com apenas o redirectUri para o exchangeCodeForToken
+          decodedState = btoa(stateObj.redirectUri);
+        }
+      } catch {
+        // State não é JSON, usar como está (fluxo normal do Manus)
+      }
+
+      const tokenResponse = await sdk.exchangeCodeForToken(code, decodedState);
       const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
 
       if (!userInfo.openId) {
@@ -49,21 +65,19 @@ export function registerOAuthRoutes(app: Express) {
       const cookieOptions = getSessionCookieOptions(req);
       res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
 
-      // Verificar se há um cf_return (Cloudflare relay) no query
-      const cfReturn = getQueryParam(req, "cf_return");
+      // Se há cf_return, redirecionar para o Cloudflare com o token
       if (cfReturn) {
         try {
           const cfUrl = new URL(cfReturn);
-          // Verificar se o domínio está na lista de autorizados
           if (ALLOWED_CF_DOMAINS.includes(cfUrl.hostname)) {
-            // Redirecionar para o Cloudflare com o token JWT na URL
             cfUrl.pathname = '/api/cf-auth-relay';
             cfUrl.searchParams.set('token', sessionToken);
             res.redirect(302, cfUrl.toString());
             return;
           }
         } catch (e) {
-          // URL inválida, ignorar e redirecionar normalmente
+          // URL inválida, redirecionar normalmente
+          console.error("[OAuth] Invalid cf_return URL:", cfReturn, e);
         }
       }
 

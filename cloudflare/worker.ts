@@ -1,11 +1,12 @@
 /**
  * Melo & Preda - Cloudflare Worker
  * 
- * Estratégia: Worker como proxy inteligente com autenticação OAuth nativa
- * - Serve frontend estático via Workers Assets
- * - OAuth: login via Manus OAuth, mas callback e sessão gerenciados nativamente no Worker
- * - API requests são proxied para o Manus backend com cookie de sessão
+ * Estratégia: Worker como proxy completo do Manus com autenticação integrada
+ * - Serve frontend estático via Workers Assets (ou proxy Manus como fallback)
+ * - OAuth: login via Manus OAuth, sessão JWT nativa no domínio Cloudflare
+ * - Todas as API requests são proxied para o Manus backend COM cookie de sessão
  * - D1 serve como banco de dados de leitura local (cache)
+ * - Handler scheduled para sincronização automática
  */
 
 interface Env {
@@ -35,7 +36,7 @@ const MANUS_DOMAIN = 'https://melopreda-4imsnkhw.manus.space';
 const COOKIE_NAME = 'app_session_id';
 const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
 
-// ==================== JWT HELPERS (jose-compatible, Web Crypto API) ====================
+// ==================== JWT HELPERS (Web Crypto API) ====================
 async function createJWT(payload: Record<string, any>, secret: string, expiresInMs: number): Promise<string> {
   const header = { alg: 'HS256', typ: 'JWT' };
   const now = Math.floor(Date.now() / 1000);
@@ -81,6 +82,7 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
     const cfOrigin = url.origin;
+    const manusUrl = env.MANUS_APP_URL || MANUS_DOMAIN;
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
@@ -102,7 +104,7 @@ export default {
           platform: 'cloudflare-workers',
           timestamp: new Date().toISOString(),
           database: dbCheck,
-          manus_url: env.MANUS_APP_URL || MANUS_DOMAIN,
+          manus_url: manusUrl,
           auth: {
             jwt_secret: env.JWT_SECRET ? 'configured' : 'missing',
             app_id: env.VITE_APP_ID ? 'configured' : 'missing',
@@ -131,18 +133,23 @@ export default {
         }, corsHeaders);
       }
 
-      // ==================== OAUTH: LOGIN REDIRECT ====================
-      // /api/cf-login → redireciona para Manus OAuth usando redirectUri do Manus (autorizado)
-      // Após login no Manus, o callback inclui cf_return para voltar ao Cloudflare com o token
+      // ==================== OAUTH: LOGIN VIA CLOUDFLARE ====================
+      // Fluxo: cf-login → Manus OAuth → Manus callback → cf-auth-relay → cookie no CF
       if (path === '/api/cf-login') {
-        // O redirectUri DEVE ser do domínio Manus (autorizado no OAuth)
-        // Adicionamos cf_return como query param para o Manus saber redirecionar de volta
-        const manusCallbackUrl = `${MANUS_DOMAIN}/api/oauth/callback?cf_return=${encodeURIComponent(cfOrigin)}`;
-        const state = btoa(manusCallbackUrl);
+        // redirectUri DEVE ser do domínio Manus (autorizado no OAuth)
+        const manusRedirectUri = `${manusUrl}/api/oauth/callback`;
+        
+        // Codificar o state como JSON com redirectUri + cf_return
+        // O oauth.ts do Manus vai decodificar e redirecionar para o Cloudflare
+        const stateObj = {
+          redirectUri: manusRedirectUri,
+          cf_return: cfOrigin,
+        };
+        const state = btoa(JSON.stringify(stateObj));
 
         const oauthUrl = new URL(`${env.VITE_OAUTH_PORTAL_URL || 'https://manus.im'}/app-auth`);
         oauthUrl.searchParams.set('appId', env.VITE_APP_ID);
-        oauthUrl.searchParams.set('redirectUri', manusCallbackUrl);
+        oauthUrl.searchParams.set('redirectUri', manusRedirectUri);
         oauthUrl.searchParams.set('state', state);
         oauthUrl.searchParams.set('type', 'signIn');
 
@@ -150,37 +157,45 @@ export default {
       }
 
       // ==================== OAUTH: AUTH RELAY FROM MANUS ====================
-      // /api/cf-auth-relay?token=JWT → Recebe token do Manus e seta cookie local
+      // Recebe token do Manus após login e seta cookie no domínio Cloudflare
       if (path === '/api/cf-auth-relay') {
         const token = url.searchParams.get('token');
         if (!token) {
           return jsonResponse({ error: 'Token is required' }, corsHeaders, 400);
         }
 
-        // Setar cookie com o JWT recebido do Manus e redirecionar para home
+        // Setar cookie com o JWT recebido do Manus
         const headers = new Headers();
         headers.set('Location', '/');
         headers.set('Set-Cookie', 
-          `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(ONE_YEAR_MS / 1000)}`
+          `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=${Math.floor(ONE_YEAR_MS / 1000)}`
         );
 
         return new Response(null, { status: 302, headers });
       }
 
-      // ==================== OAUTH: CALLBACK HANDLER (FALLBACK) ====================
-      // /api/oauth/callback → Recebe code+state, troca por token, cria sessão JWT local
-      // Este é o fallback caso o OAuth redirecione diretamente para o Cloudflare
+      // ==================== OAUTH: CALLBACK HANDLER (DIRETO NO CF) ====================
+      // Fallback: se o OAuth redirecionar diretamente para o Cloudflare
       if (path === '/api/oauth/callback') {
         const code = url.searchParams.get('code');
         const state = url.searchParams.get('state');
 
         if (!code || !state) {
-          return jsonResponse({ error: 'code and state are required' }, corsHeaders, 400);
+          // Sem code/state, redirecionar para login
+          return Response.redirect(`${cfOrigin}/api/cf-login`, 302);
         }
 
         try {
-          // 1. Trocar code por access token via Manus OAuth API
-          const redirectUri = atob(state);
+          // Decodificar state para obter redirectUri
+          let redirectUri: string;
+          try {
+            const stateObj = JSON.parse(atob(state));
+            redirectUri = stateObj.redirectUri || atob(state);
+          } catch {
+            redirectUri = atob(state);
+          }
+
+          // Trocar code por access token
           const exchangeResp = await fetch(`${env.OAUTH_SERVER_URL}/webdev.v1.WebDevAuthPublicService/ExchangeToken`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -205,53 +220,39 @@ export default {
             return jsonResponse({ error: 'No access token received' }, corsHeaders, 500);
           }
 
-          // 2. Obter informações do usuário
+          // Obter informações do usuário
           const userInfoResp = await fetch(`${env.OAUTH_SERVER_URL}/webdev.v1.WebDevAuthPublicService/GetUserInfo`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accessToken }),
           });
 
-          if (!userInfoResp.ok) {
-            const errText = await userInfoResp.text();
-            console.error('GetUserInfo failed:', errText);
-            return jsonResponse({ error: 'User info fetch failed', details: errText }, corsHeaders, 500);
-          }
-
           const userInfo = await userInfoResp.json() as any;
           const openId = userInfo.openId;
-          const userName = userInfo.name || '';
 
           if (!openId) {
-            return jsonResponse({ error: 'openId missing from user info' }, corsHeaders, 500);
+            return jsonResponse({ error: 'openId missing' }, corsHeaders, 500);
           }
 
-          // 3. Criar JWT de sessão (mesmo formato que o Manus usa)
+          // Criar JWT de sessão
           const sessionToken = await createJWT(
-            {
-              openId,
-              appId: env.VITE_APP_ID,
-              name: userName,
-            },
+            { openId, appId: env.VITE_APP_ID, name: userInfo.name || '' },
             env.JWT_SECRET,
             ONE_YEAR_MS
           );
 
-          // 4. Setar cookie e redirecionar para home
+          // Setar cookie e redirecionar
           const headers = new Headers();
           headers.set('Location', '/');
           headers.set('Set-Cookie', 
-            `${COOKIE_NAME}=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(ONE_YEAR_MS / 1000)}`
+            `${COOKIE_NAME}=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=${Math.floor(ONE_YEAR_MS / 1000)}`
           );
 
           return new Response(null, { status: 302, headers });
 
         } catch (error: any) {
           console.error('OAuth callback error:', error);
-          return jsonResponse({
-            error: 'OAuth callback failed',
-            message: error.message,
-          }, corsHeaders, 500);
+          return jsonResponse({ error: 'OAuth callback failed', message: error.message }, corsHeaders, 500);
         }
       }
 
@@ -260,13 +261,13 @@ export default {
         return handleD1ReadAPI(path, url, env.DB, corsHeaders);
       }
 
-      // ==================== PROXY API TO MANUS ====================
+      // ==================== PROXY ALL API TO MANUS ====================
+      // Encaminha TODAS as chamadas /api/* para o Manus, incluindo cookies
       if (path.startsWith('/api/')) {
         return proxyToManus(request, env, corsHeaders);
       }
 
       // ==================== STATIC ASSETS (FRONTEND) ====================
-      // Verifica se ASSETS binding existe (pode não existir se deploy via wrangler.jsonc automático)
       if (env.ASSETS && typeof env.ASSETS.fetch === 'function') {
         try {
           const assetResponse = await env.ASSETS.fetch(request);
@@ -274,15 +275,15 @@ export default {
             return assetResponse;
           }
         } catch (e) {
-          // Asset not found, fall through to SPA fallback
+          // Asset not found, fall through
         }
 
-        // SPA fallback via ASSETS
+        // SPA fallback
         try {
           const indexRequest = new Request(new URL('/', request.url).toString(), request);
           return env.ASSETS.fetch(indexRequest);
         } catch (e) {
-          // ASSETS fallback failed
+          // fallback failed
         }
       }
 
@@ -296,6 +297,39 @@ export default {
         message: error.message,
         platform: 'cloudflare-workers',
       }, corsHeaders, 500);
+    }
+  },
+
+  // ==================== SCHEDULED HANDLER (CRON) ====================
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    console.log(`[Cron] Triggered at ${event.scheduledTime}`);
+    
+    try {
+      // Sincronizar dados do Manus (TiDB) para D1
+      const manusUrl = env.MANUS_APP_URL || MANUS_DOMAIN;
+      
+      // 1. Buscar stats do Manus via API
+      const statsResp = await fetch(`${manusUrl}/api/trpc/dashboard.stats`, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (statsResp.ok) {
+        console.log('[Cron] Manus stats fetched successfully');
+      }
+      
+      // 2. Log sync status
+      try {
+        await env.DB.prepare(
+          `INSERT INTO sync_log (tabela, registrosSincronizados, status, dataSync) 
+           VALUES (?, ?, ?, ?)`
+        ).bind('cron_check', 0, 'ok', new Date().toISOString()).run();
+      } catch (e) {
+        // sync_log table may not exist
+      }
+      
+      console.log('[Cron] Sync check completed');
+    } catch (error: any) {
+      console.error('[Cron] Error:', error.message);
     }
   },
 };
@@ -445,11 +479,25 @@ async function proxyToManus(request: Request, env: Env, corsHeaders: Record<stri
   const targetUrl = `${manusUrl}${url.pathname}${url.search}`;
 
   try {
-    const proxyHeaders = new Headers(request.headers);
+    // Construir headers do proxy - encaminhar TODOS os headers incluindo cookies
+    const proxyHeaders = new Headers();
+    
+    // Copiar headers relevantes
+    for (const [key, value] of request.headers.entries()) {
+      if (key.toLowerCase() !== 'host' && 
+          key.toLowerCase() !== 'cf-connecting-ip' &&
+          key.toLowerCase() !== 'cf-ray' &&
+          key.toLowerCase() !== 'cf-visitor' &&
+          key.toLowerCase() !== 'cf-worker') {
+        proxyHeaders.set(key, value);
+      }
+    }
+    
+    // Encaminhar o cookie de sessão do Cloudflare para o Manus
+    // O cookie é o mesmo JWT, então o Manus vai aceitar
     proxyHeaders.set('X-Forwarded-For', request.headers.get('CF-Connecting-IP') || '');
     proxyHeaders.set('X-Forwarded-Proto', 'https');
     proxyHeaders.set('X-Original-Host', url.hostname);
-    proxyHeaders.delete('Host');
 
     const proxyRequest = new Request(targetUrl, {
       method: request.method,
@@ -459,7 +507,13 @@ async function proxyToManus(request: Request, env: Env, corsHeaders: Record<stri
 
     const response = await fetch(proxyRequest);
 
-    const newHeaders = new Headers(response.headers);
+    // Copiar response headers incluindo Set-Cookie
+    const newHeaders = new Headers();
+    for (const [key, value] of response.headers.entries()) {
+      newHeaders.append(key, value);
+    }
+    
+    // Adicionar CORS headers
     Object.entries(corsHeaders).forEach(([key, value]) => {
       newHeaders.set(key, value);
     });

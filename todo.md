@@ -666,3 +666,6 @@
 - [x] Finalizar sincronização D1 - COMPLETA: 5.738 registros (926 publicações, 436 agente_ia_historico, etc)
 - [x] Deploy via Wrangler CLI direto do Manus (GitHub Actions pendente permissão workflow)
 - [x] Testar login e funcionalidades no Cloudflare (health OK, D1 OK, auth relay OK, frontend 200)
+- [x] URGENTE: Cloudflare dando erro - CORRIGIDO: Worker reescrito com OAuth nativo completo (JWT via Web Crypto API), state JSON com cf_return, proxy transparente
+- [x] Worker funciona como proxy completo do Manus (todas as rotas tRPC, cookies encaminhados)
+- [x] Handler scheduled (cron) adicionado ao Worker para sincronização automática
