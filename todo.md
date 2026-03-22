@@ -811,3 +811,11 @@
 - [x] Relatórios com riqueza de detalhes técnicos, não resumos superficiais
 - [x] Proibir uso de [COMPLETAR], [INSERIR], modelos genéricos
 - [x] Testar geração de petição com dados reais (211/211 testes passando)
+
+## INTEGRAÇÃO SKILLS + BANCO DE CONHECIMENTO (Mar 2026)
+- [x] Ler e consolidar todas as skills (analise-processual, peticionamento-melo-preda, peticionamento-avancado, melo-preda-juridico)
+- [x] 29 registros inseridos no banco (452 total: 138 Estratégias, 116 Jurisprudências, 111 Teses, 44 Modelos, 43 Legislações)
+- [x] Estilo de redação e instruções expert integrados em TODOS os prompts (chat, análise, petição, refinamento)
+- [x] 2 petições aprovadas importadas (Obrigação de Fazer + Mandado de Segurança)
+- [x] Exportado: export-banco-conhecimento-melo-preda.zip (guias, conhecimentos, templates, petições aprovadas)
+- [x] 211/211 testes passando, 0 erros TypeScript

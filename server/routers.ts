@@ -832,6 +832,38 @@ export const appRouter = router({
         await db.delete(conhecimentos).where(eq(conhecimentos.id, input.id));
         return { success: true };
       }),
+    bulkInsert: protectedProcedure
+      .input(z.object({
+        records: z.array(z.object({
+          categoria: z.enum(["Jurisprudencia", "Tese", "Estrategia", "Legislacao", "Modelo"]),
+          titulo: z.string(),
+          conteudo: z.string().optional(),
+          tribunal: z.string().optional(),
+          tipoAcao: z.string().optional(),
+          tags: z.string().optional(),
+        }))
+      }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+        let inserted = 0;
+        for (const rec of input.records) {
+          try {
+            await db.insert(conhecimentos).values({
+              categoria: rec.categoria,
+              titulo: rec.titulo.substring(0, 500),
+              conteudo: rec.conteudo || null,
+              tribunal: rec.tribunal || null,
+              tipoAcao: rec.tipoAcao || null,
+              tags: rec.tags || null,
+            });
+            inserted++;
+          } catch(e) {
+            console.error(`Erro ao inserir conhecimento: ${rec.titulo}`, e);
+          }
+        }
+        return { success: true, inserted, total: input.records.length };
+      }),
   }),
 
   // ==================== UPLOAD E PROCESSAMENTO ====================
@@ -4868,8 +4900,20 @@ Prazos: ${prazos.map(p => `${p.titulo} | ${p.dataVencimento} | ${p.status}`).joi
           }
         }
 
-        // 5. Montar base de conhecimento RESUMIDA (títulos + início do conteúdo — tools buscam detalhes)
+        // 5. Montar base de conhecimento ENRIQUECIDA com estilo, instruções e modelos completos
         const truncConteudo = (c: string | null, max: number = 200) => c ? c.substring(0, max) + (c.length > max ? '...' : '') : '';
+        
+        // Extrair modelos críticos com conteúdo completo (estilo, instruções, petições aprovadas)
+        const modelosCriticos = modelos.filter(m => 
+          m.titulo.includes('ESTILO') || m.titulo.includes('INSTRUÇÕES') || 
+          m.titulo.includes('IDENTIDADE') || m.titulo.includes('PETIÇÃO APROVADA')
+        );
+        const modelosTemplates = modelos.filter(m => m.titulo.includes('TEMPLATE:'));
+        
+        const estiloRedacao = modelosCriticos.find(m => m.titulo.includes('ESTILO'));
+        const instrucoes = modelosCriticos.find(m => m.titulo.includes('INSTRUÇÕES'));
+        const peticoesAprovadas = modelosCriticos.filter(m => m.titulo.includes('PETIÇÃO APROVADA'));
+        
         const baseConhecimento = `
 === BASE DE CONHECIMENTO (${todosConhecimentos.length} registros — use buscar_conhecimento para detalhes) ===
 TESES (${teses.length}): ${teses.map(t => `${t.titulo}`).join(' | ')}
@@ -4877,6 +4921,16 @@ JURISPRUDÊNCIA (${jurisprudencias.length}): ${jurisprudencias.map(j => `${j.tit
 ESTRATÉGIAS (${estrategiasConhec.length}): ${estrategiasConhec.map(e => `${e.titulo}`).join(' | ')}
 LEGISLAÇÃO (${legislacoes.length}): ${legislacoes.map(l => `${l.titulo}`).join(' | ')}
 MODELOS (${modelos.length}): ${modelos.map(m => `${m.titulo}`).join(' | ')}
+TEMPLATES DISPONÍVEIS: ${modelosTemplates.map(m => m.titulo).join(' | ')}
+
+=== ESTILO DE REDAÇÃO OBRIGATÓRIO DO ESCRITÓRIO ===
+${estiloRedacao?.conteudo || 'Tom assertivo, técnico, combativo. Expressões: flagrante ilegalidade, abuso manifesto, violação frontal.'}
+
+=== INSTRUÇÕES DETALHADAS PARA O AGENTE ===
+${instrucoes?.conteudo?.substring(0, 3000) || ''}
+
+=== PETIÇÕES APROVADAS COMO REFERÊNCIA DE ESTILO (use como modelo de tom, estrutura e qualidade) ===
+${peticoesAprovadas.map(p => `--- ${p.titulo} ---\n${p.conteudo?.substring(0, 2000) || ''}`).join('\n\n')}
 `;
 
         // 5. Buscar TODAS as configurações de expertise do agente
@@ -5208,12 +5262,17 @@ ${conhecimentosProc.length > 0 ? conhecimentosProc.map(c => `[${c.categoria}] ${
         const estratTxt = estratRelevantes.map(e => `- [Rel:${e.relevancia}] ${e.titulo}: ${e.conteudo?.substring(0, 200)}`).join('\n');
 
         // REFERÊNCIAS DE PETIÇÕES APROVADAS (aprendizado do agente)
+        // Buscar referências aprovadas (tanto as antigas com tag 'referencia_aprovada' quanto as novas com 'referência')
         const referenciasAprovadas = conhecimentosOrdenados
-          .filter(c => c.tags?.includes('referencia_aprovada'))
+          .filter(c => c.tags?.includes('referencia_aprovada') || c.tags?.includes('referência') || c.titulo?.includes('PETIÇÃO APROVADA'))
           .slice(0, 5);
         const refAprovTxt = referenciasAprovadas.length > 0
-          ? referenciasAprovadas.map(r => `\n[REF ${r.tipoAcao || 'Geral'}] ${r.titulo}:\n${r.conteudo?.substring(0, 600)}`).join('\n---')
+          ? referenciasAprovadas.map(r => `\n[REF ${r.tipoAcao || 'Geral'}] ${r.titulo}:\n${r.conteudo?.substring(0, 2000)}`).join('\n---')
           : '';
+        
+        // Buscar estilo de redação e instruções do escritório
+        const estiloModel = todosConhecimentos.find(c => c.titulo?.includes('ESTILO') && c.categoria === 'Modelo');
+        const instrucoesModel = todosConhecimentos.find(c => c.titulo?.includes('INSTRUÇÕES') && c.categoria === 'Modelo');
 
         const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
 Advogado: PAULO DA SILVA MELO FILHO
@@ -5232,14 +5291,17 @@ Gere a petição completa do tipo "${input.tipoPeticao}" seguindo RIGOROSAMENTE 
 ${contextoCliente}
 ${contextoProcesso}
 
-=== ESTILO DE REDAÇÃO OBRIGATÓRIO ===
-- Tom assertivo, combativo e técnico — sem hesitação, sem linguagem genérica
+=== ESTILO DE REDAÇÃO OBRIGATÓRIO DO ESCRITÓRIO ===
+${estiloModel?.conteudo?.substring(0, 3000) || `- Tom assertivo, combativo e técnico — sem hesitação, sem linguagem genérica
 - Fundamentação ROBUSTA e EXAUSTIVA: transcreva artigos de lei relevantes, cite ementas jurisprudenciais completas, referencie doutrinadores
 - Expressões fortes e características: "flagrante ilegalidade", "abuso manifesto", "violação frontal ao ordenamento jurídico", "consoante entendimento pacificado", "cristalino ao dispor que"
 - Parágrafos densos com argumentação encadeada e progressiva — cada parágrafo deve avançar o argumento
 - Pedidos ESPECÍFICOS com valores EXATOS calculados a partir dos dados do processo
 - Citações jurisprudenciais COMPLETAS: tribunal, turma/câmara, número do processo, relator, data do julgamento
-- Doutrina com autor, obra, edição, página
+- Doutrina com autor, obra, edição, página`}
+
+=== INSTRUÇÕES DETALHADAS DO AGENTE ===
+${instrucoesModel?.conteudo?.substring(0, 2000) || ''}
 
 === ESTRUTURA OBRIGATÓRIA ===
 1. ENDEREÇAMENTO — Use a vara e comarca REAIS do processo fornecido acima. Ex: "EXCELENTÍSSIMO(A) SENHOR(A) DOUTOR(A) JUIZ(A) DE DIREITO DA ${contextoProcesso.includes('Vara') ? '' : '__ '}VARA CÍVEL DA COMARCA DE ${contextoProcesso.includes('Comarca') ? '' : 'GOIÂNIA'} — ESTADO DE GOIÁS"
@@ -5739,12 +5801,8 @@ Você ESTUDOU todos os processos do escritório e conhece profundamente cada cas
 ${configExpertise?.valor ? `EXPERTISE: ${configExpertise.valor}` : ''}
 ${configEstilo?.valor ? `ESTILO DE REDAÇÃO: ${configEstilo.valor}` : ''}
 
-ESTILO DE REDAÇÃO OBRIGATÓRIO:
-- Tom ASSERTIVO, COMBATIVO e TÉCNICO — sem hesitação
-- Expressões características: "flagrante ilegalidade", "abuso manifesto", "violação frontal ao ordenamento jurídico"
-- Fundamentação ROBUSTA com artigos de lei, doutrina e jurisprudência
-- Citações jurisprudenciais completas (tribunal, número, relator, câmara, data)
-- Parágrafos densos com argumentação encadeada e progressiva
+ESTILO DE REDAÇÃO OBRIGATÓRIO DO ESCRITÓRIO:
+${(() => { const estilo = todosConhecimentos.find((c: any) => c.titulo?.includes('ESTILO') && c.categoria === 'Modelo'); return estilo?.conteudo?.substring(0, 2000) || '- Tom ASSERTIVO, COMBATIVO e TÉCNICO — sem hesitação\n- Expressões características: "flagrante ilegalidade", "abuso manifesto", "violação frontal ao ordenamento jurídico"\n- Fundamentação ROBUSTA com artigos de lei, doutrina e jurisprudência\n- Citações jurisprudenciais completas (tribunal, número, relator, câmara, data)\n- Parágrafos densos com argumentação encadeada e progressiva'; })()}
 
 CONHECIMENTOS JURÍDICOS RELEVANTES AO REFINAMENTO:
 ${conhecimentosRelevantes || 'Nenhum conhecimento específico carregado.'}

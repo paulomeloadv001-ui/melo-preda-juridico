@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO conhecimentos (categoria, titulo, conteudo, tribunal, tipoAcao, tags) VALUES ('Modelo', 'GUIA DE ESTILO E REDAÇÃO — MELO & PREDA ADVOGADOS', 'Estilo de redação: assertivo, técnico, estratégico, combativo. Expressões: flagrante ilegalidade, abuso manifesto, violação frontal. Urgência: periculum in mora evidente, tutela de urgência se impõe. Fundamentação: consoante entendimento pacificado no STJ, jurisprudência dominante. Pedidos: numerar, ser específico, incluir subsidiários, tutela primeiro, honorários sempre. Fechamento: Nestes termos, pede deferimento. Erros a evitar: arcaísmos, data venia em excesso, parágrafos longos, etc.', NULL, 'Todos', 'estilo,redação,tom,voz,expressões,formatação');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute INSERT INTO conhecimentos (categoria, titulo, conteudo, tribunal, tipoAcao, tags) VALUES ('Modelo', 'GUIA DE ESTILO E REDAÇÃO — MELO & PREDA ADVOGADOS', 'Estilo de redação: assertivo, técnico, estratégico, combativo. Expressões: flagrante ilegalidade, abuso manifesto, violação frontal. Urgência: periculum in mora evidente, tutela de urgência se impõe. Fundamentação: consoante entendimento pacificado no STJ, jurisprudência dominante. Pedidos: numerar, ser específico, incluir subsidiários, tutela primeiro, honorários sempre. Fechamento: Nestes termos, pede deferimento. Erros a evitar: arcaísmos, data venia em excesso, parágrafos longos, etc.', NULL, 'Todos', 'estilo,redação,tom,voz,expressões,formatação');",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 365
+}
