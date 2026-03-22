@@ -1,0 +1,17 @@
+{
+  "query": "SELECT COUNT(*) as total, SUM(CASE WHEN textoExtraido IS NOT NULL AND textoExtraido != '' THEN 1 ELSE 0 END) as comTexto, SUM(CASE WHEN textoExtraido IS NULL OR textoExtraido = '' THEN 1 ELSE 0 END) as semTexto, SUM(CASE WHEN pdfUrl IS NOT NULL AND pdfUrl != '' THEN 1 ELSE 0 END) as comPdf, SUM(CASE WHEN pdfUrl IS NULL OR pdfUrl = '' THEN 1 ELSE 0 END) as semPdf FROM processos;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT COUNT(*) as total, SUM(CASE WHEN textoExtraido IS NOT NULL AND textoExtraido != '' THEN 1 ELSE 0 END) as comTexto, SUM(CASE WHEN textoExtraido IS NULL OR textoExtraido = '' THEN 1 ELSE 0 END) as semTexto, SUM(CASE WHEN pdfUrl IS NOT NULL AND pdfUrl != '' THEN 1 ELSE 0 END) as comPdf, SUM(CASE WHEN pdfUrl IS NULL OR pdfUrl = '' THEN 1 ELSE 0 END) as semPdf FROM processos;",
+  "rows": [
+    {
+      "total": "105",
+      "comTexto": "23",
+      "semTexto": "82",
+      "comPdf": "23",
+      "semPdf": "82"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\tcomTexto\tsemTexto\tcomPdf\tsemPdf\n105\t23\t82\t23\t82\n",
+  "stderr": "",
+  "execution_time_ms": 356
+}

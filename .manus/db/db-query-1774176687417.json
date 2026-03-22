@@ -1,0 +1,15 @@
+{
+  "query": "SELECT COUNT(*) as total, SUM(CASE WHEN id >= 120000 THEN 1 ELSE 0 END) as importadosDataJud, SUM(CASE WHEN id < 120000 THEN 1 ELSE 0 END) as cadastradosManual FROM processos WHERE (pdfUrl IS NULL OR pdfUrl = '');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT COUNT(*) as total, SUM(CASE WHEN id >= 120000 THEN 1 ELSE 0 END) as importadosDataJud, SUM(CASE WHEN id < 120000 THEN 1 ELSE 0 END) as cadastradosManual FROM processos WHERE (pdfUrl IS NULL OR pdfUrl = '');",
+  "rows": [
+    {
+      "total": "82",
+      "importadosDataJud": "82",
+      "cadastradosManual": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\timportadosDataJud\tcadastradosManual\n82\t82\t0\n",
+  "stderr": "",
+  "execution_time_ms": 355
+}

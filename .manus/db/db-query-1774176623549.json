@@ -1,0 +1,34 @@
+{
+  "query": "SELECT 'clientes' as tabela, COUNT(*) as total FROM clientes UNION ALL SELECT 'processos', COUNT(*) FROM processos UNION ALL SELECT 'peticoes', COUNT(*) FROM peticoes_geradas UNION ALL SELECT 'conhecimentos', COUNT(*) FROM conhecimentos UNION ALL SELECT 'cumprimentos', COUNT(*) FROM cumprimentos_sentenca UNION ALL SELECT 'movimentacoes', COUNT(*) FROM movimentacoes_financeiras;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT 'clientes' as tabela, COUNT(*) as total FROM clientes UNION ALL SELECT 'processos', COUNT(*) FROM processos UNION ALL SELECT 'peticoes', COUNT(*) FROM peticoes_geradas UNION ALL SELECT 'conhecimentos', COUNT(*) FROM conhecimentos UNION ALL SELECT 'cumprimentos', COUNT(*) FROM cumprimentos_sentenca UNION ALL SELECT 'movimentacoes', COUNT(*) FROM movimentacoes_financeiras;",
+  "rows": [
+    {
+      "tabela": "peticoes",
+      "total": "20"
+    },
+    {
+      "tabela": "processos",
+      "total": "105"
+    },
+    {
+      "tabela": "cumprimentos",
+      "total": "1"
+    },
+    {
+      "tabela": "conhecimentos",
+      "total": "390"
+    },
+    {
+      "tabela": "clientes",
+      "total": "79"
+    },
+    {
+      "tabela": "movimentacoes",
+      "total": "141"
+    }
+  ],
+  "messages": [],
+  "stdout": "tabela\ttotal\npeticoes\t20\nprocessos\t105\ncumprimentos\t1\nconhecimentos\t390\nclientes\t79\nmovimentacoes\t141\n",
+  "stderr": "",
+  "execution_time_ms": 395
+}

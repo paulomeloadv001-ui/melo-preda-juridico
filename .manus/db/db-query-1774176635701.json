@@ -1,0 +1,45 @@
+{
+  "query": "SELECT id, nomeCompleto, cpfCnpj FROM clientes WHERE LOWER(nomeCompleto) LIKE '%vanderson%' OR LOWER(nomeCompleto) LIKE '%natalicio%' OR LOWER(nomeCompleto) LIKE '%maria julia%' OR LOWER(nomeCompleto) LIKE '%osmair%' OR LOWER(nomeCompleto) LIKE '%irene%' OR LOWER(nomeCompleto) LIKE '%teonila%' OR LOWER(nomeCompleto) LIKE '%maeve%' OR LOWER(nomeCompleto) LIKE '%ariel%' ORDER BY nomeCompleto;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, nomeCompleto, cpfCnpj FROM clientes WHERE LOWER(nomeCompleto) LIKE '%vanderson%' OR LOWER(nomeCompleto) LIKE '%natalicio%' OR LOWER(nomeCompleto) LIKE '%maria julia%' OR LOWER(nomeCompleto) LIKE '%osmair%' OR LOWER(nomeCompleto) LIKE '%irene%' OR LOWER(nomeCompleto) LIKE '%teonila%' OR LOWER(nomeCompleto) LIKE '%maeve%' OR LOWER(nomeCompleto) LIKE '%ariel%' ORDER BY nomeCompleto;",
+  "rows": [
+    {
+      "id": "5",
+      "nomeCompleto": "ANA TEONILA FAGUNDES DA CUNHA",
+      "cpfCnpj": "03237672149"
+    },
+    {
+      "id": "2",
+      "nomeCompleto": "ARIEL ANSELMO DE OLIVEIRA",
+      "cpfCnpj": "39154017149"
+    },
+    {
+      "id": "9",
+      "nomeCompleto": "IRENE MARIA DOS SANTOS",
+      "cpfCnpj": "06726666187"
+    },
+    {
+      "id": "6",
+      "nomeCompleto": "MAEVE PRODUTOS HOSPITALARES LTDA",
+      "cpfCnpj": "09034672000192"
+    },
+    {
+      "id": "13",
+      "nomeCompleto": "MARIA JULIA DE LIMA",
+      "cpfCnpj": "36342718172"
+    },
+    {
+      "id": "11",
+      "nomeCompleto": "NATALICIO LUIZ DA COSTA",
+      "cpfCnpj": "24357677149"
+    },
+    {
+      "id": "1",
+      "nomeCompleto": "VANDERSON OLIVEIRA DINIZ LIMA",
+      "cpfCnpj": "04056581177"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tnomeCompleto\tcpfCnpj\n5\tANA TEONILA FAGUNDES DA CUNHA\t03237672149\n2\tARIEL ANSELMO DE OLIVEIRA\t39154017149\n9\tIRENE MARIA DOS SANTOS\t06726666187\n6\tMAEVE PRODUTOS HOSPITALARES LTDA\t09034672000192\n13\tMARIA JULIA DE LIMA\t36342718172\n11\tNATALICIO LUIZ DA COSTA\t24357677149\n1\tVANDERSON OLIVEIRA DINIZ LIMA\t04056581177\n",
+  "stderr": "",
+  "execution_time_ms": 363
+}

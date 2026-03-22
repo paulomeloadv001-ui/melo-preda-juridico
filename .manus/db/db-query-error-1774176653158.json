@@ -1,0 +1,8 @@
+{
+  "query": "SELECT p.id, p.clienteId, c.nomeCompleto, p.numeroCnj, p.tipoAcao, p.analiseIA IS NOT NULL as temAnalise, p.faseAtual FROM processos p JOIN clientes c ON p.clienteId = c.id WHERE p.clienteId IN (1,2,5,6,9,11,13) ORDER BY c.nomeCompleto;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT p.id, p.clienteId, c.nomeCompleto, p.numeroCnj, p.tipoAcao, p.analiseIA IS NOT NULL as temAnalise, p.faseAtual FROM processos p JOIN clientes c ON p.clienteId = c.id WHERE p.clienteId IN (1,2,5,6,9,11,13) ORDER BY c.nomeCompleto;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'p.analiseia' in 'field list'"
+  ]
+}

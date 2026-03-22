@@ -79,10 +79,16 @@ const createFetchWithTimeout = (timeoutMs: number) => async (input: RequestInfo 
 // Rotas que precisam de timeout maior (upload + processamento IA)
 const LONG_TIMEOUT_PATHS = [
   'agente.chat', 'agente.gerarPeticao', 'agente.analisarProcesso', 'agente.executarAcao',
+  'agente.refinarPeticao', 'agente.aprovarEEnsinar',
   'processar.uploadPdf', 'processar.uploadContracheque', 'processar.analiseProfunda',
   'jobs.uploadPdf', 'jobs.iniciarLote', 'jobs.processarLoteCompleto',
   'jobs.uploadArquivoLote',
   'integracao.executarSyncManual', 'integracao.limparLogsAntigos',
+  'dashboard.varreduraDataJud',
+  'prazos.verificarVencimentos',
+  'relatorios.gerar', 'relatorios.gerarPanorama', 'relatorios.gerarMargem',
+  'correcao.executar', 'correcao.executarCorrecoes',
+  'enriquecimento.enriquecer',
 ];
 
 const trpcClient = trpc.createClient({

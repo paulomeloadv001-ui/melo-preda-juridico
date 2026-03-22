@@ -724,3 +724,11 @@
 - [x] Relatórios: já ordenado por desc(updatedAt)
 - [x] Enriquecimento: padrão alterado para "mais recente primeiro"
 - [x] Corrigir CompletarPerfil: usar setLocation do wouter em vez de window.location.href
+- [x] Bug: Timeout na página principal (/?from_webdev=1) - CORRIGIDO: dashboard.varreduraDataJud adicionado à LONG_TIMEOUT_PATHS
+- [x] Inventariar todos os PDFs disponíveis nas pastas do projeto (3 PDFs de referência encontrados)
+- [x] Verificar quais PDFs já foram processados vs pendentes (23 com PDF/texto, 82 só metadados DataJud)
+- [x] Corrigir timeout dashboard.varreduraDataJud (adicionado à LONG_TIMEOUT_PATHS com 300s)
+- [x] Corrigir CompletarPerfil.tsx (remover await inválido, usar setLocation)
+- [x] Adicionar rotas de timeout: refinarPeticao, aprovarEEnsinar, relatorios.gerar, correcao.executar
+- [x] 7 dos 8 clientes dos PDFs compartilhados já estão cadastrados com dados completos
+- [x] 211/211 testes passando, 0 erros TypeScript

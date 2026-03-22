@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, nomeCompleto, cpfCnpj, status FROM clientes WHERE nomeCompleto LIKE '%vanderson%' OR nomeCompleto LIKE '%natalicio%' OR nomeCompleto LIKE '%maria julia%' OR nomeCompleto LIKE '%osmair%' OR nomeCompleto LIKE '%irene%' OR nomeCompleto LIKE '%teonila%' OR nomeCompleto LIKE '%maeve%' OR nomeCompleto LIKE '%ariel%' ORDER BY nomeCompleto;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, nomeCompleto, cpfCnpj, status FROM clientes WHERE nomeCompleto LIKE '%vanderson%' OR nomeCompleto LIKE '%natalicio%' OR nomeCompleto LIKE '%maria julia%' OR nomeCompleto LIKE '%osmair%' OR nomeCompleto LIKE '%irene%' OR nomeCompleto LIKE '%teonila%' OR nomeCompleto LIKE '%maeve%' OR nomeCompleto LIKE '%ariel%' ORDER BY nomeCompleto;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'status' in 'field list'"
+  ]
+}

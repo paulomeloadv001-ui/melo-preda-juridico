@@ -1,0 +1,124 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'processos' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'processos' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "clienteId"
+    },
+    {
+      "COLUMN_NAME": "numeroCnj"
+    },
+    {
+      "COLUMN_NAME": "tribunal"
+    },
+    {
+      "COLUMN_NAME": "comarca"
+    },
+    {
+      "COLUMN_NAME": "vara"
+    },
+    {
+      "COLUMN_NAME": "tipoAcao"
+    },
+    {
+      "COLUMN_NAME": "natureza"
+    },
+    {
+      "COLUMN_NAME": "classeProcessual"
+    },
+    {
+      "COLUMN_NAME": "assunto"
+    },
+    {
+      "COLUMN_NAME": "faseAtual"
+    },
+    {
+      "COLUMN_NAME": "statusProcesso"
+    },
+    {
+      "COLUMN_NAME": "valorCausa"
+    },
+    {
+      "COLUMN_NAME": "dataDistribuicao"
+    },
+    {
+      "COLUMN_NAME": "dataSentenca"
+    },
+    {
+      "COLUMN_NAME": "juiz"
+    },
+    {
+      "COLUMN_NAME": "prioridade"
+    },
+    {
+      "COLUMN_NAME": "segredoJustica"
+    },
+    {
+      "COLUMN_NAME": "poloAtivo"
+    },
+    {
+      "COLUMN_NAME": "poloPassivo"
+    },
+    {
+      "COLUMN_NAME": "advogadoAutor"
+    },
+    {
+      "COLUMN_NAME": "resumoSentenca"
+    },
+    {
+      "COLUMN_NAME": "valorCondenacao"
+    },
+    {
+      "COLUMN_NAME": "danosMorais"
+    },
+    {
+      "COLUMN_NAME": "danosMateriais"
+    },
+    {
+      "COLUMN_NAME": "restituicao"
+    },
+    {
+      "COLUMN_NAME": "honorariosPerc"
+    },
+    {
+      "COLUMN_NAME": "honorariosValor"
+    },
+    {
+      "COLUMN_NAME": "tutelaTipo"
+    },
+    {
+      "COLUMN_NAME": "tutelaStatus"
+    },
+    {
+      "COLUMN_NAME": "tutelaDescricao"
+    },
+    {
+      "COLUMN_NAME": "pdfStorageKey"
+    },
+    {
+      "COLUMN_NAME": "pdfUrl"
+    },
+    {
+      "COLUMN_NAME": "textoExtraido"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "COLUMN_NAME": "processoOrigemId"
+    },
+    {
+      "COLUMN_NAME": "tipoVinculo"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\nclienteId\nnumeroCnj\ntribunal\ncomarca\nvara\ntipoAcao\nnatureza\nclasseProcessual\nassunto\nfaseAtual\nstatusProcesso\nvalorCausa\ndataDistribuicao\ndataSentenca\njuiz\nprioridade\nsegredoJustica\npoloAtivo\npoloPassivo\nadvogadoAutor\nresumoSentenca\nvalorCondenacao\ndanosMorais\ndanosMateriais\nrestituicao\nhonorariosPerc\nhonorariosValor\ntutelaTipo\ntutelaStatus\ntutelaDescricao\npdfStorageKey\npdfUrl\ntextoExtraido\ncreatedAt\nupdatedAt\nprocessoOrigemId\ntipoVinculo\n",
+  "stderr": "",
+  "execution_time_ms": 365
+}

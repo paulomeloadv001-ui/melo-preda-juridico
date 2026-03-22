@@ -1,0 +1,145 @@
+{
+  "query": "SELECT p.id, p.clienteId, c.nomeCompleto, p.numeroCnj, p.tipoAcao, p.faseAtual, p.statusProcesso FROM processos p JOIN clientes c ON p.clienteId = c.id WHERE p.clienteId IN (1,2,5,6,9,11,13) ORDER BY c.nomeCompleto;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT p.id, p.clienteId, c.nomeCompleto, p.numeroCnj, p.tipoAcao, p.faseAtual, p.statusProcesso FROM processos p JOIN clientes c ON p.clienteId = c.id WHERE p.clienteId IN (1,2,5,6,9,11,13) ORDER BY c.nomeCompleto;",
+  "rows": [
+    {
+      "id": "15",
+      "clienteId": "5",
+      "nomeCompleto": "ANA TEONILA FAGUNDES DA CUNHA",
+      "numeroCnj": "6151759-84.2024.8.09.0051",
+      "tipoAcao": "Execução de Título Extrajudicial",
+      "faseAtual": "Execução",
+      "statusProcesso": "Aguardando citação/manifestação do executado para oposição de Embargos à Execução"
+    },
+    {
+      "id": "5",
+      "clienteId": "5",
+      "nomeCompleto": "ANA TEONILA FAGUNDES DA CUNHA",
+      "numeroCnj": "5726214-43.2025.8.09.0051",
+      "tipoAcao": "Agravo de Instrumento",
+      "faseAtual": "Recursal (Agravo de Instrumento)",
+      "statusProcesso": "Aguardando julgamento de antecipação de tutela recursal e mérito"
+    },
+    {
+      "id": "8",
+      "clienteId": "5",
+      "nomeCompleto": "ANA TEONILA FAGUNDES DA CUNHA",
+      "numeroCnj": "5017749-86.2025.8.09.0051",
+      "tipoAcao": "AÇÃO DE COBRANÇA",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo"
+    },
+    {
+      "id": "3",
+      "clienteId": "2",
+      "nomeCompleto": "ARIEL ANSELMO DE OLIVEIRA",
+      "numeroCnj": "5806457-90.2025.8.09.0174",
+      "tipoAcao": "CUMPRIMENTO PROVISÓRIO DE SENTENÇA",
+      "faseAtual": "Fase de conhecimento do cumprimento provisório",
+      "statusProcesso": "Ativo"
+    },
+    {
+      "id": "120004",
+      "clienteId": "2",
+      "nomeCompleto": "ARIEL ANSELMO DE OLIVEIRA",
+      "numeroCnj": "5272510-20.2024.8.09.0051",
+      "tipoAcao": "Revisional de Contrato",
+      "faseAtual": "Recursal",
+      "statusProcesso": "Ativo"
+    },
+    {
+      "id": "2",
+      "clienteId": "2",
+      "nomeCompleto": "ARIEL ANSELMO DE OLIVEIRA",
+      "numeroCnj": "5890301-69.2024.8.09.0174",
+      "tipoAcao": "Execução de Título Extrajudicial",
+      "faseAtual": "Fase de Citação/Defesa",
+      "statusProcesso": "Ativo"
+    },
+    {
+      "id": "9",
+      "clienteId": "9",
+      "nomeCompleto": "IRENE MARIA DOS SANTOS",
+      "numeroCnj": "5363744-49.2025.8.09.0051",
+      "tipoAcao": "AÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo - Aguardando decisão de tutela antecipada"
+    },
+    {
+      "id": "120002",
+      "clienteId": "6",
+      "nomeCompleto": "MAEVE PRODUTOS HOSPITALARES LTDA",
+      "numeroCnj": "5401282-58.2023.8.09.0011",
+      "tipoAcao": "Fornecimento",
+      "faseAtual": "Execução",
+      "statusProcesso": "Ativo"
+    },
+    {
+      "id": "120003",
+      "clienteId": "6",
+      "nomeCompleto": "MAEVE PRODUTOS HOSPITALARES LTDA",
+      "numeroCnj": "5034072-29.2024.8.09.0011",
+      "tipoAcao": "Ação Monitória",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo"
+    },
+    {
+      "id": "6",
+      "clienteId": "6",
+      "nomeCompleto": "MAEVE PRODUTOS HOSPITALARES LTDA",
+      "numeroCnj": "5111379-59.2024.8.09.0011",
+      "tipoAcao": "AÇÃO DECLARATÓRIA DE INEXISTÊNCIA DE DÉBITO COM PEDIDO DE TUTELA ANTECIPADA DE URGÊNCIA",
+      "faseAtual": "Petição Inicial / Conhecimento",
+      "statusProcesso": "Em andamento"
+    },
+    {
+      "id": "120045",
+      "clienteId": "6",
+      "nomeCompleto": "MAEVE PRODUTOS HOSPITALARES LTDA",
+      "numeroCnj": "5410932-32.2023.8.09.0011",
+      "tipoAcao": "Ação Monitória",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo"
+    },
+    {
+      "id": "12",
+      "clienteId": "13",
+      "nomeCompleto": "MARIA JULIA DE LIMA",
+      "numeroCnj": "5478158-79.2025.8.09.0174",
+      "tipoAcao": "AÇÃO DE OBRIGAÇÃO DE FAZER",
+      "faseAtual": "Conhecimento (aguardando análise da tutela e citação)",
+      "statusProcesso": "Ativo"
+    },
+    {
+      "id": "10",
+      "clienteId": "11",
+      "nomeCompleto": "NATALICIO LUIZ DA COSTA",
+      "numeroCnj": "5347120-22.2025.8.09.0051",
+      "tipoAcao": "AÇÃO DE REPACTUAÇÃO DE DÍVIDAS com Pedido de TUTELA ANTECIPADA DE URGÊNCIA",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo"
+    },
+    {
+      "id": "1",
+      "clienteId": "1",
+      "nomeCompleto": "VANDERSON OLIVEIRA DINIZ LIMA",
+      "numeroCnj": "5409032-24.2025.8.09.0179",
+      "tipoAcao": "AÇÃO DE OBRIGAÇÃO DE FAZER",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo"
+    },
+    {
+      "id": "120005",
+      "clienteId": "1",
+      "nomeCompleto": "VANDERSON OLIVEIRA DINIZ LIMA",
+      "numeroCnj": "5409032-24.2017.8.09.0011",
+      "tipoAcao": "Ação de Indenização por Danos Materiais e Morais c/c Revisão Contratual (Hipótese mais provável, dada a menção a empréstimos e banco como parte contrária)",
+      "faseAtual": "Conhecimento",
+      "statusProcesso": "Ativo"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tclienteId\tnomeCompleto\tnumeroCnj\ttipoAcao\tfaseAtual\tstatusProcesso\n15\t5\tANA TEONILA FAGUNDES DA CUNHA\t6151759-84.2024.8.09.0051\tExecução de Título Extrajudicial\tExecução\tAguardando citação/manifestação do executado para oposição de Embargos à Execução\n5\t5\tANA TEONILA FAGUNDES DA CUNHA\t5726214-43.2025.8.09.0051\tAgravo de Instrumento\tRecursal (Agravo de Instrumento)\tAguardando julgamento de antecipação de tutela recursal e mérito\n8\t5\tANA TEONILA FAGUNDES DA CUNHA\t5017749-86.2025.8.09.0051\tAÇÃO DE COBRANÇA\tConhecimento\tAtivo\n3\t2\tARIEL ANSELMO DE OLIVEIRA\t5806457-90.2025.8.09.0174\tCUMPRIMENTO PROVISÓRIO DE SENTENÇA\tFase de conhecimento do cumprimento provisório\tAtivo\n120004\t2\tARIEL ANSELMO DE OLIVEIRA\t5272510-20.2024.8.09.0051\tRevisional de Contrato\tRecursal\tAtivo\n2\t2\tARIEL ANSELMO DE OLIVEIRA\t5890301-69.2024.8.09.0174\tExecução de Título Extrajudicial\tFase de Citação/Defesa\tAtivo\n9\t9\tIRENE MARIA DOS SANTOS\t5363744-49.2025.8.09.0051\tAÇÃO DE OBRIGAÇÃO DE FAZER com Pedido de TUTELA ANTECIPADA DE URGÊNCIA\tConhecimento\tAtivo - Aguardando decisão de tutela antecipada\n120002\t6\tMAEVE PRODUTOS HOSPITALARES LTDA\t5401282-58.2023.8.09.0011\tFornecimento\tExecução\tAtivo\n120003\t6\tMAEVE PRODUTOS HOSPITALARES LTDA\t5034072-29.2024.8.09.0011\tAção Monitória\tConhecimento\tAtivo\n6\t6\tMAEVE PRODUTOS HOSPITALARES LTDA\t5111379-59.2024.8.09.0011\tAÇÃO DECLARATÓRIA DE INEXISTÊNCIA DE DÉBITO COM PEDIDO DE TUTELA ANTECIPADA DE URGÊNCIA\tPetição Inicial / Conhecimento\tEm andamento\n120045\t6\tMAEVE PRODUTOS HOSPITALARES LTDA\t5410932-32.2023.8.09.0011\tAção Monitória\tConhecimento\tAtivo\n12\t13\tMARIA JULIA DE LIMA\t5478158-79.2025.8.09.0174\tAÇÃO DE OBRIGAÇÃO DE FAZER\tConhecimento (aguardando análise da tutela e citação)\tAtivo\n10\t11\tNATALICIO LUIZ DA COSTA\t5347120-22.2025.8.09.0051\tAÇÃO DE REPACTUAÇÃO DE DÍVIDAS com Pedido de TUTELA ANTECIPADA DE URGÊNCIA\tConhecimento\tAtivo\n1\t1\tVANDERSON OLIVEIRA DINIZ LIMA\t5409032-24.2025.8.09.0179\tAÇÃO DE OBRIGAÇÃO DE FAZER\tConhecimento\tAtivo\n120005\t1\tVANDERSON OLIVEIRA DINIZ LIMA\t5409032-24.2017.8.09.0011\tAção de Indenização por Danos Materiais e Morais c/c Revisão Contratual (Hipótese mais provável, dada a menção a empréstimos e banco como parte contrária)\tConhecimento\tAtivo\n",
+  "stderr": "",
+  "execution_time_ms": 354
+}
