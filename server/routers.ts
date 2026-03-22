@@ -763,6 +763,32 @@ export const appRouter = router({
 
   // ==================== PROCESSOS (CRUD) ====================
   processosRouter: router({
+    recentes: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(20).optional() }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return [];
+        const lim = input?.limit ?? 8;
+        const rows = await db.select({
+          id: processos.id,
+          clienteId: processos.clienteId,
+          numeroCnj: processos.numeroCnj,
+          tipoAcao: processos.tipoAcao,
+          faseAtual: processos.faseAtual,
+          statusProcesso: processos.statusProcesso,
+          tribunal: processos.tribunal,
+          vara: processos.vara,
+          valorCausa: processos.valorCausa,
+          nomeCliente: clientes.nomeCompleto,
+          updatedAt: processos.updatedAt,
+          createdAt: processos.createdAt,
+        })
+          .from(processos)
+          .leftJoin(clientes, eq(processos.clienteId, clientes.id))
+          .orderBy(desc(processos.updatedAt))
+          .limit(lim);
+        return rows;
+      }),
     delete: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ ctx, input }) => {

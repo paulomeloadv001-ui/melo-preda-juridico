@@ -741,3 +741,8 @@
 - [x] Dashboard reescrito: números, honorários, prazos próximos, últimos clientes, últimas petições, ações rápidas
 - [x] Garantir que cada página tenha propósito claro e fluxo lógico
 - [x] Testar fluxo completo - 211/211 testes passando, 0 erros TypeScript
+
+## SEÇÃO ÚLTIMAS ATUALIZAÇÕES DE PROCESSOS NO DASHBOARD
+- [x] Rota processosRouter.recentes criada (JOIN com clientes, retorna nome, CNJ, tipo, status, valor, tribunal, vara, timestamps)
+- [x] Seção "Últimas Atualizações de Processos" implementada no Dashboard com status colorido, tempo relativo, valor da causa
+- [x] 211/211 testes passando, 0 erros TypeScript

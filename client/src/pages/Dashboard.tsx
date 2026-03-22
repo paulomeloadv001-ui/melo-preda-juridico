@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Users, FileText, DollarSign, Upload, Gavel, Calendar,
   ChevronRight, Brain, Banknote, CheckCircle2, Clock, AlertCircle,
-  RefreshCw, ArrowRight, FolderOpen, TrendingUp
+  RefreshCw, ArrowRight, FolderOpen, TrendingUp, Scale, Activity
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "wouter";
@@ -17,11 +17,27 @@ const formatCurrency = (value: number | string) => {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(num);
 };
 
+const formatTimeAgo = (date: Date): string => {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHrs = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMin < 1) return 'agora';
+  if (diffMin < 60) return `${diffMin}min atrás`;
+  if (diffHrs < 24) return `${diffHrs}h atrás`;
+  if (diffDays === 1) return 'ontem';
+  if (diffDays < 7) return `${diffDays} dias atrás`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} sem atrás`;
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+};
+
 export default function Dashboard() {
   const stats = trpc.clientes.stats.useQuery();
   const recentClientes = trpc.clientes.list.useQuery({});
   const recentPeticoes = trpc.agente.listarPeticoes.useQuery({ limit: 5 });
   const prazos = trpc.prazos.listar.useQuery({ status: "pendente" });
+  const processosRecentes = trpc.processosRouter.recentes.useQuery({ limit: 8 });
   const [, setLocation] = useLocation();
 
   const isLoading = stats.isLoading;
@@ -79,7 +95,7 @@ export default function Dashboard() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => { stats.refetch(); recentClientes.refetch(); recentPeticoes.refetch(); prazos.refetch(); }}
+          onClick={() => { stats.refetch(); recentClientes.refetch(); recentPeticoes.refetch(); prazos.refetch(); processosRecentes.refetch(); }}
           disabled={stats.isFetching}
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${stats.isFetching ? "animate-spin" : ""}`} />
@@ -261,6 +277,83 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Últimas Atualizações de Processos */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Activity className="h-4 w-4 text-indigo-600" />
+              Últimas Atualizações de Processos
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setLocation("/clientes")} className="text-xs">
+              Ver todos <ChevronRight className="h-3 w-3 ml-1" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {processosRecentes.isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+            </div>
+          ) : (processosRecentes.data?.length ?? 0) === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">Nenhum processo importado ainda</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => setLocation("/upload")}>
+                <Upload className="h-4 w-4 mr-2" /> Importar primeiro processo
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {(processosRecentes.data || []).map((proc: any) => {
+                const statusColor = proc.statusProcesso === 'Ativo'
+                  ? 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30'
+                  : proc.statusProcesso === 'Encerrado'
+                    ? 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/30'
+                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30';
+                const tempoAtras = proc.updatedAt ? formatTimeAgo(new Date(proc.updatedAt)) : '';
+                return (
+                  <div
+                    key={proc.id}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => setLocation(`/cliente/${proc.clienteId}`)}
+                  >
+                    <div className="p-2 rounded-lg bg-indigo-500/10 shrink-0">
+                      <Scale className="h-4 w-4 text-indigo-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate">{proc.nomeCliente || 'Cliente'}</p>
+                        <Badge variant="outline" className={`text-[10px] shrink-0 border ${statusColor}`}>
+                          {proc.statusProcesso || 'Ativo'}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        <span className="font-mono">{proc.numeroCnj}</span>
+                        {proc.tipoAcao && <span> &middot; {proc.tipoAcao}</span>}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                        {proc.vara && <span>{proc.vara}</span>}
+                        {proc.tribunal && proc.vara && <span> &middot; </span>}
+                        {proc.tribunal && <span>{proc.tribunal}</span>}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {proc.valorCausa && parseFloat(proc.valorCausa) > 0 && (
+                        <p className="text-xs font-semibold text-emerald-600">{formatCurrency(proc.valorCausa)}</p>
+                      )}
+                      {tempoAtras && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{tempoAtras}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Últimos clientes */}
       <Card>
