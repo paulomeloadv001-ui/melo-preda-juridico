@@ -55,16 +55,16 @@ export default function CompletarPerfil() {
   });
 
   const salvarMutation = trpc.meuPerfil.salvar.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Perfil salvo com sucesso!", {
         description: "Bem-vindo ao Melo & Preda!",
       });
       // Refresh auth para atualizar profileCompleted
-      refresh();
-      // Redirecionar para o dashboard após 1.5s
+      await refresh();
+      // Redirecionar para o dashboard após 1s
       setTimeout(() => {
         window.location.href = "/";
-      }, 1500);
+      }, 1000);
     },
     onError: (error) => {
       toast.error("Erro ao salvar perfil", {

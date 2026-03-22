@@ -275,6 +275,73 @@ export const AGENT_TOOLS: Tool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "buscar_conhecimento",
+      description: "Busca na base de conhecimentos jurídicos do escritório: teses, jurisprudências, estratégias, legislações e modelos. Use para fundamentar petições e análises.",
+      parameters: {
+        type: "object",
+        properties: {
+          termo: { type: "string", description: "Termo de busca (ex: 'margem consignável', 'superendividamento', 'art. 523 CPC')" },
+          categoria: { type: "string", description: "Filtrar por categoria: Tese, Jurisprudencia, Estrategia, Legislacao, Modelo" },
+          tipoAcao: { type: "string", description: "Filtrar por tipo de ação (ex: 'cumprimento_provisorio', 'obrigacao_fazer')" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "calcular_debito_judicial",
+      description: "Calcula débito judicial com correção monetária e juros. Útil para cumprimentos de sentença, liquidação e execução.",
+      parameters: {
+        type: "object",
+        properties: {
+          valor_principal: { type: "number", description: "Valor principal do débito em reais" },
+          indice_correcao: { type: "string", description: "Índice de correção: IPCA, INPC, IGP-M, SELIC, TR" },
+          juros_mensais: { type: "number", description: "Taxa de juros mensais em percentual (ex: 1 para 1%)" },
+          meses: { type: "number", description: "Quantidade de meses para cálculo" },
+          data_inicio: { type: "string", description: "Data de início do cálculo (YYYY-MM-DD)" },
+          multa_percentual: { type: "number", description: "Percentual de multa (ex: 10 para 10%)" },
+          honorarios_percentual: { type: "number", description: "Percentual de honorários advocatícios (ex: 10 para 10%)" },
+        },
+        required: ["valor_principal"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "consultar_prazos",
+      description: "Consulta prazos processuais pendentes, vencidos ou próximos do vencimento para um cliente ou processo específico.",
+      parameters: {
+        type: "object",
+        properties: {
+          clienteId: { type: "number", description: "Filtrar por cliente" },
+          processoId: { type: "number", description: "Filtrar por processo" },
+          status: { type: "string", description: "Filtrar por status: pendente, cumprido, vencido" },
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "consultar_cumprimento_sentenca",
+      description: "Consulta dados de cumprimentos de sentença vinculados a um cliente ou processo.",
+      parameters: {
+        type: "object",
+        properties: {
+          clienteId: { type: "number", description: "Filtrar por cliente" },
+          processoId: { type: "number", description: "Filtrar por processo" },
+        },
+        required: [],
+      },
+    },
+  },
 ];
 
 // ==================== TOOL EXECUTORS ====================
@@ -296,6 +363,10 @@ export async function executarTool(toolName: string, args: any): Promise<string>
       case "consultar_estatisticas": return await toolConsultarEstatisticas(args);
       case "editar_peticao": return await toolEditarPeticao(args);
       case "listar_peticoes": return await toolListarPeticoes(args);
+      case "buscar_conhecimento": return await toolBuscarConhecimento(args);
+      case "calcular_debito_judicial": return await toolCalcularDebitoJudicial(args);
+      case "consultar_prazos": return await toolConsultarPrazos(args);
+      case "consultar_cumprimento_sentenca": return await toolConsultarCumprimentoSentenca(args);
       default: return JSON.stringify({ erro: `Tool desconhecida: ${toolName}` });
     }
   } catch (error: any) {
@@ -1423,4 +1494,224 @@ Responda SEMPRE em português brasileiro. Seja direto, técnico e assertivo.`;
     acoesExecutadas,
     totalTools: acoesExecutadas.length,
   };
+}
+
+
+// --- BUSCAR CONHECIMENTO ---
+async function toolBuscarConhecimento(args: any): Promise<string> {
+  const db = await getDb();
+  if (!db) return JSON.stringify({ erro: "Banco de dados indisponível" });
+
+  const { termo, categoria, tipoAcao } = args;
+  let query = db.select().from(conhecimentos);
+  const conditions: any[] = [];
+
+  if (categoria) {
+    conditions.push(eq(conhecimentos.categoria, categoria));
+  }
+  if (tipoAcao) {
+    conditions.push(like(conhecimentos.tipoAcao, `%${tipoAcao}%`));
+  }
+
+  let results: any[];
+  if (conditions.length > 0) {
+    results = await query.where(and(...conditions)).orderBy(desc(conhecimentos.createdAt)).limit(30);
+  } else {
+    results = await query.orderBy(desc(conhecimentos.createdAt)).limit(30);
+  }
+
+  // Filtrar por termo se fornecido
+  if (termo) {
+    const termoLower = termo.toLowerCase();
+    const termos = termoLower.split(/\s+/).filter((t: string) => t.length > 2);
+    results = results.filter((c: any) => {
+      const texto = `${c.titulo || ''} ${c.conteudo || ''} ${c.tags || ''} ${c.tipoAcao || ''}`.toLowerCase();
+      return termos.some((t: string) => texto.includes(t));
+    });
+  }
+
+  return JSON.stringify({
+    encontrados: results.length,
+    conhecimentos: results.slice(0, 20).map((c: any) => ({
+      id: c.id,
+      titulo: c.titulo,
+      categoria: c.categoria,
+      tipoAcao: c.tipoAcao,
+      tags: c.tags,
+      conteudo: typeof c.conteudo === 'string' && c.conteudo.length > 500 
+        ? c.conteudo.substring(0, 500) + '...' 
+        : c.conteudo,
+    })),
+  });
+}
+
+// --- CALCULAR DÉBITO JUDICIAL ---
+async function toolCalcularDebitoJudicial(args: any): Promise<string> {
+  const {
+    valor_principal,
+    indice_correcao = 'IPCA',
+    juros_mensais = 1,
+    meses = 12,
+    data_inicio,
+    multa_percentual = 0,
+    honorarios_percentual = 0,
+  } = args;
+
+  if (!valor_principal || valor_principal <= 0) {
+    return JSON.stringify({ erro: "Valor principal deve ser maior que zero" });
+  }
+
+  // Taxas mensais aproximadas dos índices de correção
+  const taxasCorrecao: Record<string, number> = {
+    'IPCA': 0.44,    // ~5.3% a.a.
+    'INPC': 0.42,    // ~5.1% a.a.
+    'IGP-M': 0.35,   // ~4.2% a.a.
+    'SELIC': 0.87,   // ~10.5% a.a. (inclui juros)
+    'TR': 0.08,      // ~1% a.a.
+  };
+
+  const taxaCorrecaoMensal = taxasCorrecao[indice_correcao] || 0.44;
+  const taxaJurosMensal = juros_mensais / 100;
+
+  // Cálculo mês a mês
+  let valorCorrigido = valor_principal;
+  let totalJuros = 0;
+  let totalCorrecao = 0;
+
+  for (let i = 0; i < meses; i++) {
+    const correcaoMes = valorCorrigido * (taxaCorrecaoMensal / 100);
+    totalCorrecao += correcaoMes;
+    valorCorrigido += correcaoMes;
+    
+    const jurosMes = valorCorrigido * taxaJurosMensal;
+    totalJuros += jurosMes;
+  }
+
+  const valorComJuros = valorCorrigido + totalJuros;
+  const multa = multa_percentual > 0 ? valorComJuros * (multa_percentual / 100) : 0;
+  const honorarios = honorarios_percentual > 0 ? valorComJuros * (honorarios_percentual / 100) : 0;
+  const totalGeral = valorComJuros + multa + honorarios;
+
+  return JSON.stringify({
+    calculo: {
+      valor_principal: valor_principal.toFixed(2),
+      indice_correcao,
+      taxa_correcao_mensal: `${taxaCorrecaoMensal}%`,
+      juros_mensais: `${juros_mensais}%`,
+      periodo_meses: meses,
+      data_inicio: data_inicio || 'não informada',
+      correcao_monetaria: totalCorrecao.toFixed(2),
+      valor_corrigido: valorCorrigido.toFixed(2),
+      juros_totais: totalJuros.toFixed(2),
+      valor_com_juros: valorComJuros.toFixed(2),
+      multa: multa.toFixed(2),
+      multa_percentual: `${multa_percentual}%`,
+      honorarios: honorarios.toFixed(2),
+      honorarios_percentual: `${honorarios_percentual}%`,
+      total_geral: totalGeral.toFixed(2),
+    },
+    observacao: `Cálculo aproximado usando taxa média do ${indice_correcao}. Para valores exatos, consulte a tabela oficial do tribunal.`,
+  });
+}
+
+// --- CONSULTAR PRAZOS ---
+async function toolConsultarPrazos(args: any): Promise<string> {
+  const db = await getDb();
+  if (!db) return JSON.stringify({ erro: "Banco de dados indisponível" });
+
+  const { clienteId, processoId, status } = args;
+  const conditions: any[] = [];
+
+  if (processoId) conditions.push(eq(prazosProcessuais.processoId, processoId));
+  if (status) conditions.push(eq(prazosProcessuais.status, status));
+
+  let results: any[];
+  if (conditions.length > 0) {
+    results = await db.select().from(prazosProcessuais)
+      .where(and(...conditions))
+      .orderBy(prazosProcessuais.dataVencimento)
+      .limit(50);
+  } else {
+    results = await db.select().from(prazosProcessuais)
+      .orderBy(prazosProcessuais.dataVencimento)
+      .limit(50);
+  }
+
+  // Se filtro por cliente, buscar processos do cliente primeiro
+  if (clienteId && !processoId) {
+    const processosCliente = await db.select({ id: processos.id })
+      .from(processos).where(eq(processos.clienteId, clienteId));
+    const idsProcessos = processosCliente.map(p => p.id);
+    results = results.filter((p: any) => idsProcessos.includes(p.processoId));
+  }
+
+  const hoje = new Date();
+  const pendentes = results.filter((p: any) => p.status === 'pendente');
+  const vencidos = pendentes.filter((p: any) => new Date(p.dataVencimento) < hoje);
+  const proximos = pendentes.filter((p: any) => {
+    const venc = new Date(p.dataVencimento);
+    const diff = (venc.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24);
+    return diff >= 0 && diff <= 7;
+  });
+
+  return JSON.stringify({
+    total: results.length,
+    pendentes: pendentes.length,
+    vencidos: vencidos.length,
+    proximos_7_dias: proximos.length,
+    prazos: results.slice(0, 20).map((p: any) => ({
+      id: p.id,
+      tipo: p.tipo,
+      descricao: p.descricao,
+      dataVencimento: p.dataVencimento,
+      status: p.status,
+      processoId: p.processoId,
+    })),
+  });
+}
+
+// --- CONSULTAR CUMPRIMENTO DE SENTENÇA ---
+async function toolConsultarCumprimentoSentenca(args: any): Promise<string> {
+  const db = await getDb();
+  if (!db) return JSON.stringify({ erro: "Banco de dados indisponível" });
+
+  const { clienteId, processoId } = args;
+  const conditions: any[] = [];
+
+  if (processoId) conditions.push(eq(cumprimentosSentenca.processoId, processoId));
+
+  let results: any[];
+  if (conditions.length > 0) {
+    results = await db.select().from(cumprimentosSentenca)
+      .where(and(...conditions))
+      .orderBy(desc(cumprimentosSentenca.createdAt))
+      .limit(20);
+  } else {
+    results = await db.select().from(cumprimentosSentenca)
+      .orderBy(desc(cumprimentosSentenca.createdAt))
+      .limit(20);
+  }
+
+  // Se filtro por cliente, buscar processos do cliente primeiro
+  if (clienteId && !processoId) {
+    const processosCliente = await db.select({ id: processos.id })
+      .from(processos).where(eq(processos.clienteId, clienteId));
+    const idsProcessos = processosCliente.map(p => p.id);
+    results = results.filter((c: any) => idsProcessos.includes(c.processoId));
+  }
+
+  return JSON.stringify({
+    encontrados: results.length,
+    cumprimentos: results.map((c: any) => ({
+      id: c.id,
+      processoId: c.processoId,
+      tipo: c.tipo,
+      status: c.status,
+      valorPrincipal: c.valorPrincipal,
+      valorAtualizado: c.valorAtualizado,
+      valorHonorarios: c.valorHonorarios,
+      dataTransitoJulgado: c.dataTransitoJulgado,
+      observacoes: c.observacoes,
+    })),
+  });
 }

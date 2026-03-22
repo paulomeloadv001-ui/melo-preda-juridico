@@ -374,18 +374,24 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
+  const [, setLocation] = useLocation();
+  const needsProfile = !loading && user && (user as any).profileCompleted === 0;
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
+  useEffect(() => {
+    if (needsProfile) {
+      setLocation('/completar-perfil');
+    }
+  }, [needsProfile, setLocation]);
+
   if (loading) {
     return <DashboardLayoutSkeleton />;
   }
 
-  // Redirecionar para completar perfil se for primeiro login
-  if (user && (user as any).profileCompleted === 0) {
-    window.location.href = '/completar-perfil';
+  if (needsProfile) {
     return <DashboardLayoutSkeleton />;
   }
 

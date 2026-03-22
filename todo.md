@@ -706,3 +706,12 @@
 - [x] Frontend: dialog de feedback com descrição do que o agente aprende
 - [x] Frontend: badge indicador de referências aprendidas no header
 - [x] Frontend: status "Aprovada — IA aprendeu" no histórico para petições já aprovadas
+- [x] AUDITORIA COMPLETA: testar todas as páginas e funcionalidades, identificar e corrigir todos os erros
+- [x] Verificar logs de erro do servidor e console do browser
+- [x] Corrigir redirect no render do DashboardLayout (window.location.href → useEffect + setLocation)
+- [x] Corrigir hooks do React chamados após early returns no DashboardLayout
+- [x] Corrigir CompletarPerfil: onSuccess async + await refresh()
+- [x] Adicionar 4 tools faltantes no agente executor: buscar_conhecimento, calcular_debito_judicial, consultar_prazos, consultar_cumprimento_sentenca
+- [x] Verificar e confirmar que todas as 20 páginas existem e são importáveis
+- [x] Verificar rota /api/v1/download-docx funcional (retorna 200)
+- [x] 211/211 testes passando, 0 erros TypeScript
