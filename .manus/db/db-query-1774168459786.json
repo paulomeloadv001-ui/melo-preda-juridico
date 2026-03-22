@@ -1,0 +1,52 @@
+{
+  "query": "SELECT id, name, email, role, profileCompleted FROM users;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT id, name, email, role, profileCompleted FROM users;",
+  "rows": [
+    {
+      "id": "1",
+      "name": "Dr. Paulo Verificação",
+      "email": "paulomeloadv001@gmail.com",
+      "role": "admin",
+      "profileCompleted": "1"
+    },
+    {
+      "id": "7",
+      "name": "Paulo Filho",
+      "email": "paulomeloadv001@gmail.com",
+      "role": "admin",
+      "profileCompleted": "1"
+    },
+    {
+      "id": "180008",
+      "name": "Thalyta Ferraz",
+      "email": "thalyta_ferraz_@hotmail.com",
+      "role": "admin",
+      "profileCompleted": "1"
+    },
+    {
+      "id": "180337",
+      "name": "Thalyta Ferraz",
+      "email": "thalyta_ferraz_@hotmail.com",
+      "role": "admin",
+      "profileCompleted": "1"
+    },
+    {
+      "id": "2070068",
+      "name": "Paulo Filho",
+      "email": "paulomeloadv001@gmail.com",
+      "role": "user",
+      "profileCompleted": "0"
+    },
+    {
+      "id": "2100001",
+      "name": "Felipe Cardoso",
+      "email": "felipeleaoc@gmail.com",
+      "role": "user",
+      "profileCompleted": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tname\temail\trole\tprofileCompleted\n1\tDr. Paulo Verificação\tpaulomeloadv001@gmail.com\tadmin\t1\n7\tPaulo Filho\tpaulomeloadv001@gmail.com\tadmin\t1\n180008\tThalyta Ferraz\tthalyta_ferraz_@hotmail.com\tadmin\t1\n180337\tThalyta Ferraz\tthalyta_ferraz_@hotmail.com\tadmin\t1\n2070068\tPaulo Filho\tpaulomeloadv001@gmail.com\tuser\t0\n2100001\tFelipe Cardoso\tfelipeleaoc@gmail.com\tuser\t0\n",
+  "stderr": "",
+  "execution_time_ms": 350
+}

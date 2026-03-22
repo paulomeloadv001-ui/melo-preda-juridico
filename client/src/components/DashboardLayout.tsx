@@ -383,6 +383,12 @@ export default function DashboardLayout({
     return <DashboardLayoutSkeleton />;
   }
 
+  // Redirecionar para completar perfil se for primeiro login
+  if (user && (user as any).profileCompleted === 0) {
+    window.location.href = '/completar-perfil';
+    return <DashboardLayoutSkeleton />;
+  }
+
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[oklch(0.15_0.01_60)]">

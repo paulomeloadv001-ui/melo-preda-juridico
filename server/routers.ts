@@ -7711,6 +7711,77 @@ Retorne um JSON com os campos:
         };
       }),
   }),
+
+  // ==================== MEU PERFIL (PRIMEIRO LOGIN) ====================
+  meuPerfil: router({
+    // Obter perfil do usuário logado
+    obter: protectedProcedure.query(async ({ ctx }) => {
+      const db = await getDb();
+      if (!db) return null;
+      const [profile] = await db.select().from(userProfiles).where(eq(userProfiles.userId, ctx.user.id)).limit(1);
+      return {
+        profileCompleted: (ctx.user as any).profileCompleted === 1,
+        profile: profile || null,
+        user: { id: ctx.user.id, name: ctx.user.name, email: ctx.user.email },
+      };
+    }),
+
+    // Salvar/atualizar perfil (primeiro login ou edição)
+    salvar: protectedProcedure
+      .input(z.object({
+        nomeCompleto: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+        celular: z.string().optional(),
+        cpf: z.string().optional(),
+        oab: z.string().optional(),
+        cargo: z.string().optional(),
+        especialidade: z.string().optional(),
+        bio: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indispon\u00edvel');
+
+        // Atualizar nome do usuário
+        await db.update(users).set({
+          name: input.nomeCompleto,
+          profileCompleted: 1,
+        }).where(eq(users.id, ctx.user.id));
+
+        // Upsert user_profiles
+        const [existing] = await db.select().from(userProfiles).where(eq(userProfiles.userId, ctx.user.id)).limit(1);
+        if (existing) {
+          await db.update(userProfiles).set({
+            celular: input.celular || existing.celular,
+            cpf: input.cpf || existing.cpf,
+            oab: input.oab || existing.oab,
+            cargo: input.cargo || existing.cargo,
+            especialidade: input.especialidade || existing.especialidade,
+            bio: input.bio || existing.bio,
+          }).where(eq(userProfiles.id, existing.id));
+        } else {
+          await db.insert(userProfiles).values({
+            userId: ctx.user.id,
+            celular: input.celular || null,
+            cpf: input.cpf || null,
+            oab: input.oab || null,
+            cargo: input.cargo || null,
+            especialidade: input.especialidade || null,
+            bio: input.bio || null,
+            ativo: 1,
+          });
+        }
+
+        // Registrar no audit log
+        await db.insert(auditLog).values({
+          userId: ctx.user.id,
+          acao: 'completar_perfil',
+          modulo: 'perfil',
+          detalhes: JSON.stringify({ nomeCompleto: input.nomeCompleto, cargo: input.cargo }),
+        });
+
+        return { success: true, message: 'Perfil salvo com sucesso!' };
+      }),
+  }),
 });
 // ==================== PROCESSADOR DE FILA DE JOBS ====================
 async function processarFilaJobs(jobIds: number[]) {

@@ -670,3 +670,10 @@
 - [x] Worker funciona como proxy completo do Manus (todas as rotas tRPC, cookies encaminhados)
 - [x] Handler scheduled (cron) adicionado ao Worker para sincronização automática
 - [x] Implementar botão de login com Google na página inicial e tela de login (SVG Google colorido + botão branco + divisor 'ou' + botão email dourado)
+- [x] Implementar página de perfil inicial para novos usuários após primeiro login
+- [x] Criar/atualizar campo profileCompleted na tabela users
+- [x] Backend: rota de atualização de perfil (nome, telefone, OAB, especialidade, foto)
+- [x] Frontend: página /completar-perfil com formulário de completar perfil
+- [x] Redirecionamento automático para /completar-perfil quando profileCompleted = false
+- [ ] Deploy atualizado no Cloudflare via GitHub Actions (sincronização automática)
+- [x] Testes unitários para rotas de perfil (5 testes passando: obter, salvar, validação, campos mínimos, profileCompleted)

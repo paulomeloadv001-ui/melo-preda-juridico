@@ -11,6 +11,7 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  profileCompleted: int("profileCompleted").default(0).notNull(),
 });
 
 export type User = typeof users.$inferSelect;
@@ -371,6 +372,9 @@ export const userProfiles = mysqlTable("user_profiles", {
   celular: varchar("celular", { length: 20 }),
   cargo: varchar("cargo", { length: 100 }),
   oab: varchar("oab", { length: 30 }),
+  especialidade: varchar("especialidade", { length: 255 }),
+  fotoUrl: text("fotoUrl"),
+  bio: text("bio"),
   permissoes: text("permissoes"), // JSON string com permissões específicas
   ativo: int("ativo").default(1).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

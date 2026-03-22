@@ -25,12 +25,16 @@ import Metricas from "./pages/Metricas";
 import PreenchimentoDB from "./pages/PreenchimentoDB";
 import PublicacoesPage from "./pages/PublicacoesPage";
 import FloatingAgent from "./components/FloatingAgent";
+import CompletarPerfil from "./pages/CompletarPerfil";
 
 function Router() {
   return (
     <Switch>
       {/* Rota pública - Formulário de Solicitação de Acesso */}
       <Route path="/solicitar-acesso" component={SolicitarAcesso} />
+
+      {/* Rota de completar perfil - primeiro login */}
+      <Route path="/completar-perfil" component={CompletarPerfil} />
 
       {/* Rotas protegidas dentro do DashboardLayout */}
       <Route>
