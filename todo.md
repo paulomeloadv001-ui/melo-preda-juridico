@@ -639,3 +639,19 @@
 - [ ] Sincronizar projeto com GitHub (push completo)
 - [ ] Preparar projeto para deploy no Cloudflare
 - [ ] Configurar Cloudflare Pages + Workers
+
+- [x] Deploy Cloudflare: Criar Worker entry point (cloudflare/worker.ts)
+- [x] Deploy Cloudflare: Criar schema D1 SQLite (cloudflare/schema.sql) - 34 tabelas
+- [x] Deploy Cloudflare: Criar camada de abstração DB (cloudflare/db-adapter.ts)
+- [x] Deploy Cloudflare: Configurar wrangler.toml
+- [x] Deploy Cloudflare: Criar script de migração TiDB → D1 (cloudflare/migrate-data.mjs)
+- [x] Deploy Cloudflare: Executar migração: 4817 registros exportados (seed-data.sql 7.92MB)
+- [x] Deploy Cloudflare: Criar script de deploy (cloudflare/deploy.sh)
+- [x] Deploy Cloudflare: Criar GitHub Actions CI/CD (.github/workflows/deploy-cloudflare.yml)
+- [x] Deploy Cloudflare: Criar README do Cloudflare (cloudflare/README.md)
+- [x] Deploy Cloudflare: Build do Worker: 3.5MB minificado (dentro do limite 10MB)
+- [x] Deploy Cloudflare: Build do Frontend: 18MB assets estáticos
+- [ ] Deploy Cloudflare: Aguardando novo API Token para deploy
+- [ ] Deploy Cloudflare: Configurar secrets no Cloudflare
+- [ ] Deploy Cloudflare: Testar deploy completo
+- [ ] Deploy Cloudflare: Configurar domínio personalizado (opcional)

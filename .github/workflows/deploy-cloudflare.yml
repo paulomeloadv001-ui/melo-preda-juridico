@@ -1,0 +1,57 @@
+name: Deploy to Cloudflare Workers
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloudflare Workers
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Frontend
+        run: npx vite build
+
+      - name: Prepare Cloudflare build
+        run: |
+          rm -rf dist-cf
+          mkdir -p dist-cf
+          cp -r dist/public dist-cf/public
+
+      - name: Build Worker
+        run: |
+          npx esbuild cloudflare/worker.ts \
+            --platform=node \
+            --bundle \
+            --format=esm \
+            --outfile=dist-cf/worker.js \
+            --external:cloudflare:workers \
+            --external:cloudflare:node \
+            --external:@aws-sdk/client-s3 \
+            --external:@aws-sdk/s3-request-presigner \
+            --target=es2022 \
+            --minify
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

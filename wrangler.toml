@@ -1,0 +1,61 @@
+# ============================================================
+# Melo & Preda - Sistema Jurídico Integrado
+# Cloudflare Workers Configuration
+# ============================================================
+
+name = "melo-preda-juridico"
+main = "dist-cf/worker.js"
+compatibility_date = "2026-03-20"
+compatibility_flags = ["nodejs_compat"]
+
+# Workers Paid plan required for:
+# - D1 database
+# - 30s+ CPU time
+# - Larger bundle sizes
+# usage_model = "standard"
+
+# Static assets (frontend React build)
+[assets]
+directory = "dist-cf/public"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "melo-preda-db"
+database_id = "PLACEHOLDER_D1_ID"
+
+# Environment variables (non-secret)
+[vars]
+NODE_ENV = "production"
+CLOUDFLARE_WORKER = "true"
+MANUS_APP_URL = "https://melopreda-4imsnkhw.manus.space"
+
+# Secrets (configured via `wrangler secret put <NAME>`)
+# Required secrets:
+# - JWT_SECRET
+# - DATAJUD_API_KEY
+# - JUSCONSIG_API_KEY
+# - BUILT_IN_FORGE_API_KEY
+# - BUILT_IN_FORGE_API_URL
+# - OAUTH_SERVER_URL
+# - OWNER_OPEN_ID
+# - OWNER_NAME
+# - VITE_APP_ID
+# - VITE_OAUTH_PORTAL_URL
+# - VITE_FRONTEND_FORGE_API_KEY
+# - VITE_FRONTEND_FORGE_API_URL
+# - VITE_APP_TITLE
+# - VITE_APP_LOGO
+
+# Limits
+[limits]
+cpu_ms = 30000
+
+# Observability
+[observability]
+enabled = true
+
+# Custom domain (optional - configure after deploy)
+# [routes]
+# pattern = "juridico.melopreda.com.br/*"
+# zone_name = "melopreda.com.br"
