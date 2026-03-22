@@ -732,3 +732,12 @@
 - [x] Adicionar rotas de timeout: refinarPeticao, aprovarEEnsinar, relatorios.gerar, correcao.executar
 - [x] 7 dos 8 clientes dos PDFs compartilhados já estão cadastrados com dados completos
 - [x] 211/211 testes passando, 0 erros TypeScript
+
+## REDESENHO COMPLETO DO FLUXO (v6.0)
+- [x] Auditar todas as páginas e menus atuais da plataforma
+- [x] Identificar páginas confusas, redundantes ou sem sentido
+- [x] Redesenhar o fluxo principal: Upload → Análise → Cliente → Processo → Petição
+- [x] Simplificar sidebar de 18 itens para 6 + Configurações colapsável
+- [x] Dashboard reescrito: números, honorários, prazos próximos, últimos clientes, últimas petições, ações rápidas
+- [x] Garantir que cada página tenha propósito claro e fluxo lógico
+- [x] Testar fluxo completo - 211/211 testes passando, 0 erros TypeScript
