@@ -669,3 +669,4 @@
 - [x] URGENTE: Cloudflare dando erro - CORRIGIDO: Worker reescrito com OAuth nativo completo (JWT via Web Crypto API), state JSON com cf_return, proxy transparente
 - [x] Worker funciona como proxy completo do Manus (todas as rotas tRPC, cookies encaminhados)
 - [x] Handler scheduled (cron) adicionado ao Worker para sincronização automática
+- [x] Implementar botão de login com Google na página inicial e tela de login (SVG Google colorido + botão branco + divisor 'ou' + botão email dourado)

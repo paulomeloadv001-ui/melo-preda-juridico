@@ -1,7 +1,7 @@
 export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 
 // Generate login URL at runtime so redirect URI reflects the current origin.
-export const getLoginUrl = () => {
+export const getLoginUrl = (returnPath?: string) => {
   const currentOrigin = window.location.origin;
   
   // Detectar se estamos rodando no Cloudflare Workers (não é o domínio Manus)
@@ -25,6 +25,34 @@ export const getLoginUrl = () => {
   url.searchParams.set("redirectUri", redirectUri);
   url.searchParams.set("state", state);
   url.searchParams.set("type", "signIn");
+
+  return url.toString();
+};
+
+// Generate Google-specific login URL
+export const getGoogleLoginUrl = () => {
+  const currentOrigin = window.location.origin;
+  
+  // Detectar se estamos rodando no Cloudflare Workers
+  const isCloudflare = !currentOrigin.includes('manus.space') && 
+                       !currentOrigin.includes('manus.computer') &&
+                       !currentOrigin.includes('localhost');
+  
+  if (isCloudflare) {
+    return `${currentOrigin}/api/cf-login?provider=google`;
+  }
+
+  const oauthPortalUrl = import.meta.env.VITE_OAUTH_PORTAL_URL;
+  const appId = import.meta.env.VITE_APP_ID;
+  const redirectUri = `${currentOrigin}/api/oauth/callback`;
+  const state = btoa(redirectUri);
+
+  const url = new URL(`${oauthPortalUrl}/app-auth`);
+  url.searchParams.set("appId", appId);
+  url.searchParams.set("redirectUri", redirectUri);
+  url.searchParams.set("state", state);
+  url.searchParams.set("type", "signIn");
+  url.searchParams.set("provider", "google");
 
   return url.toString();
 };
