@@ -234,7 +234,7 @@ async function buildClientFolder(clienteId: number, nome: string, cpf: string) {
 
 // Helper: Atualizar automaticamente o relatório cadastral após importação de processo
 async function autoUpdateRelatorioCadastral(db: any) {
-  const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+  const allClientes = await db.select().from(clientes).orderBy(desc(clientes.updatedAt));
   const clientesPF = allClientes.filter((c: any) => c.tipoPessoa === "PF" && !c.cpfCnpj.startsWith("PENDENTE"));
 
   const dadosRelatorio = await Promise.all(clientesPF.map(async (cli: any) => {
@@ -1723,7 +1723,7 @@ ${textoExtraido}`;
       if (!db) return { duplicados: [], semCpf: [], processosOrfaos: [] };
 
       // 1. Clientes com CPF duplicado (normalizado)
-      const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+      const allClientes = await db.select().from(clientes).orderBy(desc(clientes.updatedAt));
       const cpfMap = new Map<string, typeof allClientes>();
       for (const cli of allClientes) {
         const cpfNorm = cli.cpfCnpj.replace(/[.\-\/]/g, "");
@@ -1743,7 +1743,7 @@ ${textoExtraido}`;
       ).map(c => ({ id: c.id, nome: c.nomeCompleto, cpfAtual: c.cpfCnpj }));
 
       // 3. Processos duplicados por CNJ
-      const allProcs = await db.select().from(processos).orderBy(processos.numeroCnj);
+      const allProcs = await db.select().from(processos).orderBy(desc(processos.updatedAt));
       const cnjMap = new Map<string, typeof allProcs>();
       for (const p of allProcs) {
         const cnj = p.numeroCnj.replace(/\s/g, "");
@@ -1842,7 +1842,7 @@ ${textoExtraido}`;
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const allClientes = await db.select().from(clientes).orderBy(clientes.id);
+      const allClientes = await db.select().from(clientes).orderBy(desc(clientes.updatedAt));
       const cpfMap = new Map<string, typeof allClientes>();
       for (const cli of allClientes) {
         const cpfNorm = cli.cpfCnpj.replace(/[.\-\/]/g, "");
@@ -1933,7 +1933,7 @@ ${textoExtraido}`;
       }> = [];
 
       // 1. CLIENTES - CPFs pendentes/inválidos
-      const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+      const allClientes = await db.select().from(clientes).orderBy(desc(clientes.updatedAt));
       for (const cli of allClientes) {
         if (cli.cpfCnpj.startsWith('PEND') || cli.cpfCnpj.startsWith('SEM_CPF')) {
           erros.push({
@@ -2269,7 +2269,7 @@ ${textoExtraido}`;
 
       // 2. Auto-Merge de duplicados
       try {
-        const allClientes2 = await db.select().from(clientes).orderBy(clientes.id);
+        const allClientes2 = await db.select().from(clientes).orderBy(desc(clientes.updatedAt));
         const cpfMap2 = new Map<string, typeof allClientes2>();
         for (const cli of allClientes2) {
           const cpfNorm = cli.cpfCnpj.replace(/[.\-\/]/g, "");
@@ -2495,7 +2495,7 @@ ${textoExtraido}`;
     todosClientesJson: protectedProcedure.query(async () => {
       const db = await getDb();
       if (!db) return [];
-      const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+      const allClientes = await db.select().from(clientes).orderBy(desc(clientes.updatedAt));
       const result = await Promise.all(allClientes.map(async (cli) => {
         const procs = await db.select().from(processos).where(eq(processos.clienteId, cli.id));
         const financeiro = await db.select().from(dadosFinanceiros).where(eq(dadosFinanceiros.clienteId, cli.id));
@@ -2550,7 +2550,7 @@ ${textoExtraido}`;
       if (!db) throw new Error("Database not available");
 
       // 1. Buscar todos os clientes PF com dados completos
-      const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+      const allClientes = await db.select().from(clientes).orderBy(desc(clientes.updatedAt));
       const clientesPF = allClientes.filter(c => c.tipoPessoa === "PF" && !c.cpfCnpj.startsWith("PENDENTE"));
 
       // 2. Para cada cliente, buscar processos e dados vinculados
@@ -2672,7 +2672,7 @@ ${textoExtraido}`;
       const db = await getDb();
       if (!db) return null;
 
-      const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+      const allClientes = await db.select().from(clientes).orderBy(desc(clientes.updatedAt));
       const clientesPF = allClientes.filter(c => c.tipoPessoa === "PF" && !c.cpfCnpj.startsWith("PENDENTE"));
 
       const dadosRelatorio = await Promise.all(clientesPF.map(async (cli) => {
@@ -2817,7 +2817,7 @@ ${textoExtraido}`;
       const db = await getDb();
       if (!db) return null;
 
-      const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+      const allClientes = await db.select().from(clientes).orderBy(desc(clientes.updatedAt));
       const clientesPF = allClientes.filter(c => c.tipoPessoa === 'PF' && !c.cpfCnpj.startsWith('PENDENTE'));
 
       const dadosMargem = await Promise.all(clientesPF.map(async (cli) => {
@@ -2914,7 +2914,7 @@ ${textoExtraido}`;
       if (!db) throw new Error('Database not available');
 
       // Reutilizar lógica do dadosMargemRealtime
-      const allClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+      const allClientes = await db.select().from(clientes).orderBy(desc(clientes.updatedAt));
       const clientesPF = allClientes.filter(c => c.tipoPessoa === 'PF' && !c.cpfCnpj.startsWith('PENDENTE'));
 
       const dadosMargem = await Promise.all(clientesPF.map(async (cli) => {
@@ -4659,7 +4659,7 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
         // O agente ESTUDOU todos os processos e deve saber tudo
 
         // 2a. Todos os clientes
-        const todosClientes = await db.select().from(clientes).orderBy(clientes.nomeCompleto);
+        const todosClientes = await db.select().from(clientes).orderBy(desc(clientes.updatedAt));
         // 2b. Todos os processos
         const todosProcessos = await db.select().from(processos).orderBy(desc(processos.createdAt));
         // 2c. Todas as estratégias
@@ -7364,7 +7364,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
           createdAt: clientes.createdAt,
         }).from(clientes)
           .where(sql`${clientes.cpfCnpj} LIKE 'PEND%' OR ${clientes.cpfCnpj} LIKE 'SEM_CPF%' OR ${clientes.cpfCnpj} = ''`)
-          .orderBy(clientes.nomeCompleto);
+          .orderBy(desc(clientes.updatedAt));
         return { clientes: pendentes, total: pendentes.length };
       }),
 

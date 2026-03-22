@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,17 +55,19 @@ export default function CompletarPerfil() {
     refetchOnWindowFocus: false,
   });
 
+  const [, setLocation] = useLocation();
+
   const salvarMutation = trpc.meuPerfil.salvar.useMutation({
-    onSuccess: async () => {
+    onSuccess: () => {
       toast.success("Perfil salvo com sucesso!", {
         description: "Bem-vindo ao Melo & Preda!",
       });
       // Refresh auth para atualizar profileCompleted
-      await refresh();
-      // Redirecionar para o dashboard após 1s
+      refresh();
+      // Redirecionar para o dashboard após 1.5s
       setTimeout(() => {
-        window.location.href = "/";
-      }, 1000);
+        setLocation("/");
+      }, 1500);
     },
     onError: (error) => {
       toast.error("Erro ao salvar perfil", {

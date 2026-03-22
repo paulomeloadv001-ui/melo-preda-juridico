@@ -15,7 +15,7 @@ export default function Enriquecimento() {
   const [busca, setBusca] = useState("");
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [cpfInput, setCpfInput] = useState("");
-  const [ordenacao, setOrdenacao] = useState<"nome" | "id">("nome");
+  const [ordenacao, setOrdenacao] = useState<"nome" | "id" | "recente">("recente");
 
   const { data: pendentes, isLoading, refetch } = trpc.enriquecimento.clientesPendentes.useQuery();
   const { data: stats } = trpc.enriquecimento.estatisticas.useQuery();
@@ -50,6 +50,8 @@ export default function Enriquecimento() {
     }
     if (ordenacao === "id") {
       lista = [...lista].sort((a, b) => a.id - b.id);
+    } else if (ordenacao === "recente") {
+      lista = [...lista].sort((a, b) => b.id - a.id);
     }
     return lista;
   }, [pendentes?.clientes, busca, ordenacao]);

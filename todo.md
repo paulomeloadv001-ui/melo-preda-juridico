@@ -715,3 +715,12 @@
 - [x] Verificar e confirmar que todas as 20 páginas existem e são importáveis
 - [x] Verificar rota /api/v1/download-docx funcional (retorna 200)
 - [x] 211/211 testes passando, 0 erros TypeScript
+- [x] Após upload de processo, redirecionar automaticamente para /clientes (3 tipos: individual, contracheque, lote)
+- [x] Ordenar todas as abas/páginas por mais recente (12 queries corrigidas no backend)
+- [x] Dashboard: dados já ordenados por mais recente (processosPorMes, movimentacoesPorMes)
+- [x] Clientes: orderBy(desc(updatedAt)) em todas as queries
+- [x] Processos: orderBy(desc(updatedAt)) em todas as queries
+- [x] Peticionamento: histórico já ordenado por desc(createdAt)
+- [x] Relatórios: já ordenado por desc(updatedAt)
+- [x] Enriquecimento: padrão alterado para "mais recente primeiro"
+- [x] Corrigir CompletarPerfil: usar setLocation do wouter em vez de window.location.href

@@ -147,6 +147,13 @@ function ProcessoUpload() {
     setIsProcessing(false);
     utils.clientes.list.invalidate();
     utils.clientes.stats.invalidate();
+
+    // Redirecionar automaticamente para Clientes após processamento bem-sucedido
+    const successCount = files.filter(f => f.status === "done").length;
+    if (successCount > 0) {
+      toast.success(`${successCount} processo(s) importado(s) com sucesso! Redirecionando para Clientes...`, { duration: 3000 });
+      setTimeout(() => setLocation('/clientes'), 2500);
+    }
   };
 
   const totalFiles = files.length;
@@ -424,6 +431,13 @@ function ContrachequeUpload() {
     setIsProcessing(false);
     utils.clientes.list.invalidate();
     utils.clientes.stats.invalidate();
+
+    // Redirecionar automaticamente para Clientes após processamento bem-sucedido
+    const successCount = files.filter(f => f.status === "done").length;
+    if (successCount > 0) {
+      toast.success(`${successCount} contracheque(s) processado(s)! Redirecionando para Clientes...`, { duration: 3000 });
+      setTimeout(() => setLocation('/clientes'), 2500);
+    }
   };
 
   const totalFiles = files.length;
@@ -722,10 +736,12 @@ function ImportacaoLote() {
     if (statusLote?.master?.status === 'concluido' || statusLote?.master?.status === 'erro') {
       setIsProcessing(false);
       if (statusLote.master.status === 'concluido') {
-        toast.success('Importação em lote concluída com sucesso!');
+        toast.success('Importação em lote concluída! Redirecionando para Clientes...');
         utils.clientes.list.invalidate();
         utils.clientes.stats.invalidate();
         utils.conhecimentosRouter.list.invalidate();
+        // Redirecionar automaticamente para Clientes após 3 segundos
+        setTimeout(() => setLocation('/clientes'), 3000);
       }
     }
   }, [statusLote?.master?.status]);
