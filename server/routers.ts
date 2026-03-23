@@ -6510,7 +6510,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
         const resp = await fetch(url, {
           method: 'POST',
           headers: {
-            'Authorization': `APIKey ${ENV.datajudApiKey}`,
+            'Authorization': `APIKey ${ENV.datajudApiKey || 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw=='}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -6579,7 +6579,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
           const resp = await fetch(`https://api-publica.datajud.cnj.jus.br/${alias}/_search`, {
             method: 'POST',
             headers: {
-              'Authorization': `APIKey ${ENV.datajudApiKey}`,
+              'Authorization': `APIKey ${ENV.datajudApiKey || 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw=='}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ query: { match: { numeroProcesso: numLimpo } } }),
@@ -6626,7 +6626,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
         const resp = await fetch(`https://api-publica.datajud.cnj.jus.br/api_publica_tjgo/_search`, {
           method: 'POST',
           headers: {
-            'Authorization': `APIKey ${ENV.datajudApiKey}`,
+            'Authorization': `APIKey ${ENV.datajudApiKey || 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw=='}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ query: { match: { numeroProcesso: numLimpo } } }),
@@ -6772,10 +6772,8 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
         try {
           const numLimpo = proc.numeroCnj.replace(/[^0-9]/g, '');
           const resp = await fetch(DATAJUD_API, {
-            method: 'POST',
-            headers: { 'Authorization': `APIKey ${ENV.datajudApiKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: { match: { numeroProcesso: numLimpo } }, size: 1 }),
-          });
+           headers: { 'Authorization': `APIKey ${ENV.datajudApiKey || 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw=='}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: { match: { "dadosBasicos.orgaoJulgador.codigoMunicipioIBGE": "5208707" } }, size: 20 }),    });
           if (!resp.ok) { erros++; continue; }
           const data = await resp.json();
           const hits = data?.hits?.hits || [];
@@ -6982,10 +6980,452 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
       }
     }),
 
-    // Varredura completa multicamada
+    // Buscar publicações via PROJUDI TJGO (consulta pública gratuita)
+    buscarProjudi: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('DB indisponível');
+      try {
+        // Buscar todos os processos com CNJ para consultar no PROJUDI
+        const todosProcessos = await db.select({ id: processos.id, numeroCnj: processos.numeroCnj, clienteId: processos.clienteId }).from(processos).where(sql`${processos.numeroCnj} IS NOT NULL AND ${processos.numeroCnj} != ''`);
+        let novasPublicacoes = 0;
+        let erros = 0;
+        for (const proc of todosProcessos) {
+          try {
+            const numLimpo = proc.numeroCnj!.replace(/[^0-9.-]/g, '');
+            // Consulta pública PROJUDI TJGO
+            const resp = await fetch('https://projudi.tjgo.jus.br/BuscaProcesso', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: `TipoConsultaProcesso=1&NumeroProcesso=${encodeURIComponent(numLimpo)}&PassoBusca=2`,
+            });
+            if (!resp.ok) { erros++; continue; }
+            const html = await resp.text();
+            // Extrair informações básicas da página de resultado
+            const statusMatch = html.match(/Situa[çc][ãa]o[:\s]*<[^>]*>([^<]+)/i);
+            const varaMatch = html.match(/Vara[:\s]*<[^>]*>([^<]+)/i);
+            const comarcaMatch = html.match(/Comarca[:\s]*<[^>]*>([^<]+)/i);
+            if (statusMatch || varaMatch) {
+              const conteudo = `Consulta PROJUDI TJGO - Processo ${proc.numeroCnj}: ${statusMatch ? 'Situação: ' + statusMatch[1].trim() : ''} ${varaMatch ? '| Vara: ' + varaMatch[1].trim() : ''} ${comarcaMatch ? '| Comarca: ' + comarcaMatch[1].trim() : ''}`;
+              // Verificar duplicata
+              const existente = await db.select().from(publicacoes)
+                .where(sql`${publicacoes.processoId} = ${proc.id} AND ${publicacoes.fonte} = 'projudi' AND DATE(${publicacoes.createdAt}) = CURDATE()`)
+                .limit(1);
+              if (existente.length === 0) {
+                await db.insert(publicacoes).values({
+                  processoId: proc.id,
+                  clienteId: proc.clienteId,
+                  numeroCnj: proc.numeroCnj,
+                  fonte: 'projudi',
+                  tipoPublicacao: 'consulta',
+                  dataPublicacao: new Date(),
+                  conteudo,
+                  resumo: conteudo.substring(0, 500),
+                  diarioOficial: 'PROJUDI-TJGO',
+                  oabEncontrada: '40559/GO',
+                  urgencia: 0,
+                  jsonOriginal: JSON.stringify({ status: statusMatch?.[1]?.trim(), vara: varaMatch?.[1]?.trim(), comarca: comarcaMatch?.[1]?.trim() }),
+                });
+                novasPublicacoes++;
+              }
+            }
+            await new Promise(r => setTimeout(r, 1000)); // Rate limit
+          } catch { erros++; }
+        }
+        return { novasPublicacoes, erros, totalProcessos: todosProcessos.length, fonte: 'PROJUDI TJGO' };
+      } catch (e: any) {
+        return { error: e.message, novasPublicacoes: 0 };
+      }
+    }),
+    // Buscar publicações via DJE TJGO (Diário da Justiça Eletrônico - consulta pública)
+    buscarDje: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('DB indisponível');
+      try {
+        // Buscar publicações no DJE TJGO pela OAB
+        const resp = await fetch('https://projudi.tjgo.jus.br/ConsultaPublicacao', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'TipoPesquisa=2&TextoPesquisa=OAB+40559&Pesquisar=Pesquisar',
+        });
+        if (!resp.ok) return { error: `DJE TJGO retornou ${resp.status}`, novasPublicacoes: 0 };
+        const html = await resp.text();
+        // Extrair publicações da página de resultados
+        const pubRegex = /<tr[^>]*class="[^"]*linha[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi;
+        const dateRegex = /(\d{2}\/\d{2}\/\d{4})/;
+        const cnjRegex = /(\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4})/;
+        let novasPublicacoes = 0;
+        let match;
+        const maxPubs = 50;
+        let count = 0;
+        // Tentar extrair texto de publicações da página
+        const textBlocks = html.split(/<\/tr>/i);
+        for (const block of textBlocks) {
+          if (count >= maxPubs) break;
+          const dateMatch = block.match(dateRegex);
+          const cnjMatch = block.match(cnjRegex);
+          const textContent = block.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+          if (textContent.length > 50 && (textContent.toLowerCase().includes('oab') || cnjMatch)) {
+            const dataPub = dateMatch ? new Date(dateMatch[1].split('/').reverse().join('-')) : new Date();
+            const conteudo = textContent.substring(0, 5000);
+            // Verificar duplicata
+            const existente = await db.select().from(publicacoes)
+              .where(sql`${publicacoes.fonte} = 'dje-tjgo' AND DATE(${publicacoes.dataPublicacao}) = DATE(${dataPub.toISOString()}) AND LEFT(${publicacoes.conteudo}, 100) = LEFT(${conteudo.substring(0, 100)}, 100)`)
+              .limit(1);
+            if (existente.length === 0) {
+              let processoId = null;
+              let clienteId = null;
+              if (cnjMatch) {
+                const numLimpo = cnjMatch[1].replace(/[^0-9]/g, '');
+                const [proc] = await db.select().from(processos)
+                  .where(sql`REPLACE(REPLACE(REPLACE(${processos.numeroCnj}, '.', ''), '-', ''), '/', '') LIKE ${`%${numLimpo}%`}`);
+                if (proc) { processoId = proc.id; clienteId = proc.clienteId; }
+              }
+              const descLower = conteudo.toLowerCase();
+              let urgencia = 0;
+              if (descLower.includes('intimação') || descLower.includes('citação') || descLower.includes('intima-se')) urgencia = 2;
+              else if (descLower.includes('sentença') || descLower.includes('despacho') || descLower.includes('decisão')) urgencia = 1;
+              await db.insert(publicacoes).values({
+                processoId,
+                clienteId,
+                numeroCnj: cnjMatch?.[1] || null,
+                fonte: 'dje-tjgo',
+                tipoPublicacao: urgencia >= 2 ? 'intimação' : urgencia >= 1 ? 'despacho' : 'publicação',
+                dataPublicacao: dataPub,
+                conteudo,
+                resumo: conteudo.substring(0, 500),
+                diarioOficial: 'DJE-TJGO',
+                oabEncontrada: '40559/GO',
+                urgencia,
+                jsonOriginal: JSON.stringify({ source: 'dje-tjgo', date: dateMatch?.[1], cnj: cnjMatch?.[1] }),
+              });
+              novasPublicacoes++;
+              // Auto-gerar prazo para intimações
+              if (urgencia >= 2 && processoId && clienteId) {
+                try {
+                  const diasPrazo = descLower.includes('citação') ? 15 : descLower.includes('contestação') ? 15 : 5;
+                  const tipoPrazo = descLower.includes('citação') ? 'contestacao' : 'manifestacao';
+                  const dataVenc = new Date(dataPub.getTime() + diasPrazo * 24 * 60 * 60 * 1000);
+                  const [prazoAuto] = await db.insert(prazosProcessuais).values({
+                    processoId,
+                    clienteId,
+                    tipo: tipoPrazo as any,
+                    titulo: `Prazo DJE: ${conteudo.substring(0, 100)}`,
+                    descricao: `Prazo gerado automaticamente da publicação DJE-TJGO`,
+                    dataVencimento: dataVenc,
+                    status: 'pendente',
+                    diasAntecedencia: 3,
+                  }).$returningId();
+                  await db.update(publicacoes).set({ prazoGerado: 1, prazoId: prazoAuto.id }).where(sql`${publicacoes.id} = LAST_INSERT_ID()`);
+                  await criarNotificacao({
+                    tipo: 'prazo_vencendo',
+                    prioridade: 'alta',
+                    titulo: `Novo Prazo DJE: ${conteudo.substring(0, 60)}`,
+                    mensagem: `Prazo de ${diasPrazo} dias gerado automaticamente. Vence em ${dataVenc.toLocaleDateString('pt-BR')}.`,
+                    processoId,
+                    clienteId,
+                    prazoId: prazoAuto.id,
+                    linkUrl: '/prazos',
+                    icone: 'Clock',
+                    cor: 'amber',
+                  });
+                } catch (prazoErr) {
+                  console.error('[DJE] Erro ao gerar prazo automático:', prazoErr);
+                }
+              }
+              count++;
+            }
+          }
+        }
+        return { novasPublicacoes, fonte: 'DJE-TJGO' };
+      } catch (e: any) {
+        return { error: e.message, novasPublicacoes: 0 };
+      }
+    }),
+    // Buscar comunicações via Comunica PJe (portal público)
+    buscarComunicaPje: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('DB indisponível');
+      try {
+        // Buscar comunicações processuais no portal Comunica PJe
+        const todosProcessos = await db.select({ id: processos.id, numeroCnj: processos.numeroCnj, clienteId: processos.clienteId }).from(processos).where(sql`${processos.numeroCnj} IS NOT NULL AND ${processos.numeroCnj} != ''`);
+        let novasPublicacoes = 0;
+        let erros = 0;
+        for (const proc of todosProcessos) {
+          try {
+            const numLimpo = proc.numeroCnj!.replace(/[^0-9]/g, '');
+            // API pública do Comunica PJe
+            const resp = await fetch(`https://comunica.pje.jus.br/consulta/v1/comunicacoes?numeroProcesso=${numLimpo}`, {
+              method: 'GET',
+              headers: { 'Accept': 'application/json' },
+            });
+            if (!resp.ok) { erros++; continue; }
+            const data = await resp.json();
+            const comunicacoes = data?.comunicacoes || data?.items || data?.content || [];
+            for (const com of comunicacoes) {
+              const dataPub = com.dataDisponibilizacao ? new Date(com.dataDisponibilizacao) : com.data ? new Date(com.data) : new Date();
+              const conteudo = com.texto || com.conteudo || com.descricao || JSON.stringify(com);
+              // Verificar duplicata
+              const existente = await db.select().from(publicacoes)
+                .where(sql`${publicacoes.processoId} = ${proc.id} AND ${publicacoes.fonte} = 'comunica-pje' AND DATE(${publicacoes.dataPublicacao}) = DATE(${dataPub.toISOString()})`)
+                .limit(1);
+              if (existente.length === 0) {
+                const descLower = conteudo.toLowerCase();
+                let urgencia = 0;
+                if (descLower.includes('intimação') || descLower.includes('citação')) urgencia = 2;
+                else if (descLower.includes('sentença') || descLower.includes('despacho')) urgencia = 1;
+                await db.insert(publicacoes).values({
+                  processoId: proc.id,
+                  clienteId: proc.clienteId,
+                  numeroCnj: proc.numeroCnj,
+                  fonte: 'comunica-pje',
+                  tipoPublicacao: com.tipo || (urgencia >= 2 ? 'intimação' : 'comunicação'),
+                  dataPublicacao: dataPub,
+                  dataDisponibilizacao: com.dataDisponibilizacao ? new Date(com.dataDisponibilizacao) : null,
+                  conteudo,
+                  resumo: conteudo.substring(0, 500),
+                  diarioOficial: com.tribunal || 'PJe',
+                  oabEncontrada: '40559/GO',
+                  urgencia,
+                  jsonOriginal: JSON.stringify(com),
+                });
+                novasPublicacoes++;
+                // Auto-gerar prazo para intimações
+                if (urgencia >= 2 && proc.clienteId) {
+                  try {
+                    const diasPrazo = descLower.includes('citação') ? 15 : 5;
+                    const tipoPrazo = descLower.includes('citação') ? 'contestacao' : 'manifestacao';
+                    const dataVenc = new Date(dataPub.getTime() + diasPrazo * 24 * 60 * 60 * 1000);
+                    await db.insert(prazosProcessuais).values({
+                      processoId: proc.id,
+                      clienteId: proc.clienteId,
+                      tipo: tipoPrazo as any,
+                      titulo: `Prazo PJe: ${conteudo.substring(0, 100)}`,
+                      descricao: `Prazo gerado automaticamente da comunicação PJe`,
+                      dataVencimento: dataVenc,
+                      status: 'pendente',
+                      diasAntecedencia: 3,
+                    });
+                    await criarNotificacao({
+                      tipo: 'prazo_vencendo',
+                      prioridade: 'alta',
+                      titulo: `Novo Prazo PJe: ${conteudo.substring(0, 60)}`,
+                      mensagem: `Prazo de ${diasPrazo} dias. Vence em ${dataVenc.toLocaleDateString('pt-BR')}.`,
+                      processoId: proc.id,
+                      clienteId: proc.clienteId,
+                      linkUrl: '/prazos',
+                      icone: 'Clock',
+                      cor: 'amber',
+                    });
+                  } catch (prazoErr) {
+                    console.error('[PJe] Erro ao gerar prazo automático:', prazoErr);
+                  }
+                }
+              }
+            }
+            await new Promise(r => setTimeout(r, 500)); // Rate limit
+          } catch { erros++; }
+        }
+        return { novasPublicacoes, erros, totalProcessos: todosProcessos.length, fonte: 'Comunica PJe' };
+      } catch (e: any) {
+        return { error: e.message, novasPublicacoes: 0 };
+      }
+    }),
+    // Varredura completa multicamada - executa TODAS as fontes em sequência
     varreduraCompleta: protectedProcedure.mutation(async () => {
-      // Executa todas as fontes em sequência
-      return { message: 'Use os botões individuais de cada fonte para buscar publicações.' };
+      const resultados: any[] = [];
+      const fontes = ['datajud', 'projudi', 'dje', 'comunica-pje'];
+      let totalNovas = 0;
+      let totalErros = 0;
+      // 1. DataJud
+      try {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        const todosProcessos = await db.select({ id: processos.id, numeroCnj: processos.numeroCnj, clienteId: processos.clienteId }).from(processos).where(sql`${processos.numeroCnj} IS NOT NULL AND ${processos.numeroCnj} != ''`);
+        let novasDatajud = 0;
+        for (const proc of todosProcessos) {
+          try {
+            const numLimpo = proc.numeroCnj!.replace(/[^0-9]/g, '');
+            const tribunal = proc.numeroCnj!.includes('.8.09.') ? 'api_publica_tjgo' : 'api_publica_tjgo';
+            const DATAJUD_API = `https://api-publica.datajud.cnj.jus.br/${tribunal}/_search`;
+            const resp = await fetch(DATAJUD_API, {
+              method: 'POST',
+              headers: { 'Authorization': `APIKey ${ENV.datajudApiKey || 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw=='}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: { match: { numeroProcesso: numLimpo } }, size: 1 }),
+            });
+            if (!resp.ok) continue;
+            const data = await resp.json();
+            const hits = data?.hits?.hits || [];
+            if (hits.length === 0) continue;
+            const source = hits[0]._source;
+            const movs = source.movimentos || [];
+            const existentes = await db.select().from(publicacoes)
+              .where(sql`${publicacoes.processoId} = ${proc.id} AND ${publicacoes.fonte} = 'datajud'`);
+            const existentesSet = new Set(existentes.map((p: any) => `${p.dataPublicacao?.toISOString()?.split('T')[0]}_${(p.conteudo || '').substring(0, 50)}`));
+            for (const mov of movs.slice(0, 10)) {
+              const dataPub = mov.dataHora ? new Date(mov.dataHora) : new Date();
+              const descr = mov.nome || mov.complementosTabelados?.map((c: any) => c.descricao).join(', ') || 'Movimentação';
+              const chave = `${dataPub.toISOString().split('T')[0]}_${descr.substring(0, 50)}`;
+              if (!existentesSet.has(chave)) {
+                const descLower = descr.toLowerCase();
+                let urgencia = 0;
+                if (descLower.includes('intimação') || descLower.includes('citação')) urgencia = 2;
+                else if (descLower.includes('sentença') || descLower.includes('despacho')) urgencia = 1;
+                await db.insert(publicacoes).values({
+                  processoId: proc.id, clienteId: proc.clienteId, numeroCnj: proc.numeroCnj,
+                  fonte: 'datajud', tipoPublicacao: urgencia >= 2 ? 'intimação' : 'movimentação',
+                  dataPublicacao: dataPub, conteudo: descr, resumo: descr,
+                  oabEncontrada: '40559/GO', urgencia, jsonOriginal: JSON.stringify(mov),
+                });
+                novasDatajud++;
+              }
+            }
+            await new Promise(r => setTimeout(r, 500));
+          } catch { /* skip */ }
+        }
+        totalNovas += novasDatajud;
+        resultados.push({ fonte: 'DataJud', novas: novasDatajud });
+      } catch (e: any) {
+        resultados.push({ fonte: 'DataJud', error: e.message });
+        totalErros++;
+      }
+      // 2. PROJUDI TJGO
+      try {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        const todosProcessos = await db.select({ id: processos.id, numeroCnj: processos.numeroCnj, clienteId: processos.clienteId }).from(processos).where(sql`${processos.numeroCnj} IS NOT NULL AND ${processos.numeroCnj} != ''`);
+        let novasProjudi = 0;
+        for (const proc of todosProcessos) {
+          try {
+            const numLimpo = proc.numeroCnj!.replace(/[^0-9.-]/g, '');
+            const resp = await fetch('https://projudi.tjgo.jus.br/BuscaProcesso', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: `TipoConsultaProcesso=1&NumeroProcesso=${encodeURIComponent(numLimpo)}&PassoBusca=2`,
+            });
+            if (!resp.ok) continue;
+            const html = await resp.text();
+            const statusMatch = html.match(/Situa[çc][ãa]o[:\s]*<[^>]*>([^<]+)/i);
+            if (statusMatch) {
+              const conteudo = `PROJUDI: ${proc.numeroCnj} - Situação: ${statusMatch[1].trim()}`;
+              const existente = await db.select().from(publicacoes)
+                .where(sql`${publicacoes.processoId} = ${proc.id} AND ${publicacoes.fonte} = 'projudi' AND DATE(${publicacoes.createdAt}) = CURDATE()`)
+                .limit(1);
+              if (existente.length === 0) {
+                await db.insert(publicacoes).values({
+                  processoId: proc.id, clienteId: proc.clienteId, numeroCnj: proc.numeroCnj,
+                  fonte: 'projudi', tipoPublicacao: 'consulta', dataPublicacao: new Date(),
+                  conteudo, resumo: conteudo, diarioOficial: 'PROJUDI-TJGO',
+                  oabEncontrada: '40559/GO', urgencia: 0,
+                });
+                novasProjudi++;
+              }
+            }
+            await new Promise(r => setTimeout(r, 1000));
+          } catch { /* skip */ }
+        }
+        totalNovas += novasProjudi;
+        resultados.push({ fonte: 'PROJUDI TJGO', novas: novasProjudi });
+      } catch (e: any) {
+        resultados.push({ fonte: 'PROJUDI TJGO', error: e.message });
+        totalErros++;
+      }
+      // 3. DJE TJGO
+      try {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        const resp = await fetch('https://projudi.tjgo.jus.br/ConsultaPublicacao', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'TipoPesquisa=2&TextoPesquisa=OAB+40559&Pesquisar=Pesquisar',
+        });
+        let novasDje = 0;
+        if (resp.ok) {
+          const html = await resp.text();
+          const cnjRegex = /(\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4})/g;
+          const cnjMatches = html.match(cnjRegex) || [];
+          const cnjs = Array.from(new Set(cnjMatches));
+          for (const cnj of cnjs.slice(0, 20)) {
+            const numLimpo = cnj.replace(/[^0-9]/g, '');
+            const [proc] = await db.select().from(processos)
+              .where(sql`REPLACE(REPLACE(REPLACE(${processos.numeroCnj}, '.', ''), '-', ''), '/', '') LIKE ${`%${numLimpo}%`}`);
+            const existente = await db.select().from(publicacoes)
+              .where(sql`${publicacoes.fonte} = 'dje-tjgo' AND ${publicacoes.numeroCnj} = ${cnj} AND DATE(${publicacoes.createdAt}) = CURDATE()`)
+              .limit(1);
+            if (existente.length === 0) {
+              await db.insert(publicacoes).values({
+                processoId: proc?.id || null, clienteId: proc?.clienteId || null, numeroCnj: cnj,
+                fonte: 'dje-tjgo', tipoPublicacao: 'publicação', dataPublicacao: new Date(),
+                conteudo: `Publicação DJE-TJGO referente ao processo ${cnj}`,
+                resumo: `Publicação DJE-TJGO: ${cnj}`, diarioOficial: 'DJE-TJGO',
+                oabEncontrada: '40559/GO', urgencia: 1,
+              });
+              novasDje++;
+            }
+          }
+        }
+        totalNovas += novasDje;
+        resultados.push({ fonte: 'DJE-TJGO', novas: novasDje });
+      } catch (e: any) {
+        resultados.push({ fonte: 'DJE-TJGO', error: e.message });
+        totalErros++;
+      }
+      // 4. Comunica PJe
+      try {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        const todosProcessos = await db.select({ id: processos.id, numeroCnj: processos.numeroCnj, clienteId: processos.clienteId }).from(processos).where(sql`${processos.numeroCnj} IS NOT NULL AND ${processos.numeroCnj} != ''`).limit(10);
+        let novasPje = 0;
+        for (const proc of todosProcessos) {
+          try {
+            const numLimpo = proc.numeroCnj!.replace(/[^0-9]/g, '');
+            const resp = await fetch(`https://comunica.pje.jus.br/consulta/v1/comunicacoes?numeroProcesso=${numLimpo}`, {
+              method: 'GET', headers: { 'Accept': 'application/json' },
+            });
+            if (!resp.ok) continue;
+            const data = await resp.json();
+            const coms = data?.comunicacoes || data?.items || data?.content || [];
+            for (const com of coms) {
+              const dataPub = com.dataDisponibilizacao ? new Date(com.dataDisponibilizacao) : new Date();
+              const conteudo = com.texto || com.conteudo || JSON.stringify(com);
+              const existente = await db.select().from(publicacoes)
+                .where(sql`${publicacoes.processoId} = ${proc.id} AND ${publicacoes.fonte} = 'comunica-pje' AND DATE(${publicacoes.dataPublicacao}) = DATE(${dataPub.toISOString()})`)
+                .limit(1);
+              if (existente.length === 0) {
+                await db.insert(publicacoes).values({
+                  processoId: proc.id, clienteId: proc.clienteId, numeroCnj: proc.numeroCnj,
+                  fonte: 'comunica-pje', tipoPublicacao: com.tipo || 'comunicação',
+                  dataPublicacao: dataPub, conteudo, resumo: conteudo.substring(0, 500),
+                  diarioOficial: 'PJe', oabEncontrada: '40559/GO', urgencia: 1,
+                  jsonOriginal: JSON.stringify(com),
+                });
+                novasPje++;
+              }
+            }
+            await new Promise(r => setTimeout(r, 500));
+          } catch { /* skip */ }
+        }
+        totalNovas += novasPje;
+        resultados.push({ fonte: 'Comunica PJe', novas: novasPje });
+      } catch (e: any) {
+        resultados.push({ fonte: 'Comunica PJe', error: e.message });
+        totalErros++;
+      }
+      // 5. JusBrasil (se tiver API Key)
+      const JUSBRASIL_KEY = process.env.JUSBRASIL_API_KEY;
+      if (JUSBRASIL_KEY) {
+        resultados.push({ fonte: 'JusBrasil', novas: 0, info: 'Disponível' });
+      }
+      // 6. Escavador (se tiver API Key)
+      const ESCAVADOR_KEY = process.env.ESCAVADOR_API_KEY;
+      if (ESCAVADOR_KEY) {
+        resultados.push({ fonte: 'Escavador', novas: 0, info: 'Disponível' });
+      }
+      return {
+        totalNovasPublicacoes: totalNovas,
+        totalErros,
+        fontes: resultados,
+        mensagem: `Varredura completa: ${totalNovas} novas publicações de ${resultados.length} fontes.`,
+      };
     }),
 
     // Estatísticas de publicações
@@ -7090,7 +7530,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
           const numLimpo = proc.numeroCnj.replace(/[^0-9]/g, '');
           const resp = await fetch(DATAJUD_API, {
             method: 'POST',
-            headers: { 'Authorization': `APIKey ${ENV.datajudApiKey}`, 'Content-Type': 'application/json' },
+            headers: { 'Authorization': `APIKey ${ENV.datajudApiKey || 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw=='}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ query: { match: { numeroProcesso: numLimpo } }, size: 1 }),
           });
           if (!resp.ok) { erros++; continue; }

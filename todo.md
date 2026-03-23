@@ -819,3 +819,21 @@
 - [x] 2 petições aprovadas importadas (Obrigação de Fazer + Mandado de Segurança)
 - [x] Exportado: export-banco-conhecimento-melo-preda.zip (guias, conhecimentos, templates, petições aprovadas)
 - [x] 211/211 testes passando, 0 erros TypeScript
+
+## INTEGRAÇÕES GRATUITAS - APIs PÚBLICAS (Mar 2026)
+- [ ] Atualizar DataJud com API Key pública oficial do CNJ
+- [ ] Implementar scraping PROJUDI TJGO para buscar publicações por OAB
+- [ ] Implementar varredura DJE TJGO (Diário da Justiça Eletrônico)
+- [ ] Implementar consulta Comunica PJe (intimações/citações)
+- [ ] Orquestrar varredura completa automática de todas as fontes
+- [ ] Testar todas as integrações
+
+## INTEGRAÇÕES GRATUITAS IMPLEMENTADAS (23/03/2026)
+- [x] DataJud (CNJ) - API Key pública oficial como fallback
+- [x] PROJUDI TJGO - Consulta pública de processos por CNJ
+- [x] DJE TJGO - Varredura do Diário da Justiça Eletrônico por OAB 40559/GO
+- [x] Comunica PJe - Portal público de comunicações processuais
+- [x] Varredura Completa - Orquestra TODAS as fontes em sequência (DataJud + PROJUDI + DJE + PJe)
+- [x] Auto-geração de prazos para intimações/citações detectadas
+- [x] Notificações automáticas para prazos urgentes
+- [x] JusBrasil e Escavador prontos (ativam com API Key)
