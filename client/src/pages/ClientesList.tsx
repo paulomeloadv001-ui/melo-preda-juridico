@@ -8,7 +8,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
-import { Search, User, ChevronRight, RefreshCw, Trash2, Upload, Download, Filter, ChevronLeft, FilePlus, Bot, Zap, Loader2 } from "lucide-react";
+import { Search, User, ChevronRight, RefreshCw, Trash2, Upload, Download, Filter, ChevronLeft, FilePlus, Bot, Zap, Loader2, Clock } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -205,6 +205,12 @@ export default function ClientesList() {
                           <span className="text-xs text-muted-foreground font-mono">{cli.cpfCnpj}</span>
                           {cli.orgaoEmpregador && (
                             <Badge variant="secondary" className="text-xs">{cli.orgaoEmpregador}</Badge>
+                          )}
+                          {cli.updatedAt && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {new Date(cli.updatedAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
                           )}
                           {cli.cidade && cli.estado && (
                             <span className="text-xs text-muted-foreground">{cli.cidade}/{cli.estado}</span>

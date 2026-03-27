@@ -1,0 +1,8 @@
+{
+  "query": "SELECT nomeCompleto, cpfCnpj, COUNT(*) as qtd, GROUP_CONCAT(id ORDER BY id) as ids \nFROM clientes \nGROUP BY nomeCompleto \nHAVING COUNT(*) > 1 \nORDER BY qtd DESC \nLIMIT 30;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT nomeCompleto, cpfCnpj, COUNT(*) as qtd, GROUP_CONCAT(id ORDER BY id) as ids \nFROM clientes \nGROUP BY nomeCompleto \nHAVING COUNT(*) > 1 \nORDER BY qtd DESC \nLIMIT 30;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1055 (42000) at line 1: Expression #2 of SELECT list is not in GROUP BY clause and contains nonaggregated column '4imSnKhwnzycXmSWcGeMqe.clientes.cpfCnpj' which is not functionally dependent on columns in GROUP BY clause; this is incompatible with sql_mode=only_full_group_by"
+  ]
+}

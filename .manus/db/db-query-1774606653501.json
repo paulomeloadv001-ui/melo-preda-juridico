@@ -1,0 +1,9 @@
+{
+  "query": "SELECT numeroCnj, COUNT(*) as qtd, GROUP_CONCAT(id ORDER BY id) as ids, GROUP_CONCAT(clienteId ORDER BY id) as clienteIds\nFROM processos \nGROUP BY numeroCnj \nHAVING COUNT(*) > 1 \nORDER BY qtd DESC \nLIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT numeroCnj, COUNT(*) as qtd, GROUP_CONCAT(id ORDER BY id) as ids, GROUP_CONCAT(clienteId ORDER BY id) as clienteIds\nFROM processos \nGROUP BY numeroCnj \nHAVING COUNT(*) > 1 \nORDER BY qtd DESC \nLIMIT 20;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 358
+}

@@ -13,7 +13,8 @@ import {
   BookOpen, Lightbulb, RefreshCw, Trash2, Upload, Link2, GitBranch, Banknote,
   Receipt, ArrowUpCircle, Clock, CheckCircle2, AlertCircle, Landmark, Edit,
   Plus, X, Save, Bot, FilePlus, User, MapPin, Phone, Mail, Briefcase, Building2,
-  Calendar, Hash, ChevronDown, ChevronRight, FileDown, Gavel, Activity
+  Calendar, Hash, ChevronDown, ChevronRight, FileDown, Gavel, Activity,
+  Loader2, Sparkles, Eye, FileCheck, Send
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -119,6 +120,55 @@ export default function ClientePerfil() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editStatus, setEditStatus] = useState('');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  // ===== PETIÇÃO INLINE: Estado para gerar petição direto na pasta =====
+  const [showPeticaoWizard, setShowPeticaoWizard] = useState(false);
+  const [peticaoTipo, setPeticaoTipo] = useState('');
+  const [peticaoProcessoId, setPeticaoProcessoId] = useState<number | undefined>();
+  const [peticaoInstrucoes, setPeticaoInstrucoes] = useState('');
+  const [peticaoGerando, setPeticaoGerando] = useState(false);
+  const [peticaoGerada, setPeticaoGerada] = useState<any>(null);
+
+  const { data: tiposPeticao } = trpc.agente.tiposPeticao.useQuery();
+  const gerarPeticaoInline = trpc.agente.gerarPeticao.useMutation({
+    onSuccess: (data) => {
+      setPeticaoGerada(data);
+      setPeticaoGerando(false);
+      refetchPeticoes();
+      toast.success(`Petição gerada! ${data.tipoPeticao}`);
+    },
+    onError: (err) => {
+      setPeticaoGerando(false);
+      toast.error(`Erro ao gerar: ${err.message}`);
+    },
+  });
+  const regenerarDocxInline = trpc.agente.regenerarDocx.useMutation({
+    onSuccess: (data) => {
+      refetchPeticoes();
+      if (data.docxUrl) window.open(data.docxUrl, '_blank');
+      toast.success('DOCX gerado! Download iniciado');
+    },
+    onError: (err) => toast.error(`Erro: ${err.message}`),
+  });
+
+  const handleGerarPeticaoInline = () => {
+    if (!peticaoTipo) { toast.error('Selecione o tipo de petição'); return; }
+    setPeticaoGerando(true);
+    gerarPeticaoInline.mutate({
+      tipoPeticao: peticaoTipo,
+      clienteId,
+      processoId: peticaoProcessoId,
+      instrucoes: peticaoInstrucoes || undefined,
+    });
+  };
+
+  const resetPeticaoWizard = () => {
+    setShowPeticaoWizard(false);
+    setPeticaoTipo('');
+    setPeticaoProcessoId(undefined);
+    setPeticaoInstrucoes('');
+    setPeticaoGerada(null);
+  };
   const [newMov, setNewMov] = useState({
     tipo: 'honorarios_sucumbenciais' as any,
     status: 'pendente' as any,
@@ -168,9 +218,6 @@ export default function ClientePerfil() {
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
-          </Button>
-          <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => setLocation(`/peticionamento?clienteId=${clienteId}`)}>
-            <FilePlus className="h-4 w-4 mr-1" /> Gerar Petição
           </Button>
           <Button size="sm" variant="outline" onClick={() => setLocation(`/agente?clienteId=${clienteId}`)}>
             <Bot className="h-4 w-4 mr-1" /> Agente IA
@@ -354,17 +401,132 @@ export default function ClientePerfil() {
         />
       </SectionHeader>
 
-      {/* ==================== 4. PETIÇÕES ==================== */}
-      <SectionHeader title="Petições Geradas" icon={<FilePlus className="h-4 w-4 text-amber-600" />} count={totalPeticoes}>
-        <div className="flex justify-end mb-3">
-          <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => setLocation(`/peticionamento?clienteId=${clienteId}`)}>
-            <Plus className="h-4 w-4 mr-1" /> Nova Petição
+      {/* ==================== 4. ANÁLISE + ESTRATÉGIA + PETIÇÃO (INTEGRADO) ==================== */}
+      <SectionHeader title="Análise Processual & Petições" icon={<Sparkles className="h-4 w-4 text-amber-600" />} count={totalPeticoes}>
+        {/* Botão para abrir wizard inline */}
+        <div className="flex justify-between items-center mb-4">
+          <p className="text-sm text-muted-foreground">Gere petições diretamente nesta pasta com base nos dados do cliente e processos.</p>
+          <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => setShowPeticaoWizard(!showPeticaoWizard)}>
+            {showPeticaoWizard ? <><X className="h-4 w-4 mr-1" /> Fechar</> : <><FilePlus className="h-4 w-4 mr-1" /> Gerar Petição</>}
           </Button>
         </div>
+
+        {/* ===== WIZARD INLINE DE PETIÇÃO ===== */}
+        {showPeticaoWizard && (
+          <div className="border-2 border-amber-200 rounded-lg p-4 mb-4 bg-amber-50/30 dark:bg-amber-950/10 space-y-4">
+            <h4 className="font-semibold text-sm flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-amber-600" /> Gerar Nova Petição para {cliente.nomeCompleto}
+            </h4>
+
+            {/* Resultado da petição gerada */}
+            {peticaoGerada ? (
+              <div className="space-y-3">
+                <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h5 className="font-semibold text-sm text-green-800 dark:text-green-200 flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4" /> Petição Gerada com Sucesso!
+                    </h5>
+                    <Badge variant="default" className="bg-green-600">{peticaoGerada.tipoPeticao}</Badge>
+                  </div>
+                  <p className="text-sm font-medium">{peticaoGerada.titulo || peticaoGerada.tipoPeticao}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Cliente: {peticaoGerada.cliente} | Processo: {peticaoGerada.processo || 'N/A'}</p>
+                  <div className="flex gap-2 mt-3">
+                    {peticaoGerada.docxUrl && (
+                      <Button size="sm" variant="outline" onClick={() => {
+                        const proxyUrl = `/api/v1/download-docx/${peticaoGerada.peticaoId}`;
+                        const filename = `${peticaoGerada.titulo || 'peticao'}.docx`.replace(/[^a-zA-Z0-9\u00C0-\u00FF\s._-]/g, '_');
+                        fetch(proxyUrl).then(r => r.blob()).then(blob => {
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url; a.download = filename;
+                          document.body.appendChild(a); a.click();
+                          document.body.removeChild(a); URL.revokeObjectURL(url);
+                        }).catch(() => window.open(peticaoGerada.docxUrl, '_blank'));
+                      }}>
+                        <FileDown className="h-4 w-4 mr-1" /> Baixar DOCX
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" onClick={() => regenerarDocxInline.mutate({ id: peticaoGerada.peticaoId })} disabled={regenerarDocxInline.isPending}>
+                      <RefreshCw className={`h-4 w-4 mr-1 ${regenerarDocxInline.isPending ? 'animate-spin' : ''}`} /> Regenerar DOCX
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={resetPeticaoWizard}>
+                      <Plus className="h-4 w-4 mr-1" /> Nova Petição
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Tipo de Petição */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Tipo de Petição</Label>
+                  <Select value={peticaoTipo} onValueChange={setPeticaoTipo}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o tipo de petição..." /></SelectTrigger>
+                    <SelectContent className="max-h-80">
+                      {tiposPeticao?.map((t: any) => (
+                        <SelectItem key={t.id} value={t.nome}>
+                          <span className="text-xs text-muted-foreground mr-1">[{t.categoria}]</span> {t.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Processo vinculado */}
+                {processosComDetalhes && processosComDetalhes.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Processo Vinculado</Label>
+                    <Select value={peticaoProcessoId?.toString() || ''} onValueChange={(v) => setPeticaoProcessoId(v ? Number(v) : undefined)}>
+                      <SelectTrigger><SelectValue placeholder="Selecione o processo (opcional)..." /></SelectTrigger>
+                      <SelectContent>
+                        {processosComDetalhes.map((p: any) => (
+                          <SelectItem key={p.id} value={p.id.toString()}>
+                            {p.numeroCnj} — {p.tipoAcao || 'Processo'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* Instruções adicionais */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Instruções Adicionais (opcional)</Label>
+                  <Textarea
+                    placeholder="Ex: Incluir jurisprudência do STJ sobre abusividade de consignações, enfatizar superendividamento..."
+                    value={peticaoInstrucoes}
+                    onChange={(e) => setPeticaoInstrucoes(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                {/* Botão de gerar */}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleGerarPeticaoInline}
+                    disabled={peticaoGerando || !peticaoTipo}
+                    className="bg-amber-600 hover:bg-amber-700"
+                  >
+                    {peticaoGerando ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Gerando Petição com IA...</>
+                    ) : (
+                      <><Sparkles className="h-4 w-4 mr-2" /> Gerar Petição</>
+                    )}
+                  </Button>
+                  <Button variant="outline" onClick={resetPeticaoWizard}>
+                    Cancelar
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ===== LISTA DE PETIÇÕES GERADAS ===== */}
         {!peticoesCliente || (peticoesCliente as any[]).length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">Nenhuma petição gerada</p>
+            <p className="text-sm">Nenhuma petição gerada. Use o botão acima para gerar.</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -384,14 +546,23 @@ export default function ClientePerfil() {
                   </div>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
-                  {pet.storageUrl && (
-                    <a href={pet.storageUrl} target="_blank" rel="noopener noreferrer">
-                      <Button variant="ghost" size="sm" title="Baixar"><Download className="h-4 w-4" /></Button>
-                    </a>
-                  )}
-                  <Button variant="ghost" size="sm" title="Exportar DOCX" disabled={exportarDocx.isPending}
-                    onClick={() => exportarDocx.mutate({ peticaoId: pet.id })}>
+                  <Button variant="ghost" size="sm" title="Baixar DOCX"
+                    onClick={() => {
+                      const proxyUrl = `/api/v1/download-docx/${pet.id}`;
+                      const filename = `${pet.titulo || 'peticao'}.docx`.replace(/[^a-zA-Z0-9\u00C0-\u00FF\s._-]/g, '_');
+                      fetch(proxyUrl).then(r => r.blob()).then(blob => {
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url; a.download = filename;
+                        document.body.appendChild(a); a.click();
+                        document.body.removeChild(a); URL.revokeObjectURL(url);
+                      }).catch(() => toast.error('Erro no download'));
+                    }}>
                     <FileDown className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" title="Regenerar DOCX" disabled={exportarDocx.isPending}
+                    onClick={() => exportarDocx.mutate({ peticaoId: pet.id })}>
+                    <RefreshCw className="h-4 w-4" />
                   </Button>
                 </div>
               </div>

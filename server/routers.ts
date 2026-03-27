@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -878,8 +879,23 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
-        // 1. Extract text from PDF
+        // 0. DETECÇÃO DE DUPLICADOS: Calcular hash SHA-256 do PDF
         const buffer = Buffer.from(input.fileBase64, "base64");
+        const fileHash = createHash('sha256').update(buffer).digest('hex');
+        
+        // Verificar se já existe documento com mesmo hash
+        const docExistente = await db.select().from(documentos).where(eq(documentos.fileHash, fileHash)).limit(1);
+        if (docExistente.length > 0) {
+          // Buscar nome do cliente para informar
+          const clienteDoc = await db.select().from(clientes).where(eq(clientes.id, docExistente[0].clienteId)).limit(1);
+          const nomeCliente = clienteDoc[0]?.nomeCompleto || 'Desconhecido';
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: `Este documento já existe no sistema! Arquivo: "${docExistente[0].nomeArquivo}" — Cliente: ${nomeCliente}. Upload rejeitado para evitar duplicidade.`,
+          });
+        }
+
+        // 1. Extract text from PDF
         const pdfParse = (await import("pdf-parse")) as any;
         let textoExtraido = "";
         try {
@@ -1335,7 +1351,7 @@ ${textoExtraido}`;
           }
         }
 
-        // 10. Insert document record
+        // 10. Insert document record (com hash para detecção de duplicados)
         await db.insert(documentos).values({
           processoId,
           clienteId,
@@ -1345,6 +1361,7 @@ ${textoExtraido}`;
           storageUrl: url,
           tamanho: input.fileSize,
           mimeType: "application/pdf",
+          fileHash,
         });
 
         // 11. Extract knowledge
@@ -1666,6 +1683,15 @@ ${textoExtraido}`;
         const { key, url } = await storagePut(pdfKey, buffer, "application/pdf");
 
         // 5. Insert document record
+        const contrachequeHash = createHash('sha256').update(buffer).digest('hex');
+        // Verificar duplicado de contracheque
+        const contrachequeExistente = await db.select().from(documentos).where(eq(documentos.fileHash, contrachequeHash)).limit(1);
+        if (contrachequeExistente.length > 0) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: `Este contracheque já existe no sistema! Arquivo: "${contrachequeExistente[0].nomeArquivo}". Upload rejeitado.`,
+          });
+        }
         await db.insert(documentos).values({
           clienteId,
           tipo: "Contracheque",
@@ -1674,6 +1700,7 @@ ${textoExtraido}`;
           storageUrl: url,
           tamanho: input.fileSize,
           mimeType: "application/pdf",
+          fileHash: contrachequeHash,
         });
 
         // 6. Insert/Update financial data with full calculations
@@ -6314,15 +6341,24 @@ ${pet.conteudoTexto || ''}
         const { url: docUrl } = await storagePut(key, buffer, input.tipoArquivo || 'application/pdf');
 
         // 2. Salvar referência no banco
+        const docHash = createHash('sha256').update(buffer).digest('hex');
+        const docDuplicado = await db.select().from(documentos).where(eq(documentos.fileHash, docHash)).limit(1);
+        if (docDuplicado.length > 0) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: `Este documento já existe no sistema! Arquivo: "${docDuplicado[0].nomeArquivo}". Upload rejeitado para evitar duplicidade.`,
+          });
+        }
         const [doc] = await db.insert(documentos).values({
           clienteId: input.clienteId,
-          processoId: 0, // Será atualizado após análise
+          processoId: 0,
           nomeArquivo: input.nomeArquivo,
           tipo: input.tipoArquivo || 'application/pdf',
           storageKey: key,
           storageUrl: docUrl,
           tamanho: buffer.length,
           mimeType: input.tipoArquivo || 'application/pdf',
+          fileHash: docHash,
         }).$returningId();
 
         // 3. Buscar dados do cliente para contexto
@@ -8937,8 +8973,23 @@ async function processarJobImportacaoPdf(jobId: number, inputData: any) {
   };
 
   try {
-    await updateProgress(10, 'Extraindo texto do PDF...');
+    // 0. DETECÇÃO DE DUPLICADOS POR HASH
     const pdfBuffer = Buffer.from(inputData.fileBase64, 'base64');
+    const fileHash = createHash('sha256').update(pdfBuffer).digest('hex');
+    const docExistente = await db.select().from(documentos).where(eq(documentos.fileHash, fileHash)).limit(1);
+    if (docExistente.length > 0) {
+      const clienteDoc = await db.select().from(clientes).where(eq(clientes.id, docExistente[0].clienteId)).limit(1);
+      const nomeCliente = clienteDoc[0]?.nomeCompleto || 'Desconhecido';
+      await db.update(jobs).set({
+        status: 'erro',
+        erroDetalhes: `Documento duplicado! Já existe como "${docExistente[0].nomeArquivo}" do cliente ${nomeCliente}. Upload rejeitado.`,
+        concluidoEm: new Date(),
+        progresso: 0,
+      }).where(eq(jobs.id, jobId));
+      return;
+    }
+
+    await updateProgress(10, 'Extraindo texto do PDF...');
     let textoExtraido = '';
     try {
       const pdfParse = (await import('pdf-parse') as any).default || (await import('pdf-parse'));
@@ -9486,6 +9537,7 @@ ${textoTruncado}`;
       storageUrl: pdfUrl,
       tamanho: inputData.fileSize,
       mimeType: 'application/pdf',
+      fileHash,
     });
 
     await updateProgress(88, 'Gerando conhecimentos jurídicos...');
@@ -9849,6 +9901,17 @@ ${textoExtraido.substring(0, 50000)}`;
 
     await updateProgress(60, 'Registrando documento...');
     // 5. Insert document record
+    const contrachequeHash = createHash('sha256').update(pdfBuffer).digest('hex');
+    const contrachequeExistente = await db.select().from(documentos).where(eq(documentos.fileHash, contrachequeHash)).limit(1);
+    if (contrachequeExistente.length > 0) {
+      await db.update(jobs).set({
+        status: 'erro',
+        erroDetalhes: `Contracheque duplicado! Já existe como "${contrachequeExistente[0].nomeArquivo}". Upload rejeitado.`,
+        concluidoEm: new Date(),
+        progresso: 0,
+      }).where(eq(jobs.id, jobId));
+      return;
+    }
     await db.insert(documentos).values({
       clienteId,
       tipo: 'Contracheque',
@@ -9857,6 +9920,7 @@ ${textoExtraido.substring(0, 50000)}`;
       storageUrl: pdfUrl,
       tamanho: inputData.fileSize,
       mimeType: 'application/pdf',
+      fileHash: contrachequeHash,
     });
 
     await updateProgress(70, 'Calculando margem consignável...');

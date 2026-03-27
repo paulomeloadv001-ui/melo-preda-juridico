@@ -1,0 +1,17 @@
+{
+  "query": "SELECT \n  (SELECT COUNT(*) FROM clientes) as clientes,\n  (SELECT COUNT(*) FROM processos) as processos,\n  (SELECT COUNT(*) FROM documentos) as documentos,\n  (SELECT COUNT(*) FROM conhecimentos) as conhecimentos,\n  (SELECT COUNT(*) FROM peticoes_geradas) as peticoes;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT \n  (SELECT COUNT(*) FROM clientes) as clientes,\n  (SELECT COUNT(*) FROM processos) as processos,\n  (SELECT COUNT(*) FROM documentos) as documentos,\n  (SELECT COUNT(*) FROM conhecimentos) as conhecimentos,\n  (SELECT COUNT(*) FROM peticoes_geradas) as peticoes;",
+  "rows": [
+    {
+      "clientes": "79",
+      "processos": "108",
+      "documentos": "50",
+      "conhecimentos": "416",
+      "peticoes": "26"
+    }
+  ],
+  "messages": [],
+  "stdout": "clientes\tprocessos\tdocumentos\tconhecimentos\tpeticoes\n79\t108\t50\t416\t26\n",
+  "stderr": "",
+  "execution_time_ms": 364
+}

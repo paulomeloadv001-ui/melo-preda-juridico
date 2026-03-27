@@ -115,6 +115,12 @@ function ProcessoUpload() {
         toast.success(`${fileItem.file.name} processado com sucesso`);
       } catch (error: any) {
         let friendlyError = error.message || "Erro desconhecido";
+        // Documento duplicado
+        if (friendlyError.includes("j\u00e1 existe no sistema") || friendlyError.includes("CONFLICT") || friendlyError.includes("duplicidade") || friendlyError.includes("duplicado")) {
+          setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "error", error: friendlyError } : f));
+          toast.error(`Documento duplicado: ${friendlyError}`, { duration: 8000 });
+          continue;
+        }
         if (friendlyError.includes("TIMEOUT") || friendlyError.includes("demorou mais") || friendlyError.includes("processando sua solicita")) {
           // Timeout - o processamento pode ter concluído em background
           friendlyError = "O processamento demorou mais que o esperado, mas pode ter sido concluído. Verifique a aba Clientes.";
@@ -416,6 +422,12 @@ function ContrachequeUpload() {
         toast.success(`Contracheque de ${result.clienteNome} processado com sucesso`);
       } catch (error: any) {
         let friendlyError = error.message || "Erro desconhecido";
+        // Documento duplicado
+        if (friendlyError.includes("j\u00e1 existe no sistema") || friendlyError.includes("CONFLICT") || friendlyError.includes("duplicidade") || friendlyError.includes("duplicado")) {
+          setFiles(prev => prev.map((f, idx) => idx === fileIndex ? { ...f, status: "error", error: friendlyError } : f));
+          toast.error(`Documento duplicado: ${friendlyError}`, { duration: 8000 });
+          continue;
+        }
         if (friendlyError.includes("grande demais") || friendlyError.includes("413")) {
           friendlyError = "Erro no envio. Tente novamente.";
         } else if (friendlyError.includes("identificar o CPF")) {

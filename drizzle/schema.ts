@@ -192,6 +192,7 @@ export const documentos = mysqlTable("documentos", {
   storageUrl: text("storageUrl"),
   tamanho: int("tamanho"),
   mimeType: varchar("mimeType", { length: 100 }),
+  fileHash: varchar("fileHash", { length: 64 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

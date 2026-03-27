@@ -1,0 +1,9 @@
+{
+  "query": "DELETE c1 FROM conhecimentos c1\nINNER JOIN conhecimentos c2\nON c1.titulo = c2.titulo \nAND ((c1.processoOrigemId = c2.processoOrigemId) OR (c1.processoOrigemId IS NULL AND c2.processoOrigemId IS NULL))\nAND c1.id > c2.id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute DELETE c1 FROM conhecimentos c1\nINNER JOIN conhecimentos c2\nON c1.titulo = c2.titulo \nAND ((c1.processoOrigemId = c2.processoOrigemId) OR (c1.processoOrigemId IS NULL AND c2.processoOrigemId IS NULL))\nAND c1.id > c2.id;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 377
+}

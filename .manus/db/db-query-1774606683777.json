@@ -1,0 +1,70 @@
+{
+  "query": "SELECT titulo, processoOrigemId, COUNT(*) as qtd, GROUP_CONCAT(id ORDER BY id) as ids\nFROM conhecimentos \nGROUP BY titulo, processoOrigemId \nHAVING COUNT(*) > 1 \nORDER BY qtd DESC \nLIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT titulo, processoOrigemId, COUNT(*) as qtd, GROUP_CONCAT(id ORDER BY id) as ids\nFROM conhecimentos \nGROUP BY titulo, processoOrigemId \nHAVING COUNT(*) > 1 \nORDER BY qtd DESC \nLIMIT 10;",
+  "rows": [
+    {
+      "titulo": "Legislação",
+      "processoOrigemId": "NULL",
+      "qtd": "20",
+      "ids": "300024,300025,300026,300027,300028,300029,300030,300031,300032,300033,300053,300054,300055,300056,300057,300058,300059,300060,300061,300062"
+    },
+    {
+      "titulo": "TJ-GO",
+      "processoOrigemId": "NULL",
+      "qtd": "6",
+      "ids": "300021,300022,300023,300050,300051,300052"
+    },
+    {
+      "titulo": "STJ",
+      "processoOrigemId": "NULL",
+      "qtd": "6",
+      "ids": "300018,300019,300020,300047,300048,300049"
+    },
+    {
+      "titulo": "GUIA DE ESTILO E REDAÇÃO — MELO & PREDA ADVOGADOS",
+      "processoOrigemId": "NULL",
+      "qtd": "3",
+      "ids": "300004,300005,300034"
+    },
+    {
+      "titulo": "TEMPLATE: Embargos de Declaração Infringentes",
+      "processoOrigemId": "NULL",
+      "qtd": "2",
+      "ids": "300013,300042"
+    },
+    {
+      "titulo": "ESTRATÉGIAS PROCESSUAIS AVANÇADAS — COMPILAÇÃO COMPLETA",
+      "processoOrigemId": "NULL",
+      "qtd": "2",
+      "ids": "300009,300038"
+    },
+    {
+      "titulo": "INSTRUÇÕES DETALHADAS PARA AGENTES DE IA — MELO & PREDA EXPERT",
+      "processoOrigemId": "NULL",
+      "qtd": "2",
+      "ids": "300007,300036"
+    },
+    {
+      "titulo": "TEMPLATE: Exceção de Pré-Executividade",
+      "processoOrigemId": "NULL",
+      "qtd": "2",
+      "ids": "300014,300043"
+    },
+    {
+      "titulo": "ESTRATÉGIAS PROCESSUAIS DETALHADAS POR CLIENTE — 26 ESTRATÉGIAS",
+      "processoOrigemId": "NULL",
+      "qtd": "2",
+      "ids": "300010,300039"
+    },
+    {
+      "titulo": "TEMPLATE: Cumprimento Provisório de Sentença",
+      "processoOrigemId": "NULL",
+      "qtd": "2",
+      "ids": "300011,300040"
+    }
+  ],
+  "messages": [],
+  "stdout": "titulo\tprocessoOrigemId\tqtd\tids\nLegislação\tNULL\t20\t300024,300025,300026,300027,300028,300029,300030,300031,300032,300033,300053,300054,300055,300056,300057,300058,300059,300060,300061,300062\nTJ-GO\tNULL\t6\t300021,300022,300023,300050,300051,300052\nSTJ\tNULL\t6\t300018,300019,300020,300047,300048,300049\nGUIA DE ESTILO E REDAÇÃO — MELO & PREDA ADVOGADOS\tNULL\t3\t300004,300005,300034\nTEMPLATE: Embargos de Declaração Infringentes\tNULL\t2\t300013,300042\nESTRATÉGIAS PROCESSUAIS AVANÇADAS — COMPILAÇÃO COMPLETA\tNULL\t2\t300009,300038\nINSTRUÇÕES DETALHADAS PARA AGENTES DE IA — MELO & PREDA EXPERT\tNULL\t2\t300007,300036\nTEMPLATE: Exceção de Pré-Executividade\tNULL\t2\t300014,300043\nESTRATÉGIAS PROCESSUAIS DETALHADAS POR CLIENTE — 26 ESTRATÉGIAS\tNULL\t2\t300010,300039\nTEMPLATE: Cumprimento Provisório de Sentença\tNULL\t2\t300011,300040\n",
+  "stderr": "",
+  "execution_time_ms": 360
+}

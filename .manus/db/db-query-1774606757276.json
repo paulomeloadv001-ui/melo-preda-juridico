@@ -1,0 +1,9 @@
+{
+  "query": "SELECT titulo, processoOrigemId, COUNT(*) as qtd\nFROM conhecimentos \nGROUP BY titulo, processoOrigemId \nHAVING COUNT(*) > 1 \nORDER BY qtd DESC \nLIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT titulo, processoOrigemId, COUNT(*) as qtd\nFROM conhecimentos \nGROUP BY titulo, processoOrigemId \nHAVING COUNT(*) > 1 \nORDER BY qtd DESC \nLIMIT 5;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 354
+}

@@ -1,0 +1,70 @@
+{
+  "query": "SELECT nomeArquivo, clienteId, COUNT(*) as qtd, GROUP_CONCAT(id ORDER BY id) as ids\nFROM documentos \nGROUP BY nomeArquivo, clienteId \nHAVING COUNT(*) > 1 \nORDER BY qtd DESC \nLIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT nomeArquivo, clienteId, COUNT(*) as qtd, GROUP_CONCAT(id ORDER BY id) as ids\nFROM documentos \nGROUP BY nomeArquivo, clienteId \nHAVING COUNT(*) > 1 \nORDER BY qtd DESC \nLIMIT 20;",
+  "rows": [
+    {
+      "nomeArquivo": "test.pdf",
+      "clienteId": "1",
+      "qtd": "82",
+      "ids": "30004,30005,30006,30007,60005,60006,60012,90001,90002,90003,90004,90006,90007,90008,90009,90010,120001,150001,150002,150003,150004,150005,150006,150007,180001,180002,180005,180006,180007,180008,240001,240002,240003,270001,300001,300002,300003,330016,330017,330018,330019,330024,330025,330027,330028,330029,360007,360009,360010,480001,480002,510001,570001,600002,630002,630003,630004,630006,630007,630008,630010,630011,630013,630014,630015,630016,630018,630019,630020,660001,660002,660003,660004,690002,690003,690004,690005,750001,780001,810001,840001,840002"
+    },
+    {
+      "nomeArquivo": "inicial obrigação de fazer ariel.pdf",
+      "clienteId": "2",
+      "qtd": "2",
+      "ids": "2,19"
+    },
+    {
+      "nomeArquivo": "processo completo osmair.pdf",
+      "clienteId": "4",
+      "qtd": "2",
+      "ids": "4,13"
+    },
+    {
+      "nomeArquivo": "processo arquivado bradesco ana teonila.pdf",
+      "clienteId": "8",
+      "qtd": "2",
+      "ids": "8,15"
+    },
+    {
+      "nomeArquivo": "processo irene - cumprimento provisorio.pdf",
+      "clienteId": "9",
+      "qtd": "2",
+      "ids": "9,14"
+    },
+    {
+      "nomeArquivo": "Íntegra - Processo MAURICIO BERNARDES JUNIOR.pdf",
+      "clienteId": "300001",
+      "qtd": "2",
+      "ids": "720001,720002"
+    },
+    {
+      "nomeArquivo": "ALBERTO MANOEL DA COSTA - 5071305-59.pdf",
+      "clienteId": "90004",
+      "qtd": "2",
+      "ids": "60004,330007"
+    },
+    {
+      "nomeArquivo": "processo fabiana.pdf",
+      "clienteId": "150055",
+      "qtd": "2",
+      "ids": "180003,180004"
+    },
+    {
+      "nomeArquivo": "CACILDA BEATRIZ DA SILVA MACHADO - 5122094-74.pdf",
+      "clienteId": "150011",
+      "qtd": "2",
+      "ids": "210001,330008"
+    },
+    {
+      "nomeArquivo": "cumprimento de sentença helio.pdf",
+      "clienteId": "150016",
+      "qtd": "2",
+      "ids": "330001,420002"
+    }
+  ],
+  "messages": [],
+  "stdout": "nomeArquivo\tclienteId\tqtd\tids\ntest.pdf\t1\t82\t30004,30005,30006,30007,60005,60006,60012,90001,90002,90003,90004,90006,90007,90008,90009,90010,120001,150001,150002,150003,150004,150005,150006,150007,180001,180002,180005,180006,180007,180008,240001,240002,240003,270001,300001,300002,300003,330016,330017,330018,330019,330024,330025,330027,330028,330029,360007,360009,360010,480001,480002,510001,570001,600002,630002,630003,630004,630006,630007,630008,630010,630011,630013,630014,630015,630016,630018,630019,630020,660001,660002,660003,660004,690002,690003,690004,690005,750001,780001,810001,840001,840002\ninicial obrigação de fazer ariel.pdf\t2\t2\t2,19\nprocesso completo osmair.pdf\t4\t2\t4,13\nprocesso arquivado bradesco ana teonila.pdf\t8\t2\t8,15\nprocesso irene - cumprimento provisorio.pdf\t9\t2\t9,14\nÍntegra - Processo MAURICIO BERNARDES JUNIOR.pdf\t300001\t2\t720001,720002\nALBERTO MANOEL DA COSTA - 5071305-59.pdf\t90004\t2\t60004,330007\nprocesso fabiana.pdf\t150055\t2\t180003,180004\nCACILDA BEATRIZ DA SILVA MACHADO - 5122094-74.pdf\t150011\t2\t210001,330008\ncumprimento de sentença helio.pdf\t150016\t2\t330001,420002\n",
+  "stderr": "",
+  "execution_time_ms": 351
+}

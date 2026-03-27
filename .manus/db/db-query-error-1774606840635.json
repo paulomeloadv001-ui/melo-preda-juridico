@@ -1,0 +1,8 @@
+{
+  "query": "ALTER TABLE `documentos` ADD `fileHash` varchar(64);\nALTER TABLE `user_profiles` ADD `especialidade` varchar(255);\nALTER TABLE `user_profiles` ADD `fotoUrl` text;\nALTER TABLE `user_profiles` ADD `bio` text;\nALTER TABLE `users` ADD `profileCompleted` int DEFAULT 0 NOT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute ALTER TABLE `documentos` ADD `fileHash` varchar(64);\nALTER TABLE `user_profiles` ADD `especialidade` varchar(255);\nALTER TABLE `user_profiles` ADD `fotoUrl` text;\nALTER TABLE `user_profiles` ADD `bio` text;\nALTER TABLE `users` ADD `profileCompleted` int DEFAULT 0 NOT NULL;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1060 (42S21) at line 2: Duplicate column name 'especialidade'"
+  ]
+}

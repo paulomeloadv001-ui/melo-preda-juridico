@@ -851,3 +851,34 @@
 - [x] Verificar 17 páginas retornam HTTP 200
 - [x] Verificar banco: 80 clientes, 107 processos, 456 conhecimentos, 24 petições, 393 prazos
 - [x] Testar 211/211 testes passando
+
+## BUG: FLUXO DE UPLOAD NÃO FUNCIONA (27/03/2026)
+- [x] Investigar logs do servidor e console para identificar erros no upload
+- [x] Testar fluxo completo: upload PDF → extração IA → inserção no banco → cliente criado
+- [x] Corrigir todos os bugs encontrados no fluxo de upload
+- [x] Validar fluxo corrigido com teste real
+
+## CORREÇÃO COMPLETA DO FLUXO DE UPLOAD (27/03/2026)
+- [x] Upload inteligente: detectar se cliente já existe e vincular ao existente (não duplicar)
+- [x] Upload = processo completo (não existe complementar)
+- [x] Após upload + análise IA: redirecionar automaticamente para pasta do cliente
+- [x] Lista de clientes ordenada por última modificação/visualização (cronológica)
+- [x] Fluxo completo: Upload → IA analisa → extrai dados → vincula cliente/processo → redireciona pasta
+- [x] Atualizar timestamp do cliente ao receber nova movimentação
+- [x] Integrar análise processual + estratégia + petição DENTRO da pasta do cliente (sem aba separada)
+- [x] Cada petição gerada dentro da pasta do cliente com dados do histórico do processo
+- [x] Upload redireciona automaticamente para pasta do cliente após conclusão
+- [x] Lista de clientes ordenada por última modificação (cronológica descendente)
+
+## REESTRUTURAÇÃO COMPLETA DO FLUXO (27/03/2026)
+- [x] Limpar TODOS os dados duplicados do banco (documentos, conhecimentos, cliente MP)
+- [x] Implementar hash SHA-256 do PDF para detecção de documento duplicado
+- [x] Adicionar coluna fileHash na tabela documentos para armazenar hash
+- [x] No upload: verificar hash antes de processar, rejeitar se já existe e informar o usuário
+- [x] Upload = processo completo, não existe complementar
+- [x] Vincular ao cliente existente por CPF/nome, ou criar novo
+- [x] Retornar clienteId após upload para redirecionamento
+- [x] Pasta do cliente: integrar análise processual + estratégia + petição (sem aba separada)
+- [x] Lista de clientes ordenada por última modificação
+- [x] Redirecionamento automático para pasta do cliente após upload
+- [x] 211/211 testes passando, 0 erros TypeScript
