@@ -882,3 +882,14 @@
 - [x] Lista de clientes ordenada por última modificação
 - [x] Redirecionamento automático para pasta do cliente após upload
 - [x] 211/211 testes passando, 0 erros TypeScript
+
+## TESTE E CORREÇÃO COMPLETA + NOVAS FEATURES (27/03/2026)
+- [x] Testar upload de processo real via API autenticada (JWT + tRPC)
+- [x] Testar redirecionamento automático para pasta do cliente após upload
+- [x] Testar geração de petição inline na pasta do cliente (23 tipos disponíveis)
+- [x] Testar detecção de duplicados (hash SHA-256 → Status 409 CONFLICT)
+- [x] Implementar preview da petição (Markdown renderizado com Streamdown)
+- [x] Implementar refinamento inline (enviar instruções ao agente para melhorar petição)
+- [x] Implementar histórico de versões (visualizar, restaurar, baixar DOCX de cada versão)
+- [x] Corrigir teste contracheque (hash único por execução)
+- [x] 211/211 testes passando, 0 erros TypeScript, servidor OK

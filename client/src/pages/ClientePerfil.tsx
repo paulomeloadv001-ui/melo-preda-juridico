@@ -14,14 +14,15 @@ import {
   Receipt, ArrowUpCircle, Clock, CheckCircle2, AlertCircle, Landmark, Edit,
   Plus, X, Save, Bot, FilePlus, User, MapPin, Phone, Mail, Briefcase, Building2,
   Calendar, Hash, ChevronDown, ChevronRight, FileDown, Gavel, Activity,
-  Loader2, Sparkles, Eye, FileCheck, Send
+  Loader2, Sparkles, Eye, FileCheck, Send, History, RotateCcw, MessageSquare, ChevronUp
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { Streamdown } from "streamdown";
 import { Progress } from "@/components/ui/progress";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
@@ -150,6 +151,54 @@ export default function ClientePerfil() {
     },
     onError: (err) => toast.error(`Erro: ${err.message}`),
   });
+
+  // ===== PREVIEW E HISTÓRICO DE VERSÕES =====
+  const [expandedPeticaoId, setExpandedPeticaoId] = useState<number | null>(null);
+  const [previewContent, setPreviewContent] = useState<string | null>(null);
+  const [showVersions, setShowVersions] = useState<number | null>(null);
+  const [refineInstrucoes, setRefineInstrucoes] = useState('');
+  const [refiningPeticaoId, setRefiningPeticaoId] = useState<number | null>(null);
+
+  const versionsQuery = trpc.agente.listarVersoes.useQuery(
+    { peticaoId: showVersions! },
+    { enabled: !!showVersions }
+  );
+
+  const refinarPeticao = trpc.agente.refinarPeticao.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Petição refinada! Versão ${data.versao} — ${data.diff?.adicionados || 0} parágrafos adicionados, ${data.diff?.removidos || 0} removidos`);
+      setRefiningPeticaoId(null);
+      setRefineInstrucoes('');
+      refetchPeticoes();
+      if (showVersions) versionsQuery.refetch();
+      // Atualizar preview com conteúdo refinado
+      setPreviewContent(data.conteudoRefinado);
+    },
+    onError: (err) => {
+      toast.error(`Erro ao refinar: ${err.message}`);
+      setRefiningPeticaoId(null);
+    },
+  });
+
+  const restaurarVersao = trpc.agente.restaurarVersao.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Versão ${data.versaoRestaurada} restaurada com sucesso!`);
+      refetchPeticoes();
+      if (showVersions) versionsQuery.refetch();
+    },
+    onError: (err) => toast.error(`Erro: ${err.message}`),
+  });
+
+  const togglePreview = useCallback((pet: any) => {
+    if (expandedPeticaoId === pet.id) {
+      setExpandedPeticaoId(null);
+      setPreviewContent(null);
+      setShowVersions(null);
+    } else {
+      setExpandedPeticaoId(pet.id);
+      setPreviewContent(pet.conteudoTexto || null);
+    }
+  }, [expandedPeticaoId]);
 
   const handleGerarPeticaoInline = () => {
     if (!peticaoTipo) { toast.error('Selecione o tipo de petição'); return; }
@@ -522,51 +571,166 @@ export default function ClientePerfil() {
           </div>
         )}
 
-        {/* ===== LISTA DE PETIÇÕES GERADAS ===== */}
+        {/* ===== LISTA DE PETIÇÕES COM PREVIEW E HISTÓRICO ===== */}
         {!peticoesCliente || (peticoesCliente as any[]).length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
             <p className="text-sm">Nenhuma petição gerada. Use o botão acima para gerar.</p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {(peticoesCliente as any[]).map((pet: any) => (
-              <div key={pet.id} className="flex items-center justify-between border rounded-lg p-3 hover:bg-accent/50 transition-colors">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <FileText className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{pet.titulo}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <Badge variant="outline" className="text-[10px]">{pet.tipo}</Badge>
-                      <Badge variant={pet.status === 'finalizada' ? 'default' : 'secondary'} className="text-[10px]">{pet.status}</Badge>
-                      <span className="text-[10px] text-muted-foreground">
-                        {new Date(pet.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </span>
+          <div className="space-y-3">
+            {(peticoesCliente as any[]).map((pet: any) => {
+              const isExpanded = expandedPeticaoId === pet.id;
+              return (
+                <div key={pet.id} className={`border rounded-lg overflow-hidden ${isExpanded ? 'border-amber-300 dark:border-amber-700' : ''}`}>
+                  {/* Header da petição */}
+                  <div className="flex items-center justify-between p-3 hover:bg-accent/50 cursor-pointer" onClick={() => togglePreview(pet)}>
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {isExpanded ? <ChevronUp className="h-4 w-4 text-amber-600 flex-shrink-0" /> : <ChevronRight className="h-4 w-4 text-amber-600 flex-shrink-0" />}
+                      <FileText className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{pet.titulo}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Badge variant="outline" className="text-[10px]">{pet.tipo}</Badge>
+                          <Badge variant={pet.status === 'finalizada' ? 'default' : 'secondary'} className="text-[10px]">{pet.status}</Badge>
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Date(pet.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <Button variant="ghost" size="sm" title="Preview" onClick={() => togglePreview(pet)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" title="Baixar DOCX"
+                        onClick={() => {
+                          const proxyUrl = `/api/v1/download-docx/${pet.id}`;
+                          const filename = `${pet.titulo || 'peticao'}.docx`.replace(/[^a-zA-Z0-9\u00C0-\u00FF\s._-]/g, '_');
+                          fetch(proxyUrl).then(r => r.blob()).then(blob => {
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url; a.download = filename;
+                            document.body.appendChild(a); a.click();
+                            document.body.removeChild(a); URL.revokeObjectURL(url);
+                          }).catch(() => toast.error('Erro no download'));
+                        }}>
+                        <FileDown className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" title="Regenerar DOCX" disabled={exportarDocx.isPending}
+                        onClick={() => exportarDocx.mutate({ peticaoId: pet.id })}>
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" title="Histórico de Versões"
+                        onClick={() => setShowVersions(showVersions === pet.id ? null : pet.id)}>
+                        <History className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
+
+                  {/* Preview expandido */}
+                  {isExpanded && (
+                    <div className="border-t">
+                      {/* Conteúdo da petição */}
+                      <div className="p-4 max-h-[500px] overflow-y-auto bg-white dark:bg-gray-950">
+                        {previewContent ? (
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <Streamdown>{previewContent}</Streamdown>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic">Conteúdo não disponível. Regenere a petição para visualizar.</p>
+                        )}
+                      </div>
+
+                      {/* Barra de refinamento */}
+                      <div className="border-t p-3 bg-accent/20">
+                        <p className="text-xs font-medium mb-2 flex items-center gap-1">
+                          <MessageSquare className="h-3 w-3" /> Refinar Petição (instruções ao agente)
+                        </p>
+                        <div className="flex gap-2">
+                          <Textarea
+                            placeholder="Ex: Aprofundar fundamentação sobre abusividade, adicionar jurisprudência do STJ, reforçar pedidos..."
+                            value={refineInstrucoes}
+                            onChange={(e) => setRefineInstrucoes(e.target.value)}
+                            rows={2}
+                            className="flex-1 text-sm"
+                          />
+                          <Button
+                            size="sm"
+                            className="bg-amber-600 hover:bg-amber-700 self-end"
+                            disabled={!refineInstrucoes.trim() || refinarPeticao.isPending}
+                            onClick={() => {
+                              setRefiningPeticaoId(pet.id);
+                              refinarPeticao.mutate({ peticaoId: pet.id, instrucoes: refineInstrucoes });
+                            }}
+                          >
+                            {refinarPeticao.isPending && refiningPeticaoId === pet.id ? (
+                              <><Loader2 className="h-4 w-4 animate-spin" /></>
+                            ) : (
+                              <><Send className="h-4 w-4" /></>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Histórico de versões */}
+                      {showVersions === pet.id && (
+                        <div className="border-t p-3 bg-muted/30">
+                          <p className="text-xs font-semibold mb-2 flex items-center gap-1">
+                            <History className="h-3 w-3" /> Histórico de Versões
+                          </p>
+                          {versionsQuery.isLoading ? (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Loader2 className="h-3 w-3 animate-spin" /> Carregando versões...
+                            </div>
+                          ) : !versionsQuery.data || versionsQuery.data.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">Nenhuma versão anterior. Refine a petição para criar versões.</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {(versionsQuery.data as any[]).map((v: any) => (
+                                <div key={v.id} className="flex items-center justify-between border rounded p-2 bg-background text-xs">
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <Badge variant="outline" className="text-[10px] flex-shrink-0">v{v.versao}</Badge>
+                                    <span className="truncate">
+                                      {v.instrucoes ? v.instrucoes.substring(0, 80) + (v.instrucoes.length > 80 ? '...' : '') : 'Versão original'}
+                                    </span>
+                                    <span className="text-muted-foreground flex-shrink-0">
+                                      {new Date(v.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    {v.diff && (
+                                      <span className="text-muted-foreground flex-shrink-0">
+                                        +{v.diff.adicionados || 0} -{v.diff.removidos || 0}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex gap-1 flex-shrink-0">
+                                    <Button variant="ghost" size="sm" title="Visualizar esta versão"
+                                      onClick={() => setPreviewContent(v.conteudoTexto)}>
+                                      <Eye className="h-3 w-3" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" title="Restaurar esta versão"
+                                      disabled={restaurarVersao.isPending}
+                                      onClick={() => restaurarVersao.mutate({ peticaoId: pet.id, versaoId: v.id })}>
+                                      <RotateCcw className="h-3 w-3" />
+                                    </Button>
+                                    {v.docxUrl && (
+                                      <Button variant="ghost" size="sm" title="Baixar DOCX desta versão"
+                                        onClick={() => window.open(v.docxUrl, '_blank')}>
+                                        <FileDown className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="flex gap-1 flex-shrink-0">
-                  <Button variant="ghost" size="sm" title="Baixar DOCX"
-                    onClick={() => {
-                      const proxyUrl = `/api/v1/download-docx/${pet.id}`;
-                      const filename = `${pet.titulo || 'peticao'}.docx`.replace(/[^a-zA-Z0-9\u00C0-\u00FF\s._-]/g, '_');
-                      fetch(proxyUrl).then(r => r.blob()).then(blob => {
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url; a.download = filename;
-                        document.body.appendChild(a); a.click();
-                        document.body.removeChild(a); URL.revokeObjectURL(url);
-                      }).catch(() => toast.error('Erro no download'));
-                    }}>
-                    <FileDown className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" title="Regenerar DOCX" disabled={exportarDocx.isPending}
-                    onClick={() => exportarDocx.mutate({ peticaoId: pet.id })}>
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </SectionHeader>

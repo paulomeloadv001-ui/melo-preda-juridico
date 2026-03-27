@@ -73,12 +73,16 @@ describe("contracheque upload", () => {
     const { ctx } = createAuthContext();
     const caller = appRouter.createCaller(ctx);
 
+    // Use unique content each test run to avoid duplicate hash detection
+    const uniqueContent = `test_contracheque_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+    const fileBase64 = Buffer.from(uniqueContent).toString('base64');
+
     // With an invalid PDF (not parseable), the system should still process
     // and create a client with empty/default financial data
     const result = await caller.processar.uploadContracheque({
-      fileName: "test.pdf",
-      fileBase64: "dGVzdA==", // "test" in base64 - not a valid PDF
-      fileSize: 4,
+      fileName: `test_${Date.now()}.pdf`,
+      fileBase64,
+      fileSize: uniqueContent.length,
       clienteId: 1,
     });
 

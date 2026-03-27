@@ -1,0 +1,13 @@
+{
+  "query": "SHOW TABLES LIKE 'peticao_versoes';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SHOW TABLES LIKE 'peticao_versoes';",
+  "rows": [
+    {
+      "Tables_in_4imSnKhwnzycXmSWcGeMqe (peticao_versoes)": "peticao_versoes"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_4imSnKhwnzycXmSWcGeMqe (peticao_versoes)\npeticao_versoes\n",
+  "stderr": "",
+  "execution_time_ms": 499
+}
