@@ -86,9 +86,17 @@ const LONG_TIMEOUT_PATHS = [
   'integracao.executarSyncManual', 'integracao.limparLogsAntigos',
   'dashboard.varreduraDataJud',
   'prazos.verificarVencimentos',
-  'relatorios.gerar', 'relatorios.gerarPanorama', 'relatorios.gerarMargem',
-  'correcao.executar', 'correcao.executarCorrecoes',
-  'enriquecimento.enriquecer',
+  'relatorios.gerarCadastral', 'relatorios.gerarPanoramaProcessual', 'relatorios.gerarMargemConsignavel',
+  'relatorios.gerarRelatorioHonorarios', 'relatorios.gerarRelatorioConhecimentos', 'relatorios.gerarRelatorioPrazos',
+  'correcao.executarTodasCorrecoes', 'correcao.auditoriaCompleta', 'correcao.autoMerge',
+  'correcao.deduplicarProcessos', 'correcao.normalizarCpfs',
+  'enriquecimento.extrairCpfDosProcessos', 'enriquecimento.atualizarCpfLote', 'enriquecimento.completarDados',
+  'preenchimento.gerarPrazos', 'preenchimento.gerarEstrategias', 'preenchimento.gerarFinanceiro',
+  'publicacoesRouter.buscarDatajud', 'publicacoesRouter.buscarProjudi', 'publicacoesRouter.buscarDje',
+  'publicacoesRouter.buscarComunicaPje', 'publicacoesRouter.buscarEscavador', 'publicacoesRouter.buscarJusbrasil',
+  'datajud.consultarTodosProcessos',
+  'agente.analisarDocumentoCliente', 'agente.classificarProcessos',
+  'agente.exportarDocx', 'agente.regenerarDocx',
 ];
 
 const trpcClient = trpc.createClient({

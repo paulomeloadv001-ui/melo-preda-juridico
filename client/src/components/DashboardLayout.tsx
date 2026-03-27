@@ -29,7 +29,7 @@ import {
   Bell, Clock, AlertTriangle, DollarSign, FileText, CheckCircle, X, Trash2,
   Gavel, Calendar, Settings, ChevronDown, ChevronRight, Shield, Download,
   BookOpen, Database, ArrowRightLeft, ShieldCheck, ListChecks, UserCheck,
-  FileBarChart, Wrench, FolderOpen
+  FileBarChart, Wrench, FolderOpen, BarChart3
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -53,6 +53,7 @@ const configItems = [
   { icon: Shield, label: "Auditoria", path: "/correcao" },
   { icon: Download, label: "Exportar", path: "/exportacao" },
   { icon: ShieldCheck, label: "Acessos", path: "/acessos" },
+  { icon: BarChart3, label: "Painel Uploads", path: "/admin-uploads" },
 ];
 
 // Flat list for route matching (includes all routes, even hidden ones)

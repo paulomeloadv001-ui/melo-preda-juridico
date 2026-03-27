@@ -1,0 +1,20 @@
+{
+  "query": "SELECT \n  (SELECT COUNT(*) FROM clientes) as total_clientes,\n  (SELECT COUNT(*) FROM processos) as total_processos,\n  (SELECT COUNT(*) FROM conhecimentos) as total_conhecimentos,\n  (SELECT COUNT(*) FROM peticoes_geradas) as total_peticoes,\n  (SELECT COUNT(*) FROM prazos_processuais) as total_prazos,\n  (SELECT COUNT(*) FROM jobs) as total_jobs,\n  (SELECT COUNT(*) FROM users) as total_users,\n  (SELECT COUNT(*) FROM notificacoes) as total_notificacoes;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT \n  (SELECT COUNT(*) FROM clientes) as total_clientes,\n  (SELECT COUNT(*) FROM processos) as total_processos,\n  (SELECT COUNT(*) FROM conhecimentos) as total_conhecimentos,\n  (SELECT COUNT(*) FROM peticoes_geradas) as total_peticoes,\n  (SELECT COUNT(*) FROM prazos_processuais) as total_prazos,\n  (SELECT COUNT(*) FROM jobs) as total_jobs,\n  (SELECT COUNT(*) FROM users) as total_users,\n  (SELECT COUNT(*) FROM notificacoes) as total_notificacoes;",
+  "rows": [
+    {
+      "total_clientes": "80",
+      "total_processos": "107",
+      "total_conhecimentos": "456",
+      "total_peticoes": "24",
+      "total_prazos": "393",
+      "total_jobs": "51",
+      "total_users": "6",
+      "total_notificacoes": "188"
+    }
+  ],
+  "messages": [],
+  "stdout": "total_clientes\ttotal_processos\ttotal_conhecimentos\ttotal_peticoes\ttotal_prazos\ttotal_jobs\ttotal_users\ttotal_notificacoes\n80\t107\t456\t24\t393\t51\t6\t188\n",
+  "stderr": "",
+  "execution_time_ms": 369
+}

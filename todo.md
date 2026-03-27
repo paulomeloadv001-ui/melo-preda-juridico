@@ -837,3 +837,17 @@
 - [x] Auto-geração de prazos para intimações/citações detectadas
 - [x] Notificações automáticas para prazos urgentes
 - [x] JusBrasil e Escavador prontos (ativam com API Key)
+
+## PAINEL DE ADMINISTRAÇÃO + REVISÃO TOTAL (26/03/2026)
+- [x] Criar painel de administração para visualizar todos os uploads de processos e status
+- [x] Criar rota backend uploadsAdmin com filtros, stats, reprocessar, excluir
+- [x] Página frontend AdminUploads com tabela, filtros por status, estatísticas, ações
+- [x] Revisão total de todas as funções da plataforma
+- [x] Verificar TypeScript (0 erros), build OK, servidor rodando
+- [x] Verificar consistência frontend vs backend - todas as 156 rotas correspondem
+- [x] Corrigir campo cpf→cpfCnpj no uploadsAdmin
+- [x] Corrigir LONG_TIMEOUT_PATHS com nomes corretos de rotas
+- [x] Melhorar tratamento de erros do auto-cleanup de jobs
+- [x] Verificar 17 páginas retornam HTTP 200
+- [x] Verificar banco: 80 clientes, 107 processos, 456 conhecimentos, 24 petições, 393 prazos
+- [x] Testar 211/211 testes passando

@@ -1,0 +1,22 @@
+{
+  "query": "SELECT status, COUNT(*) as total FROM jobs GROUP BY status;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3Xc9RJjwPAzqyUN.e36368bedae0 --database 4imSnKhwnzycXmSWcGeMqe --execute SELECT status, COUNT(*) as total FROM jobs GROUP BY status;",
+  "rows": [
+    {
+      "status": "concluido",
+      "total": "42"
+    },
+    {
+      "status": "erro",
+      "total": "8"
+    },
+    {
+      "status": "processando",
+      "total": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "status\ttotal\nconcluido\t42\nerro\t8\nprocessando\t1\n",
+  "stderr": "",
+  "execution_time_ms": 360
+}

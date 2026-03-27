@@ -3468,6 +3468,94 @@ ${textoExtraido}`;
   }),
   // ==================== FILA DE TRABALHOS (JOBS) ====================
   jobs: router({
+    // === PAINEL DE ADMINISTRAÇÃO DE UPLOADS ===
+    uploadsAdmin: protectedProcedure
+      .input(z.object({
+        status: z.string().optional(),
+        limit: z.number().default(100),
+        offset: z.number().default(0),
+      }).optional())
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) return { uploads: [], total: 0, stats: { total: 0, concluidos: 0, processando: 0, erros: 0, pendentes: 0 } };
+        const filters = input || { status: undefined, limit: 100, offset: 0 };
+        
+        // Buscar todos os jobs de importação com dados do cliente
+        const allUploads = await db.select({
+          id: jobs.id,
+          tipo: jobs.tipo,
+          status: jobs.status,
+          titulo: jobs.titulo,
+          descricao: jobs.descricao,
+          progresso: jobs.progresso,
+          mensagemProgresso: jobs.mensagemProgresso,
+          clienteId: jobs.clienteId,
+          processoId: jobs.processoId,
+          tentativas: jobs.tentativas,
+          erroDetalhes: jobs.erroDetalhes,
+          inputData: jobs.inputData,
+          outputData: jobs.outputData,
+          createdAt: jobs.createdAt,
+          updatedAt: jobs.updatedAt,
+          clienteNome: clientes.nomeCompleto,
+          clienteCpf: clientes.cpfCnpj,
+          numeroCnj: processos.numeroCnj,
+          tipoAcao: processos.tipoAcao,
+        })
+        .from(jobs)
+        .leftJoin(clientes, eq(jobs.clienteId, clientes.id))
+        .leftJoin(processos, eq(jobs.processoId, processos.id))
+        .where(sql`${jobs.tipo} IN ('importacao_pdf', 'importacao_contracheque', 'lote_master')`)
+        .orderBy(desc(jobs.createdAt))
+        .limit(filters.limit || 100)
+        .offset(filters.offset || 0);
+        
+        let filtered = allUploads;
+        if (filters.status) filtered = filtered.filter((u: any) => u.status === filters.status);
+        
+        // Estatísticas
+        const allStats = await db.select({
+          status: jobs.status,
+          count: sql<number>`COUNT(*)`,
+        })
+        .from(jobs)
+        .where(sql`${jobs.tipo} IN ('importacao_pdf', 'importacao_contracheque', 'lote_master')`)
+        .groupBy(jobs.status);
+        
+        const stats = {
+          total: allStats.reduce((acc: number, s: any) => acc + Number(s.count), 0),
+          concluidos: Number(allStats.find((s: any) => s.status === 'concluido')?.count || 0),
+          processando: Number(allStats.find((s: any) => s.status === 'processando')?.count || 0),
+          erros: Number(allStats.find((s: any) => s.status === 'erro')?.count || 0),
+          pendentes: Number(allStats.find((s: any) => s.status === 'pendente')?.count || 0),
+        };
+        
+        return { uploads: filtered, total: stats.total, stats };
+      }),
+
+    // Reprocessar upload com erro
+    reprocessarUpload: protectedProcedure
+      .input(z.object({ jobId: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        const [job] = await db.select().from(jobs).where(eq(jobs.id, input.jobId));
+        if (!job) throw new Error('Job não encontrado');
+        if (job.status !== 'erro') throw new Error('Apenas jobs com erro podem ser reprocessados');
+        await db.update(jobs).set({ status: 'pendente', tentativas: 0, erroDetalhes: null, progresso: 0, mensagemProgresso: 'Aguardando reprocessamento...' }).where(eq(jobs.id, input.jobId));
+        return { success: true, message: 'Upload marcado para reprocessamento' };
+      }),
+
+    // Excluir upload
+    excluirUpload: protectedProcedure
+      .input(z.object({ jobId: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('Database not available');
+        await db.delete(jobs).where(eq(jobs.id, input.jobId));
+        return { success: true };
+      }),
+
     // Listar todos os jobs com filtros
     list: protectedProcedure
       .input(z.object({
@@ -10271,8 +10359,9 @@ async function limparJobsPresos() {
       console.log(`[Jobs] Auto-cleanup: ${presos.length} jobs presos corrigidos`);
     }
   } catch (e: any) {
-    // Silenciar erros de conexão (ECONNRESET) que são normais em ambientes cloud
-    if (e?.message?.includes('ECONNRESET') || e?.cause?.message?.includes('ECONNRESET')) {
+    // Silenciar erros de conexão temporários que são normais em ambientes cloud
+    const errMsg = String(e?.message || '') + String(e?.cause?.message || '');
+    if (errMsg.includes('ECONNRESET') || errMsg.includes('Region is unavailable') || errMsg.includes('Connection lost')) {
       // Conexão perdida temporariamente - será retentada no próximo ciclo
       return;
     }
