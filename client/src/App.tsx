@@ -27,6 +27,7 @@ import PublicacoesPage from "./pages/PublicacoesPage";
 import FloatingAgent from "./components/FloatingAgent";
 import CompletarPerfil from "./pages/CompletarPerfil";
 import AdminUploads from "./pages/AdminUploads";
+import StatusSistema from "./pages/StatusSistema";
 
 function Router() {
   return (
@@ -61,6 +62,7 @@ function Router() {
             <Route path="/publicacoes" component={PublicacoesPage} />
             <Route path="/acessos" component={GestaoAcessos} />
             <Route path="/admin-uploads" component={AdminUploads} />
+            <Route path="/status" component={StatusSistema} />
             <Route path="/404" component={NotFound} />
             <Route component={NotFound} />
           </Switch>

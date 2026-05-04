@@ -102,6 +102,7 @@ const LONG_TIMEOUT_PATHS = [
   'relatorios.gerarRelatorioHonorarios', 'relatorios.gerarRelatorioConhecimentos', 'relatorios.gerarRelatorioPrazos',
   'relatorios.dadosCadastraisRealtime', 'relatorios.dadosMargemRealtime', 'relatorios.dadosPanoramaRealtime',
   'relatorios.dadosHonorariosRealtime', 'relatorios.dadosConhecimentosRealtime', 'relatorios.dadosPrazosRealtime',
+  'statusSistema.healthCheck',
   'correcao.executarTodasCorrecoes', 'correcao.auditoriaCompleta', 'correcao.autoMerge',
   'correcao.deduplicarProcessos', 'correcao.normalizarCpfs',
   'enriquecimento.extrairCpfDosProcessos', 'enriquecimento.atualizarCpfLote', 'enriquecimento.completarDados',

@@ -919,3 +919,8 @@
 ## BUGS REPORTADOS (29/04/2026)
 - [x] BUG: Upload duplicado rejeita documento existente sem opção de substituir (joseli cumprimento.pdf) — CORRIGIDO: agora substitui automaticamente
 - [x] BUG: Relatórios com erro "Missing result" e timeout ao gerar — CORRIGIDO: rotas realtime no timeout longo + retry + timeout batch 90s
+
+## STATUS DO SISTEMA (04/05/2026)
+- [x] Criar rota backend de health check para todas as integrações
+- [x] Criar página frontend de Status do Sistema com monitoramento em tempo real
+- [x] Adicionar rota e navegação na sidebar

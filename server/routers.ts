@@ -8890,6 +8890,222 @@ Retorne um JSON com os campos:
         return { success: true, message: 'Perfil salvo com sucesso!' };
       }),
   }),
+
+  // ==================== STATUS DO SISTEMA ====================
+  statusSistema: router({
+    healthCheck: protectedProcedure.query(async () => {
+      const db = await getDb();
+      const results: Array<{
+        servico: string;
+        categoria: string;
+        status: 'online' | 'degradado' | 'offline' | 'nao_configurado';
+        latencia: number | null;
+        mensagem: string;
+        ultimaVerificacao: string;
+      }> = [];
+      const now = new Date().toISOString();
+
+      // 1. Banco de Dados (TiDB/MySQL)
+      const dbStart = Date.now();
+      try {
+        if (!db) throw new Error('DB not available');
+        const [row] = await db.execute(sql`SELECT 1 as ok`);
+        const latencia = Date.now() - dbStart;
+        results.push({
+          servico: 'Banco de Dados (TiDB)',
+          categoria: 'Infraestrutura',
+          status: latencia > 3000 ? 'degradado' : 'online',
+          latencia,
+          mensagem: latencia > 3000 ? `Lat\u00eancia alta: ${latencia}ms` : 'Conex\u00e3o est\u00e1vel',
+          ultimaVerificacao: now,
+        });
+      } catch (e: any) {
+        results.push({
+          servico: 'Banco de Dados (TiDB)',
+          categoria: 'Infraestrutura',
+          status: 'offline',
+          latencia: Date.now() - dbStart,
+          mensagem: `Erro: ${e.message?.substring(0, 100)}`,
+          ultimaVerificacao: now,
+        });
+      }
+
+      // 2. Storage S3
+      const s3Start = Date.now();
+      try {
+        const { url } = await storageGet('health-check-test.txt');
+        const latencia = Date.now() - s3Start;
+        results.push({
+          servico: 'Storage S3 (CloudFront)',
+          categoria: 'Infraestrutura',
+          status: latencia > 5000 ? 'degradado' : 'online',
+          latencia,
+          mensagem: 'Servi\u00e7o de armazenamento operacional',
+          ultimaVerificacao: now,
+        });
+      } catch (e: any) {
+        results.push({
+          servico: 'Storage S3 (CloudFront)',
+          categoria: 'Infraestrutura',
+          status: Date.now() - s3Start > 10000 ? 'offline' : 'degradado',
+          latencia: Date.now() - s3Start,
+          mensagem: `Aviso: ${e.message?.substring(0, 100)}`,
+          ultimaVerificacao: now,
+        });
+      }
+
+      // 3. LLM (Forge API)
+      const llmStart = Date.now();
+      try {
+        if (!ENV.forgeApiUrl || !ENV.forgeApiKey) throw new Error('N\u00e3o configurado');
+        const res = await fetch(`${ENV.forgeApiUrl}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${ENV.forgeApiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: [{ role: 'user', content: 'ping' }], max_tokens: 1 }),
+          signal: AbortSignal.timeout(15000),
+        });
+        const latencia = Date.now() - llmStart;
+        results.push({
+          servico: 'LLM / IA (Forge API)',
+          categoria: 'Intelig\u00eancia Artificial',
+          status: res.ok ? (latencia > 10000 ? 'degradado' : 'online') : 'degradado',
+          latencia,
+          mensagem: res.ok ? 'Modelo de linguagem respondendo' : `HTTP ${res.status}`,
+          ultimaVerificacao: now,
+        });
+      } catch (e: any) {
+        results.push({
+          servico: 'LLM / IA (Forge API)',
+          categoria: 'Intelig\u00eancia Artificial',
+          status: !ENV.forgeApiUrl ? 'nao_configurado' : 'offline',
+          latencia: Date.now() - llmStart,
+          mensagem: !ENV.forgeApiUrl ? 'API n\u00e3o configurada' : `Erro: ${e.message?.substring(0, 80)}`,
+          ultimaVerificacao: now,
+        });
+      }
+
+      // 4. DataJud API
+      const datajudStart = Date.now();
+      try {
+        if (!ENV.datajudApiKey) throw new Error('N\u00e3o configurado');
+        const res = await fetch('https://api-publica.datajud.cnj.jus.br/api_publica_trf1/_search', {
+          method: 'POST',
+          headers: {
+            'Authorization': `APIKey ${ENV.datajudApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ size: 1, query: { match_all: {} } }),
+          signal: AbortSignal.timeout(15000),
+        });
+        const latencia = Date.now() - datajudStart;
+        results.push({
+          servico: 'DataJud (CNJ)',
+          categoria: 'APIs Externas',
+          status: res.ok ? (latencia > 8000 ? 'degradado' : 'online') : 'degradado',
+          latencia,
+          mensagem: res.ok ? 'API do CNJ respondendo' : `HTTP ${res.status}`,
+          ultimaVerificacao: now,
+        });
+      } catch (e: any) {
+        results.push({
+          servico: 'DataJud (CNJ)',
+          categoria: 'APIs Externas',
+          status: !ENV.datajudApiKey ? 'nao_configurado' : 'offline',
+          latencia: Date.now() - datajudStart,
+          mensagem: !ENV.datajudApiKey ? 'API Key n\u00e3o configurada' : `Timeout ou erro: ${e.message?.substring(0, 80)}`,
+          ultimaVerificacao: now,
+        });
+      }
+
+      // 5. JusConsig API
+      const jusconsigStart = Date.now();
+      try {
+        if (!ENV.jusconsigApiKey) throw new Error('N\u00e3o configurado');
+        results.push({
+          servico: 'JusConsig (Projudi)',
+          categoria: 'APIs Externas',
+          status: 'online',
+          latencia: Date.now() - jusconsigStart,
+          mensagem: 'API Key configurada',
+          ultimaVerificacao: now,
+        });
+      } catch (e: any) {
+        results.push({
+          servico: 'JusConsig (Projudi)',
+          categoria: 'APIs Externas',
+          status: 'nao_configurado',
+          latencia: null,
+          mensagem: 'API Key n\u00e3o configurada',
+          ultimaVerificacao: now,
+        });
+      }
+
+      // 6. OAuth (Manus Auth)
+      const oauthStart = Date.now();
+      try {
+        if (!ENV.oAuthServerUrl) throw new Error('N\u00e3o configurado');
+        const res = await fetch(`${ENV.oAuthServerUrl}/health`, {
+          signal: AbortSignal.timeout(10000),
+        });
+        const latencia = Date.now() - oauthStart;
+        results.push({
+          servico: 'Autentica\u00e7\u00e3o (OAuth)',
+          categoria: 'Infraestrutura',
+          status: res.ok || res.status === 404 ? 'online' : 'degradado',
+          latencia,
+          mensagem: 'Servidor de autentica\u00e7\u00e3o acess\u00edvel',
+          ultimaVerificacao: now,
+        });
+      } catch (e: any) {
+        results.push({
+          servico: 'Autentica\u00e7\u00e3o (OAuth)',
+          categoria: 'Infraestrutura',
+          status: !ENV.oAuthServerUrl ? 'nao_configurado' : 'offline',
+          latencia: Date.now() - oauthStart,
+          mensagem: !ENV.oAuthServerUrl ? 'N\u00e3o configurado' : `Erro: ${e.message?.substring(0, 80)}`,
+          ultimaVerificacao: now,
+        });
+      }
+
+      // 7. M\u00e9tricas do banco de dados
+      let metricas = { clientes: 0, processos: 0, documentos: 0, conhecimentos: 0, jobs: 0, jobsPendentes: 0 };
+      if (db) {
+        try {
+          const [cliCount] = await db.select({ count: sql<number>`count(*)` }).from(clientes);
+          const [procCount] = await db.select({ count: sql<number>`count(*)` }).from(processos);
+          const [docCount] = await db.select({ count: sql<number>`count(*)` }).from(documentos);
+          const [conhCount] = await db.select({ count: sql<number>`count(*)` }).from(conhecimentos);
+          const [jobCount] = await db.select({ count: sql<number>`count(*)` }).from(jobs);
+          const [jobPend] = await db.select({ count: sql<number>`count(*)` }).from(jobs).where(eq(jobs.status, 'pendente'));
+          metricas = {
+            clientes: Number(cliCount?.count || 0),
+            processos: Number(procCount?.count || 0),
+            documentos: Number(docCount?.count || 0),
+            conhecimentos: Number(conhCount?.count || 0),
+            jobs: Number(jobCount?.count || 0),
+            jobsPendentes: Number(jobPend?.count || 0),
+          };
+        } catch { /* ignore */ }
+      }
+
+      // Calcular status geral
+      const totalServicos = results.length;
+      const online = results.filter(r => r.status === 'online').length;
+      const degradado = results.filter(r => r.status === 'degradado').length;
+      const offline = results.filter(r => r.status === 'offline').length;
+      let statusGeral: 'operacional' | 'degradado' | 'critico' = 'operacional';
+      if (offline > 0) statusGeral = 'critico';
+      else if (degradado > 1) statusGeral = 'degradado';
+
+      return {
+        statusGeral,
+        servicos: results,
+        metricas,
+        resumo: { totalServicos, online, degradado, offline },
+        verificadoEm: now,
+      };
+    }),
+  }),
 });
 // ==================== PROCESSADOR DE FILA DE JOBS ====================
 async function processarFilaJobs(jobIds: number[]) {
