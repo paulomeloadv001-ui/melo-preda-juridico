@@ -8,7 +8,19 @@ import App from "./App";
 import { getLoginUrl } from "./const";
 import "./index.css";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+      staleTime: 30_000,
+    },
+    mutations: {
+      retry: 1,
+      retryDelay: 2000,
+    },
+  },
+});
 
 const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
@@ -88,6 +100,8 @@ const LONG_TIMEOUT_PATHS = [
   'prazos.verificarVencimentos',
   'relatorios.gerarCadastral', 'relatorios.gerarPanoramaProcessual', 'relatorios.gerarMargemConsignavel',
   'relatorios.gerarRelatorioHonorarios', 'relatorios.gerarRelatorioConhecimentos', 'relatorios.gerarRelatorioPrazos',
+  'relatorios.dadosCadastraisRealtime', 'relatorios.dadosMargemRealtime', 'relatorios.dadosPanoramaRealtime',
+  'relatorios.dadosHonorariosRealtime', 'relatorios.dadosConhecimentosRealtime', 'relatorios.dadosPrazosRealtime',
   'correcao.executarTodasCorrecoes', 'correcao.auditoriaCompleta', 'correcao.autoMerge',
   'correcao.deduplicarProcessos', 'correcao.normalizarCpfs',
   'enriquecimento.extrairCpfDosProcessos', 'enriquecimento.atualizarCpfLote', 'enriquecimento.completarDados',
@@ -111,7 +125,7 @@ const trpcClient = trpc.createClient({
       false: httpBatchLink({
         url: "/api/trpc",
         transformer: superjson,
-        fetch: createFetchWithTimeout(60_000), // 60s para rotas normais
+        fetch: createFetchWithTimeout(90_000), // 90s para rotas normais (aumentado para deploy)
       }),
     }),
   ],

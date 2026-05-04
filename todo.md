@@ -893,3 +893,29 @@
 - [x] Implementar histórico de versões (visualizar, restaurar, baixar DOCX de cada versão)
 - [x] Corrigir teste contracheque (hash único por execução)
 - [x] 211/211 testes passando, 0 erros TypeScript, servidor OK
+
+## EXPORTAÇÃO E INTEGRAÇÃO DE CONHECIMENTOS AO AGENTE (26/04/2026)
+- [ ] Extrair e mapear todo o banco de conhecimentos da skill v5
+- [ ] Integrar conhecimentos ao system prompt do agente executor
+- [ ] Inserir conhecimentos no banco de dados da plataforma (tabela conhecimentos)
+- [ ] Configurar secrets das APIs jurídicas (DataJud, JusBrasil, Digesto)
+- [ ] Criar rotas backend para consulta DataJud, JusBrasil e Digesto
+- [ ] Integrar APIs ao agente para consultas automáticas
+- [ ] Testar agente com conhecimentos e APIs integrados
+
+## REESTRUTURAÇÃO COMPLETA DO SISTEMA (26/04/2026)
+- [ ] Diagnosticar todos os problemas do sistema (backend, frontend, agente, APIs)
+- [ ] Extrair TODOS os conhecimentos das 4 skills (.skill) + skill v5 ZIP
+- [ ] Consolidar conhecimentos em formato JSON para inserção no banco
+- [ ] Integrar conhecimentos ao system prompt do agente executor
+- [ ] Adicionar tools de APIs jurídicas ao agente (DataJud, JusBrasil, DJEN)
+- [ ] Configurar secrets das APIs (JUSBRASIL_API_KEY, DIGESTO_API_KEY)
+- [ ] Corrigir e organizar frontend (fluxo upload, pasta cliente, navegação)
+- [ ] Garantir botões atualizar/excluir/gerar em cada aba
+- [ ] Alertas dentro da pasta de cada cliente
+- [ ] Agente presente em todas as funcionalidades
+- [ ] Testar fluxo completo e rodar testes
+
+## BUGS REPORTADOS (29/04/2026)
+- [x] BUG: Upload duplicado rejeita documento existente sem opção de substituir (joseli cumprimento.pdf) — CORRIGIDO: agora substitui automaticamente
+- [x] BUG: Relatórios com erro "Missing result" e timeout ao gerar — CORRIGIDO: rotas realtime no timeout longo + retry + timeout batch 90s

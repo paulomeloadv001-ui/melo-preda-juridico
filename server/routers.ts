@@ -883,16 +883,12 @@ export const appRouter = router({
         const buffer = Buffer.from(input.fileBase64, "base64");
         const fileHash = createHash('sha256').update(buffer).digest('hex');
         
-        // Verificar se já existe documento com mesmo hash
+        // Verificar se já existe documento com mesmo hash - se existir, remover o antigo e permitir reprocessamento
         const docExistente = await db.select().from(documentos).where(eq(documentos.fileHash, fileHash)).limit(1);
         if (docExistente.length > 0) {
-          // Buscar nome do cliente para informar
-          const clienteDoc = await db.select().from(clientes).where(eq(clientes.id, docExistente[0].clienteId)).limit(1);
-          const nomeCliente = clienteDoc[0]?.nomeCompleto || 'Desconhecido';
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: `Este documento já existe no sistema! Arquivo: "${docExistente[0].nomeArquivo}" — Cliente: ${nomeCliente}. Upload rejeitado para evitar duplicidade.`,
-          });
+          // Remover documento antigo para permitir reprocessamento/substituição
+          await db.delete(documentos).where(eq(documentos.id, docExistente[0].id));
+          console.log(`[Upload] Documento duplicado detectado ("${docExistente[0].nomeArquivo}") - substituindo pelo novo upload.`);
         }
 
         // 1. Extract text from PDF
@@ -1684,13 +1680,11 @@ ${textoExtraido}`;
 
         // 5. Insert document record
         const contrachequeHash = createHash('sha256').update(buffer).digest('hex');
-        // Verificar duplicado de contracheque
+        // Verificar duplicado de contracheque - se existir, remover o antigo e permitir reprocessamento
         const contrachequeExistente = await db.select().from(documentos).where(eq(documentos.fileHash, contrachequeHash)).limit(1);
         if (contrachequeExistente.length > 0) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: `Este contracheque já existe no sistema! Arquivo: "${contrachequeExistente[0].nomeArquivo}". Upload rejeitado.`,
-          });
+          await db.delete(documentos).where(eq(documentos.id, contrachequeExistente[0].id));
+          console.log(`[Upload] Contracheque duplicado detectado ("${contrachequeExistente[0].nomeArquivo}") - substituindo pelo novo upload.`);
         }
         await db.insert(documentos).values({
           clienteId,
@@ -6344,10 +6338,9 @@ ${pet.conteudoTexto || ''}
         const docHash = createHash('sha256').update(buffer).digest('hex');
         const docDuplicado = await db.select().from(documentos).where(eq(documentos.fileHash, docHash)).limit(1);
         if (docDuplicado.length > 0) {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: `Este documento já existe no sistema! Arquivo: "${docDuplicado[0].nomeArquivo}". Upload rejeitado para evitar duplicidade.`,
-          });
+          // Remover documento antigo para permitir substituição
+          await db.delete(documentos).where(eq(documentos.id, docDuplicado[0].id));
+          console.log(`[Upload] Documento duplicado detectado ("${docDuplicado[0].nomeArquivo}") - substituindo pelo novo upload.`);
         }
         const [doc] = await db.insert(documentos).values({
           clienteId: input.clienteId,
@@ -8978,15 +8971,9 @@ async function processarJobImportacaoPdf(jobId: number, inputData: any) {
     const fileHash = createHash('sha256').update(pdfBuffer).digest('hex');
     const docExistente = await db.select().from(documentos).where(eq(documentos.fileHash, fileHash)).limit(1);
     if (docExistente.length > 0) {
-      const clienteDoc = await db.select().from(clientes).where(eq(clientes.id, docExistente[0].clienteId)).limit(1);
-      const nomeCliente = clienteDoc[0]?.nomeCompleto || 'Desconhecido';
-      await db.update(jobs).set({
-        status: 'erro',
-        erroDetalhes: `Documento duplicado! Já existe como "${docExistente[0].nomeArquivo}" do cliente ${nomeCliente}. Upload rejeitado.`,
-        concluidoEm: new Date(),
-        progresso: 0,
-      }).where(eq(jobs.id, jobId));
-      return;
+      // Remover documento antigo para permitir reprocessamento/substituição
+      await db.delete(documentos).where(eq(documentos.id, docExistente[0].id));
+      console.log(`[ImportLote] Documento duplicado detectado ("${docExistente[0].nomeArquivo}") - substituindo pelo novo upload.`);
     }
 
     await updateProgress(10, 'Extraindo texto do PDF...');
@@ -9904,13 +9891,9 @@ ${textoExtraido.substring(0, 50000)}`;
     const contrachequeHash = createHash('sha256').update(pdfBuffer).digest('hex');
     const contrachequeExistente = await db.select().from(documentos).where(eq(documentos.fileHash, contrachequeHash)).limit(1);
     if (contrachequeExistente.length > 0) {
-      await db.update(jobs).set({
-        status: 'erro',
-        erroDetalhes: `Contracheque duplicado! Já existe como "${contrachequeExistente[0].nomeArquivo}". Upload rejeitado.`,
-        concluidoEm: new Date(),
-        progresso: 0,
-      }).where(eq(jobs.id, jobId));
-      return;
+      // Remover documento antigo para permitir reprocessamento/substituição
+      await db.delete(documentos).where(eq(documentos.id, contrachequeExistente[0].id));
+      console.log(`[ImportLote] Contracheque duplicado detectado ("${contrachequeExistente[0].nomeArquivo}") - substituindo pelo novo upload.`);
     }
     await db.insert(documentos).values({
       clienteId,
