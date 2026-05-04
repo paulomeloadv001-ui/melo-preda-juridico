@@ -15,7 +15,8 @@ import {
   notificacoes, prazosProcessuais, syncLog,
   templatesPeticao, peticoesGeradas, agenteIaConfig, agenteIaHistorico,
   anexosPeticao, userPermissions, convites, auditLog,
-  publicacoes, monitoramentoConfig, peticaoVersoes, perfisAcesso
+  publicacoes, monitoramentoConfig, peticaoVersoes, perfisAcesso,
+  creditosConfig, creditosSaldo, creditosTransacoes, creditosResumoDiario
 } from "../drizzle/schema";
 import { eq, like, desc, asc, and, sql, inArray } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -9106,6 +9107,238 @@ Retorne um JSON com os campos:
       };
     }),
   }),
+
+  // ==================== CRÉDITOS ====================
+  creditos: router({
+    // Consultar saldo atual
+    saldo: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+      const [saldo] = await db.select().from(creditosSaldo).where(eq(creditosSaldo.conta, 'principal'));
+      if (!saldo) {
+        await db.insert(creditosSaldo).values({ conta: 'principal', saldoAtual: 10000, totalAdicionado: 10000, totalConsumido: 0, limiteAlerta: 500 });
+        return { saldoAtual: 10000, totalAdicionado: 10000, totalConsumido: 0, limiteAlerta: 500, percentualUsado: 0 };
+      }
+      const percentualUsado = saldo.totalAdicionado > 0 ? Math.round((saldo.totalConsumido / saldo.totalAdicionado) * 100) : 0;
+      return { ...saldo, percentualUsado };
+    }),
+
+    // Listar configurações de custo por operação
+    operacoes: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+      return db.select().from(creditosConfig).orderBy(asc(creditosConfig.categoria), asc(creditosConfig.operacao));
+    }),
+
+    // Histórico de transações (últimas 100)
+    historico: protectedProcedure.input(z.object({
+      limite: z.number().min(1).max(500).default(100),
+      tipo: z.enum(['credito', 'debito', 'ajuste', 'todos']).default('todos'),
+    }).optional()).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+      const limite = input?.limite ?? 100;
+      const tipo = input?.tipo ?? 'todos';
+      if (tipo !== 'todos') {
+        return db.select().from(creditosTransacoes).where(eq(creditosTransacoes.tipo, tipo)).orderBy(desc(creditosTransacoes.createdAt)).limit(limite);
+      }
+      return db.select().from(creditosTransacoes).orderBy(desc(creditosTransacoes.createdAt)).limit(limite);
+    }),
+
+    // Resumo diário (últimos 30 dias)
+    resumoDiario: protectedProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+      return db.select().from(creditosResumoDiario).orderBy(desc(creditosResumoDiario.data)).limit(30);
+    }),
+
+    // Adicionar créditos (recarga manual)
+    adicionar: adminProcedure.input(z.object({
+      quantidade: z.number().min(1).max(100000),
+      descricao: z.string().optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+      const [saldo] = await db.select().from(creditosSaldo).where(eq(creditosSaldo.conta, 'principal'));
+      const novoSaldo = (saldo?.saldoAtual ?? 0) + input.quantidade;
+      const novoTotal = (saldo?.totalAdicionado ?? 0) + input.quantidade;
+      await db.update(creditosSaldo).set({ saldoAtual: novoSaldo, totalAdicionado: novoTotal }).where(eq(creditosSaldo.conta, 'principal'));
+      await db.insert(creditosTransacoes).values({
+        conta: 'principal', tipo: 'credito', operacao: 'recarga_manual',
+        quantidade: input.quantidade, saldoApos: novoSaldo,
+        descricao: input.descricao || `Recarga manual de ${input.quantidade} créditos`,
+        userId: ctx.user.id,
+      });
+      return { sucesso: true, novoSaldo };
+    }),
+
+    // Atualizar custo de uma operação
+    atualizarCusto: adminProcedure.input(z.object({
+      operacao: z.string(),
+      custoPorUso: z.number().min(0).max(1000),
+      ativo: z.boolean().optional(),
+    })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+      const updates: any = { custoPorUso: input.custoPorUso };
+      if (input.ativo !== undefined) updates.ativo = input.ativo ? 1 : 0;
+      await db.update(creditosConfig).set(updates).where(eq(creditosConfig.operacao, input.operacao));
+      return { sucesso: true };
+    }),
+
+    // Atualizar limite de alerta
+    atualizarAlerta: adminProcedure.input(z.object({
+      limiteAlerta: z.number().min(0).max(100000),
+    })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+      await db.update(creditosSaldo).set({ limiteAlerta: input.limiteAlerta }).where(eq(creditosSaldo.conta, 'principal'));
+      return { sucesso: true };
+    }),
+  }),
+
+  // ==================== VARREDURA ANTI-DUPLICIDADE ====================
+  varredura: router({
+    // Executar varredura completa e retornar relatório
+    executar: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+
+      const problemas: { tipo: string; descricao: string; ids: number[]; sugestao: string }[] = [];
+
+      // 1. Clientes com CPF duplicado
+      const todosClientes = await db.select({ id: clientes.id, cpfCnpj: clientes.cpfCnpj, nomeCompleto: clientes.nomeCompleto }).from(clientes);
+      const cpfMap: Record<string, { id: number; nome: string }[]> = {};
+      for (const c of todosClientes) {
+        const cpfNorm = (c.cpfCnpj || '').replace(/\D/g, '');
+        if (!cpfNorm) continue;
+        if (!cpfMap[cpfNorm]) cpfMap[cpfNorm] = [];
+        cpfMap[cpfNorm].push({ id: c.id, nome: c.nomeCompleto });
+      }
+      for (const cpf of Object.keys(cpfMap)) {
+        if (cpfMap[cpf].length > 1) {
+          problemas.push({ tipo: 'cliente_duplicado', descricao: `CPF ${cpf} aparece ${cpfMap[cpf].length}x: ${cpfMap[cpf].map((e: any) => e.nome).join(', ')}`, ids: cpfMap[cpf].map((e: any) => e.id), sugestao: 'Mesclar registros mantendo o mais completo' });
+        }
+      }
+
+      // 2. Clientes com nomes idênticos
+      for (let i = 0; i < todosClientes.length; i++) {
+        for (let j = i + 1; j < todosClientes.length; j++) {
+          const a = todosClientes[i].nomeCompleto.toLowerCase().trim();
+          const b = todosClientes[j].nomeCompleto.toLowerCase().trim();
+          if (a === b && todosClientes[i].cpfCnpj !== todosClientes[j].cpfCnpj) {
+            problemas.push({ tipo: 'nome_duplicado', descricao: `Nome idêntico "${todosClientes[i].nomeCompleto}" com CPFs diferentes`, ids: [todosClientes[i].id, todosClientes[j].id], sugestao: 'Verificar se são a mesma pessoa com CPF errado' });
+          }
+        }
+      }
+
+      // 3. Processos com número duplicado
+      const todosProcessos = await db.select({ id: processos.id, numeroCnj: processos.numeroCnj, clienteId: processos.clienteId }).from(processos);
+      const numMap: Record<string, { id: number; clienteId: number }[]> = {};
+      for (const p of todosProcessos) {
+        const numNorm = (p.numeroCnj || '').replace(/\D/g, '');
+        if (!numNorm || numNorm.length < 10) continue;
+        if (!numMap[numNorm]) numMap[numNorm] = [];
+        numMap[numNorm].push({ id: p.id, clienteId: p.clienteId });
+      }
+      for (const num of Object.keys(numMap)) {
+        if (numMap[num].length > 1) {
+          problemas.push({ tipo: 'processo_duplicado', descricao: `Processo nº ${num} aparece ${numMap[num].length}x`, ids: numMap[num].map((e: any) => e.id), sugestao: 'Remover duplicata e mesclar dados' });
+        }
+      }
+
+      // 4. Processos sem cliente vinculado
+      const processosSemCliente = todosProcessos.filter(p => !p.clienteId);
+      if (processosSemCliente.length > 0) {
+        problemas.push({ tipo: 'processo_orfao', descricao: `${processosSemCliente.length} processo(s) sem cliente vinculado`, ids: processosSemCliente.map(p => p.id), sugestao: 'Vincular ao cliente correto ou remover' });
+      }
+
+      // 5. Prazos duplicados (mesmo processo, mesma data, mesmo tipo)
+      const todosPrazos = await db.select({ id: prazosProcessuais.id, processoId: prazosProcessuais.processoId, tipo: prazosProcessuais.tipo, dataVencimento: prazosProcessuais.dataVencimento }).from(prazosProcessuais);
+      const prazoMap: Record<string, number[]> = {};
+      for (const p of todosPrazos) {
+        const key = `${p.processoId}-${p.tipo}-${p.dataVencimento}`;
+        if (!prazoMap[key]) prazoMap[key] = [];
+        prazoMap[key].push(p.id);
+      }
+      for (const key of Object.keys(prazoMap)) {
+        if (prazoMap[key].length > 1) {
+          problemas.push({ tipo: 'prazo_duplicado', descricao: `Prazo duplicado: ${key}`, ids: prazoMap[key], sugestao: 'Manter apenas um e excluir duplicatas' });
+        }
+      }
+
+      // 6. Documentos com hash duplicado
+      const todosDocs = await db.select({ id: documentos.id, fileHash: documentos.fileHash, nomeArquivo: documentos.nomeArquivo, clienteId: documentos.clienteId }).from(documentos);
+      const hashMap: Record<string, { id: number; nome: string | null }[]> = {};
+      for (const d of todosDocs) {
+        if (!d.fileHash) continue;
+        if (!hashMap[d.fileHash]) hashMap[d.fileHash] = [];
+        hashMap[d.fileHash].push({ id: d.id, nome: d.nomeArquivo });
+      }
+      for (const hash of Object.keys(hashMap)) {
+        if (hashMap[hash].length > 1) {
+          problemas.push({ tipo: 'documento_duplicado', descricao: `Arquivo duplicado: "${hashMap[hash][0].nome}" (${hashMap[hash].length} cópias)`, ids: hashMap[hash].map((e: any) => e.id), sugestao: 'Manter apenas a versão mais recente' });
+        }
+      }
+
+      // 7. Conhecimentos duplicados (mesmo título)
+      const todosConhec = await db.select({ id: conhecimentos.id, titulo: conhecimentos.titulo }).from(conhecimentos);
+      const tituloMap: Record<string, number[]> = {};
+      for (const c of todosConhec) {
+        const key = (c.titulo || '').toLowerCase().trim();
+        if (!key) continue;
+        if (!tituloMap[key]) tituloMap[key] = [];
+        tituloMap[key].push(c.id);
+      }
+      for (const titulo of Object.keys(tituloMap)) {
+        if (tituloMap[titulo].length > 1) {
+          problemas.push({ tipo: 'conhecimento_duplicado', descricao: `Conhecimento duplicado: "${titulo}" (${tituloMap[titulo].length}x)`, ids: tituloMap[titulo], sugestao: 'Mesclar conteúdo e remover duplicatas' });
+        }
+      }
+
+      // Resumo
+      const resumo = {
+        totalProblemas: problemas.length,
+        clientesDuplicados: problemas.filter(p => p.tipo === 'cliente_duplicado' || p.tipo === 'nome_duplicado').length,
+        processosDuplicados: problemas.filter(p => p.tipo === 'processo_duplicado').length,
+        processosOrfaos: problemas.filter(p => p.tipo === 'processo_orfao').length,
+        prazosDuplicados: problemas.filter(p => p.tipo === 'prazo_duplicado').length,
+        documentosDuplicados: problemas.filter(p => p.tipo === 'documento_duplicado').length,
+        conhecimentosDuplicados: problemas.filter(p => p.tipo === 'conhecimento_duplicado').length,
+        totalRegistros: { clientes: todosClientes.length, processos: todosProcessos.length, prazos: todosPrazos.length, documentos: todosDocs.length, conhecimentos: todosConhec.length },
+      };
+
+      return { resumo, problemas, executadoEm: new Date().toISOString() };
+    }),
+
+    // Limpar duplicatas automaticamente (remove os mais antigos)
+    limparDuplicatas: adminProcedure.input(z.object({
+      tipo: z.enum(['prazo_duplicado', 'documento_duplicado', 'conhecimento_duplicado', 'processo_duplicado']),
+      ids: z.array(z.number()), // IDs para remover (manter o primeiro, remover os demais)
+    })).mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'DB indisponível' });
+      const idsParaRemover = input.ids.slice(1); // mantém o primeiro
+      if (idsParaRemover.length === 0) return { removidos: 0 };
+
+      switch (input.tipo) {
+        case 'prazo_duplicado':
+          await db.delete(prazosProcessuais).where(inArray(prazosProcessuais.id, idsParaRemover));
+          break;
+        case 'documento_duplicado':
+          await db.delete(documentos).where(inArray(documentos.id, idsParaRemover));
+          break;
+        case 'conhecimento_duplicado':
+          await db.delete(conhecimentos).where(inArray(conhecimentos.id, idsParaRemover));
+          break;
+        case 'processo_duplicado':
+          await db.delete(processos).where(inArray(processos.id, idsParaRemover));
+          break;
+      }
+      return { removidos: idsParaRemover.length };
+    }),
+  }),
+
 });
 // ==================== PROCESSADOR DE FILA DE JOBS ====================
 async function processarFilaJobs(jobIds: number[]) {

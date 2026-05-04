@@ -924,3 +924,21 @@
 - [x] Criar rota backend de health check para todas as integrações
 - [x] Criar página frontend de Status do Sistema com monitoramento em tempo real
 - [x] Adicionar rota e navegação na sidebar
+
+## SISTEMA DE CRÉDITOS INTERNO (04/05/2026)
+- [ ] Criar tabelas no banco: creditos_saldo, creditos_transacoes, creditos_config
+- [ ] Criar rotas backend: consultar saldo, adicionar créditos, debitar, histórico
+- [ ] Integrar middleware de créditos nas operações que consomem APIs (LLM, DataJud, etc.)
+- [ ] Criar página frontend de Créditos com painel de controle e histórico
+- [ ] Testar fluxo completo de débito/crédito
+
+## VARREDURA ANTI-DUPLICIDADE (04/05/2026)
+- [ ] Criar helper de verificação de duplicidade (CPF, número processo, hash documento)
+- [ ] Integrar verificação antes de qualquer inserção no banco
+- [ ] Criar rota de varredura que identifica e reporta duplicados existentes
+
+## PROCESSOS COMPLETADOS VIA DATAJUD (04/05/2026)
+- [x] Investigar 83 processos pendentes (sem texto extraído, sem PDF)
+- [x] Consultar DataJud para todos os 83 processos (74 com dados completos do DataJud)
+- [x] Preencher comarca, vara, tribunal, valor da causa e texto extraído
+- [x] Resultado: 109/109 processos completos (0 pendentes)

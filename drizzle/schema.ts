@@ -701,3 +701,65 @@ export const perfisAcesso = mysqlTable("perfis_acesso", {
 });
 export type PerfilAcesso = typeof perfisAcesso.$inferSelect;
 export type InsertPerfilAcesso = typeof perfisAcesso.$inferInsert;
+
+// ==================== SISTEMA DE CRÉDITOS ====================
+
+// Configuração de custos por operação
+export const creditosConfig = mysqlTable("creditos_config", {
+  id: int("id").autoincrement().primaryKey(),
+  operacao: varchar("operacao", { length: 100 }).notNull().unique(), // ex: "llm_chat", "datajud_consulta", "analise_pdf"
+  descricao: varchar("descricao", { length: 255 }).notNull(),
+  custoPorUso: int("custoPorUso").notNull().default(1), // créditos consumidos por uso
+  categoria: mysqlEnum("categoria", ["llm", "api_externa", "storage", "processamento", "outros"]).notNull().default("outros"),
+  ativo: int("ativo").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type CreditoConfig = typeof creditosConfig.$inferSelect;
+export type InsertCreditoConfig = typeof creditosConfig.$inferInsert;
+
+// Saldo de créditos (uma linha por conta/plataforma)
+export const creditosSaldo = mysqlTable("creditos_saldo", {
+  id: int("id").autoincrement().primaryKey(),
+  conta: varchar("conta", { length: 100 }).notNull().unique().default("principal"), // conta principal da plataforma
+  saldoAtual: int("saldoAtual").notNull().default(0),
+  totalAdicionado: int("totalAdicionado").notNull().default(0),
+  totalConsumido: int("totalConsumido").notNull().default(0),
+  limiteAlerta: int("limiteAlerta").default(100), // alerta quando saldo < este valor
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type CreditoSaldo = typeof creditosSaldo.$inferSelect;
+export type InsertCreditoSaldo = typeof creditosSaldo.$inferInsert;
+
+// Transações de créditos (histórico completo)
+export const creditosTransacoes = mysqlTable("creditos_transacoes", {
+  id: int("id").autoincrement().primaryKey(),
+  conta: varchar("conta", { length: 100 }).notNull().default("principal"),
+  tipo: mysqlEnum("tipo", ["credito", "debito", "ajuste"]).notNull(),
+  operacao: varchar("operacao", { length: 100 }).notNull(), // ex: "llm_chat", "recarga_manual"
+  quantidade: int("quantidade").notNull(), // positivo para crédito, negativo para débito
+  saldoApos: int("saldoApos").notNull(),
+  descricao: text("descricao"),
+  metadata: text("metadata"), // JSON com detalhes extras (clienteId, processoId, etc.)
+  userId: int("userId"), // quem executou a operação
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type CreditoTransacao = typeof creditosTransacoes.$inferSelect;
+export type InsertCreditoTransacao = typeof creditosTransacoes.$inferInsert;
+
+// Resumo diário de consumo (para gráficos e relatórios)
+export const creditosResumoDiario = mysqlTable("creditos_resumo_diario", {
+  id: int("id").autoincrement().primaryKey(),
+  data: varchar("data", { length: 10 }).notNull(), // YYYY-MM-DD
+  conta: varchar("conta", { length: 100 }).notNull().default("principal"),
+  totalCreditos: int("totalCreditos").notNull().default(0),
+  totalDebitos: int("totalDebitos").notNull().default(0),
+  operacoesCount: int("operacoesCount").notNull().default(0),
+  categoriaLlm: int("categoriaLlm").default(0),
+  categoriaApiExterna: int("categoriaApiExterna").default(0),
+  categoriaStorage: int("categoriaStorage").default(0),
+  categoriaProcessamento: int("categoriaProcessamento").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type CreditoResumoDiario = typeof creditosResumoDiario.$inferSelect;
+export type InsertCreditoResumoDiario = typeof creditosResumoDiario.$inferInsert;
