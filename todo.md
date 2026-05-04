@@ -942,3 +942,11 @@
 - [x] Consultar DataJud para todos os 83 processos (74 com dados completos do DataJud)
 - [x] Preencher comarca, vara, tribunal, valor da causa e texto extraído
 - [x] Resultado: 109/109 processos completos (0 pendentes)
+
+## CONECTOR JUSBRASIL + PRAZOS INTELIGENTES (04/05/2026)
+- [ ] Criar tabela conectores_api no banco de dados (permanente)
+- [ ] Inserir documentação completa das APIs JusBrasil como conector permanente no banco
+- [ ] Criar rotas backend para consulta de processos via JusBrasil
+- [ ] Integrar alimentação automática de intimações nos processos
+- [ ] Criar sistema inteligente de prazos baseado em movimentações/intimações
+- [ ] Criar painel de Conectores no frontend (dentro da plataforma)

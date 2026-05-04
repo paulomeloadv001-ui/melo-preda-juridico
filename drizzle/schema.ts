@@ -763,3 +763,57 @@ export const creditosResumoDiario = mysqlTable("creditos_resumo_diario", {
 });
 export type CreditoResumoDiario = typeof creditosResumoDiario.$inferSelect;
 export type InsertCreditoResumoDiario = typeof creditosResumoDiario.$inferInsert;
+
+
+// ==================== CONECTORES API (permanente na plataforma) ====================
+export const conectoresApi = mysqlTable("conectores_api", {
+  id: int("id").autoincrement().primaryKey(),
+  nome: varchar("nome", { length: 100 }).notNull(), // ex: "JusBrasil", "DataJud"
+  tipo: mysqlEnum("tipo", ["monitoramento", "consulta", "intimacoes", "diarios", "distribuicao", "webhook"]).notNull(),
+  baseUrl: varchar("baseUrl", { length: 500 }).notNull(),
+  endpoint: varchar("endpoint", { length: 500 }).notNull(),
+  metodo: mysqlEnum("metodo", ["GET", "POST", "PUT", "DELETE", "PATCH"]).notNull(),
+  descricao: text("descricao").notNull(),
+  parametros: text("parametros"), // JSON com parâmetros aceitos
+  exemploRequest: text("exemploRequest"), // JSON com exemplo de request
+  exemploResponse: text("exemploResponse"), // JSON com exemplo de response
+  headers: text("headers"), // JSON com headers necessários
+  autenticacao: varchar("autenticacao", { length: 100 }), // "Bearer", "Basic", etc.
+  modulo: varchar("modulo", { length: 200 }), // módulo necessário na API
+  ativo: int("ativo").notNull().default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ConectorApi = typeof conectoresApi.$inferSelect;
+export type InsertConectorApi = typeof conectoresApi.$inferInsert;
+
+// ==================== INTIMAÇÕES PROCESSUAIS ====================
+export const intimacoes = mysqlTable("intimacoes", {
+  id: int("id").autoincrement().primaryKey(),
+  processoId: int("processoId").notNull(),
+  clienteId: int("clienteId"),
+  tipo: mysqlEnum("tipo", ["intimacao", "citacao", "audiencia", "despacho", "sentenca", "acordao", "publicacao"]).notNull(),
+  origem: varchar("origem", { length: 100 }), // "JusBrasil", "DataJud", "Projudi", "Manual"
+  dataDisponibilizacao: timestamp("dataDisponibilizacao"),
+  dataLeitura: timestamp("dataLeitura"),
+  prazoFinal: timestamp("prazoFinal"),
+  diasPrazo: int("diasPrazo"), // prazo em dias úteis
+  status: mysqlEnum("status", ["pendente", "lida", "respondida", "vencida", "cancelada"]).default("pendente").notNull(),
+  prioridade: mysqlEnum("prioridade", ["baixa", "media", "alta", "urgente"]).default("media").notNull(),
+  conteudo: text("conteudo"), // texto da intimação
+  anexoUrl: varchar("anexoUrl", { length: 1000 }),
+  tribunal: varchar("tribunal", { length: 50 }),
+  vara: varchar("vara", { length: 200 }),
+  comarca: varchar("comarca", { length: 200 }),
+  numeroCnj: varchar("numeroCnj", { length: 30 }),
+  observacoes: text("observacoes"),
+  conectorId: int("conectorId"), // referência ao conector que trouxe a intimação
+  externalId: varchar("externalId", { length: 200 }), // ID externo na API de origem
+  metadata: text("metadata"), // JSON com dados extras
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Intimacao = typeof intimacoes.$inferSelect;
+export type InsertIntimacao = typeof intimacoes.$inferInsert;
+
+

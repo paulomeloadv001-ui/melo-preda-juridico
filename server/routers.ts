@@ -16,7 +16,8 @@ import {
   templatesPeticao, peticoesGeradas, agenteIaConfig, agenteIaHistorico,
   anexosPeticao, userPermissions, convites, auditLog,
   publicacoes, monitoramentoConfig, peticaoVersoes, perfisAcesso,
-  creditosConfig, creditosSaldo, creditosTransacoes, creditosResumoDiario
+  creditosConfig, creditosSaldo, creditosTransacoes, creditosResumoDiario,
+  conectoresApi, intimacoes
 } from "../drizzle/schema";
 import { eq, like, desc, asc, and, sql, inArray } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
@@ -9336,6 +9337,184 @@ Retorne um JSON com os campos:
           break;
       }
       return { removidos: idsParaRemover.length };
+    }),
+  }),
+
+  // ==================== CONECTORES API & INTIMAÇÕES ====================
+  conectores: router({
+    // Listar todos os conectores
+    listar: protectedProcedure.query(async () => {
+      const db = (await getDb())!;
+      return db.select().from(conectoresApi).orderBy(conectoresApi.nome);
+    }),
+
+    // Buscar por tipo
+    porTipo: protectedProcedure.input(z.object({ tipo: z.string() })).query(async ({ input }) => {
+      const db = (await getDb())!;
+      return db.select().from(conectoresApi).where(eq(conectoresApi.tipo, input.tipo as any));
+    }),
+
+    // Buscar por nome
+    porNome: protectedProcedure.input(z.object({ nome: z.string() })).query(async ({ input }) => {
+      const db = (await getDb())!;
+      return db.select().from(conectoresApi).where(eq(conectoresApi.nome, input.nome));
+    }),
+
+    // Detalhes de um conector
+    detalhes: protectedProcedure.input(z.object({ id: z.number() })).query(async ({ input }) => {
+      const db = (await getDb())!;
+      const [conector] = await db.select().from(conectoresApi).where(eq(conectoresApi.id, input.id));
+      return conector || null;
+    }),
+
+    // Estatísticas
+    stats: protectedProcedure.query(async () => {
+      const db = (await getDb())!;
+      const all = await db.select().from(conectoresApi);
+      const porTipo: Record<string, number> = {};
+      all.forEach(c => { porTipo[c.tipo] = (porTipo[c.tipo] || 0) + 1; });
+      return { total: all.length, porTipo, ativos: all.filter(c => c.ativo === 1).length };
+    }),
+  }),
+
+  intimacoesRouter: router({
+    // Listar intimações
+    listar: protectedProcedure.input(z.object({
+      page: z.number().default(1),
+      limit: z.number().default(50),
+      status: z.string().optional(),
+      processoId: z.number().optional(),
+      clienteId: z.number().optional(),
+    }).optional()).query(async ({ input }) => {
+      const db = (await getDb())!;
+      const params = input || { page: 1, limit: 50 };
+      let query = db.select().from(intimacoes);
+      if (params.status) query = query.where(eq(intimacoes.status, params.status as any)) as any;
+      if (params.processoId) query = query.where(eq(intimacoes.processoId, params.processoId)) as any;
+      if (params.clienteId) query = query.where(eq(intimacoes.clienteId, params.clienteId)) as any;
+      const results = await (query as any).orderBy(desc(intimacoes.createdAt)).limit(params.limit);
+      return results;
+    }),
+
+    // Criar intimação manualmente ou via conector
+    criar: protectedProcedure.input(z.object({
+      processoId: z.number(),
+      clienteId: z.number().optional(),
+      tipo: z.enum(['intimacao', 'citacao', 'audiencia', 'despacho', 'sentenca', 'acordao', 'publicacao']),
+      origem: z.string().optional(),
+      dataDisponibilizacao: z.string().optional(),
+      prazoFinal: z.string().optional(),
+      diasPrazo: z.number().optional(),
+      prioridade: z.enum(['baixa', 'media', 'alta', 'urgente']).default('media'),
+      conteudo: z.string().optional(),
+      tribunal: z.string().optional(),
+      vara: z.string().optional(),
+      comarca: z.string().optional(),
+      numeroCnj: z.string().optional(),
+      observacoes: z.string().optional(),
+    })).mutation(async ({ input }) => {
+      const db = (await getDb())!;
+      const values: any = {
+        processoId: input.processoId,
+        clienteId: input.clienteId || null,
+        tipo: input.tipo,
+        origem: input.origem || 'Manual',
+        prioridade: input.prioridade,
+        status: 'pendente',
+        conteudo: input.conteudo || null,
+        tribunal: input.tribunal || null,
+        vara: input.vara || null,
+        comarca: input.comarca || null,
+        numeroCnj: input.numeroCnj || null,
+        observacoes: input.observacoes || null,
+        diasPrazo: input.diasPrazo || null,
+      };
+      if (input.dataDisponibilizacao) values.dataDisponibilizacao = new Date(input.dataDisponibilizacao);
+      if (input.prazoFinal) values.prazoFinal = new Date(input.prazoFinal);
+
+      const [result] = await (db as any).insert(intimacoes).values(values);
+
+      // Se tem prazo, criar automaticamente um prazo processual vinculado
+      if (input.prazoFinal && input.diasPrazo) {
+        await (db as any).insert(prazosProcessuais).values({
+          processoId: input.processoId,
+          clienteId: input.clienteId || 0,
+          tipo: input.tipo === 'audiencia' ? 'audiencia' : 'manifestacao',
+          titulo: `Prazo: ${input.tipo} - ${input.numeroCnj || ''}`,
+          descricao: input.conteudo || `Prazo de ${input.diasPrazo} dias para ${input.tipo}`,
+          dataVencimento: new Date(input.prazoFinal),
+          diasAntecedencia: 3,
+          status: 'pendente',
+        } as any);
+      }
+
+      return { id: (result as any).insertId, message: 'Intimação criada com sucesso' };
+    }),
+
+    // Atualizar status
+    atualizarStatus: protectedProcedure.input(z.object({
+      id: z.number(),
+      status: z.enum(['pendente', 'lida', 'respondida', 'vencida', 'cancelada']),
+    })).mutation(async ({ input }) => {
+      const db = (await getDb())!;
+      await db.update(intimacoes).set({ status: input.status }).where(eq(intimacoes.id, input.id));
+      return { success: true };
+    }),
+
+    // Estatísticas de intimações
+    stats: protectedProcedure.query(async () => {
+      const db = (await getDb())!;
+      const all = await db.select().from(intimacoes);
+      const pendentes = all.filter(i => i.status === 'pendente').length;
+      const urgentes = all.filter(i => i.prioridade === 'urgente' && i.status === 'pendente').length;
+      const porTipo: Record<string, number> = {};
+      all.forEach(i => { porTipo[i.tipo] = (porTipo[i.tipo] || 0) + 1; });
+      return { total: all.length, pendentes, urgentes, porTipo };
+    }),
+
+    // Receber webhook do JusBrasil (rota para alimentação automática)
+    receberWebhook: publicProcedure.input(z.object({
+      events: z.array(z.object({
+        id: z.number().optional(),
+        evt_type: z.number(),
+        target_number: z.string().optional(),
+        target_url: z.string().optional(),
+        created_at: z.string().optional(),
+        data: z.any().optional(),
+      })),
+    })).mutation(async ({ input }) => {
+      const db = (await getDb())!;
+      let processados = 0;
+
+      for (const evt of input.events) {
+        // evt_type 1 = movimentação, 2 = publicação diário
+        if (evt.evt_type === 1 || evt.evt_type === 2) {
+          const cnj = evt.target_number;
+          if (!cnj) continue;
+
+          // Buscar processo pelo CNJ
+          const [processo] = await db.select().from(processos).where(eq(processos.numeroCnj, cnj));
+          if (!processo) continue;
+
+          // Inserir como intimação/movimentação
+          await db.insert(intimacoes).values({
+            processoId: processo.id,
+            clienteId: processo.clienteId,
+            tipo: evt.evt_type === 1 ? 'despacho' : 'publicacao',
+            origem: 'JusBrasil',
+            status: 'pendente',
+            prioridade: 'media',
+            conteudo: JSON.stringify(evt.data),
+            numeroCnj: cnj,
+            externalId: String(evt.id || ''),
+            metadata: JSON.stringify(evt),
+            dataDisponibilizacao: evt.created_at ? new Date(evt.created_at) : new Date(),
+          } as any);
+          processados++;
+        }
+      }
+
+      return { processados, total: input.events.length };
     }),
   }),
 
