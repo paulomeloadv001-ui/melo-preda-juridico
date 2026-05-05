@@ -944,9 +944,19 @@
 - [x] Resultado: 109/109 processos completos (0 pendentes)
 
 ## CONECTOR JUSBRASIL + PRAZOS INTELIGENTES (04/05/2026)
-- [ ] Criar tabela conectores_api no banco de dados (permanente)
-- [ ] Inserir documentação completa das APIs JusBrasil como conector permanente no banco
-- [ ] Criar rotas backend para consulta de processos via JusBrasil
-- [ ] Integrar alimentação automática de intimações nos processos
-- [ ] Criar sistema inteligente de prazos baseado em movimentações/intimações
-- [ ] Criar painel de Conectores no frontend (dentro da plataforma)
+- [x] Criar tabela conectores_api no banco de dados (permanente)
+- [x] Inserir documentação completa das APIs JusBrasil como conector permanente no banco
+- [x] Criar rotas backend para consulta de processos via JusBrasil
+- [x] Integrar alimentação automática de intimações nos processos
+- [x] Criar sistema inteligente de prazos baseado em movimentações/intimações
+- [x] Criar painel de Conectores no frontend (dentro da plataforma)
+
+## LIMPEZA DO BANCO + AUTOFILL (05/05/2026)
+- [x] Remover 93 prazos órfãos, 34 documentos órfãos, 10 processos fake
+- [x] Remover 253 prazos automáticos inúteis
+- [x] Remover 30 conhecimentos lixo (erros de extração)
+- [x] Remover 16 registros lixo (testes + partes adversas)
+- [x] Remover 537 notificações antigas (mantidas 20 recentes)
+- [x] Remover 1 documento órfão e 4 movimentações órfãs
+- [x] Preenchimento automático de orgaoEmpregador e cidade para 48 clientes pendentes
+- [x] Remover script temporário autofill_clientes.cjs
