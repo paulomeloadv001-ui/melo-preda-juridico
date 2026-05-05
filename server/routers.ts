@@ -8990,7 +8990,7 @@ Retorne um JSON com os campos:
       const datajudStart = Date.now();
       try {
         if (!ENV.datajudApiKey) throw new Error('N\u00e3o configurado');
-        const res = await fetch('https://api-publica.datajud.cnj.jus.br/api_publica_trf1/_search', {
+        const res = await fetch('https://api-publica.datajud.cnj.jus.br/api_publica_tjgo/_search', {
           method: 'POST',
           headers: {
             'Authorization': `APIKey ${ENV.datajudApiKey}`,

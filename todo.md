@@ -960,3 +960,17 @@
 - [x] Remover 1 documento órfão e 4 movimentações órfãs
 - [x] Preenchimento automático de orgaoEmpregador e cidade para 48 clientes pendentes
 - [x] Remover script temporário autofill_clientes.cjs
+
+## REVISÃO COMPLETA DE PONTA A PONTA (05/05/2026)
+- [x] Verificar e testar todas as APIs integradas (DataJud ✅, LLM ✅, S3 ✅, OAuth ✅, JusConsig ✅)
+- [x] Corrigir healthCheck DataJud (TRF1→TJGO - timeout resolvido)
+- [x] Limpar funcionalidades sem sentido ou quebradas (6 páginas redundantes removidas)
+- [x] Garantir fluxo completo: importação PDF → extração → dados → pasta do cliente (FUNCIONAL)
+- [x] Desacoplar agente IA do peticionamento (JÁ ESTAVA desacoplado - FloatingAgent global em todas as páginas)
+- [x] Revisar e corrigir todas as rotas backend (11054 linhas auditadas)
+- [x] Testar todas as páginas de ponta a ponta (Painel, Importar, Clientes, Petições, Prazos, Relatórios)
+- [x] Remover páginas redundantes: AgenteJuridico, Integracao, Enriquecimento, Metricas, PreenchimentoDB, AcompanhamentoPJe
+- [x] Limpar navegação sidebar (rotas ocultas desnecessárias removidas)
+- [x] Remover cliente lixo 'processo completo' e processo SEM_mosnmdye do banco
+- [x] Executar 211 testes unitários - TODOS PASSANDO
+- [ ] JusBrasil pendente token real (variável jusbrasipj contém URL webhook, não token)

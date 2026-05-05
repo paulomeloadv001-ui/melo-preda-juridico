@@ -28,8 +28,8 @@ import {
   LayoutDashboard, Users, Upload, LogOut, PanelLeft, Scale,
   Bell, Clock, AlertTriangle, DollarSign, FileText, CheckCircle, X, Trash2,
   Gavel, Calendar, Settings, ChevronDown, ChevronRight, Shield, Download,
-  BookOpen, Database, ArrowRightLeft, ShieldCheck, ListChecks, UserCheck,
-  FileBarChart, Wrench, FolderOpen, BarChart3, Activity, Plug
+  BookOpen, ShieldCheck, ListChecks,
+  FileBarChart, FolderOpen, BarChart3, Activity, Plug
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -64,14 +64,8 @@ const allItems = [
   ...configItems,
   // Hidden routes (accessible via links but not in sidebar)
   { icon: FolderOpen, label: "Cliente", path: "/cliente" },
-  { icon: FolderOpen, label: "Agente IA", path: "/agente" },
   { icon: ListChecks, label: "Jobs", path: "/jobs" },
-  { icon: ArrowRightLeft, label: "Integração", path: "/integracao" },
-  { icon: UserCheck, label: "Enriquecer", path: "/enriquecimento" },
-  { icon: Database, label: "Preencher BD", path: "/preenchimento" },
   { icon: Bell, label: "Publicações", path: "/publicacoes" },
-  { icon: FolderOpen, label: "Acompanhar", path: "/acompanhamento" },
-  { icon: FolderOpen, label: "Métricas", path: "/metricas" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

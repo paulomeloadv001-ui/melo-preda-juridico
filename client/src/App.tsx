@@ -15,14 +15,8 @@ import Correcao from "./pages/Correcao";
 import Relatorios from "./pages/Relatorios";
 import Jobs from "./pages/Jobs";
 import GestaoAcessos, { SolicitarAcesso } from "./pages/GestaoAcessos";
-import AgenteJuridico from "./pages/AgenteJuridico";
 import Peticionamento from "./pages/Peticionamento";
 import PrazosProcessuais from "./pages/PrazosProcessuais";
-import AcompanhamentoPJe from "./pages/AcompanhamentoPJe";
-import Integracao from "./pages/Integracao";
-import Enriquecimento from "./pages/Enriquecimento";
-import Metricas from "./pages/Metricas";
-import PreenchimentoDB from "./pages/PreenchimentoDB";
 import PublicacoesPage from "./pages/PublicacoesPage";
 import FloatingAgent from "./components/FloatingAgent";
 import CompletarPerfil from "./pages/CompletarPerfil";
@@ -52,14 +46,8 @@ function Router() {
             <Route path="/relatorios" component={Relatorios} />
             <Route path="/correcao" component={Correcao} />
             <Route path="/jobs" component={Jobs} />
-            <Route path="/agente" component={AgenteJuridico} />
             <Route path="/peticionamento" component={Peticionamento} />
             <Route path="/prazos" component={PrazosProcessuais} />
-            <Route path="/acompanhamento" component={AcompanhamentoPJe} />
-            <Route path="/integracao" component={Integracao} />
-            <Route path="/enriquecimento" component={Enriquecimento} />
-            <Route path="/metricas" component={Metricas} />
-            <Route path="/preenchimento" component={PreenchimentoDB} />
             <Route path="/publicacoes" component={PublicacoesPage} />
             <Route path="/acessos" component={GestaoAcessos} />
             <Route path="/admin-uploads" component={AdminUploads} />
