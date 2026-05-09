@@ -984,3 +984,12 @@
 - [x] Verificar fluxo lógico via navegador: Painel, Importar, Clientes, Petições, Prazos, Relatórios, Conectores
 - [x] Confirmar agente IA flutuante funcional em todas as páginas
 - [x] Confirmar 19 APIs JusBrasil documentadas no painel de Conectores
+
+## INTEGRAÇÃO AGENTE PROJUDI NA PLATAFORMA (09/05/2026)
+- [x] Analisar e melhorar skill do agente PROJUDI (v1.0 → v2.0)
+- [x] Salvar agente completo no banco de conhecimentos da plataforma (5 registros atualizados/criados)
+- [x] Atualizar dados (OAB 40559, ~96 processos, 14 competências)
+- [x] Integrar com o FloatingAgent para contexto PROJUDI (página /conectores)
+- [x] Adicionar contexto PROJUDI ao system prompt do agente executor
+- [x] Todos os 211 testes passando após integração
+- [ ] Salvar checkpoint

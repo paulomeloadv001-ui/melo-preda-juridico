@@ -1396,6 +1396,14 @@ Advogado: PAULO DA SILVA MELO FILHO — OAB/GO 40.559
 - Se o usuário pedir para remover algo → remover_registro
 - Se o usuário pedir merge de duplicados → merge_clientes
 
+## INTEGRAÇÃO PROJUDI-GO:
+Você tem acesso ao PROJUDI-GO (login: 03692215169). Quando o usuário perguntar sobre publicações, intimações ou status de processos no PROJUDI:
+- Classifique publicações em Cat. 1 (ciência), Cat. 2 (alerta+análise), Cat. 3 (agenda)
+- Prioridades: URGENTE (≤3 dias), ATENÇÃO (4-10 dias), NORMAL (+10 dias), INFORMATIVO
+- Processos parados +30 dias = PARADO, +60 dias = PARADO CRÍTICO
+- Prazos: Apelação/Agravo/Contestação = 15 dias úteis, ED = 5 dias úteis
+- URL busca: https://projudi.tjgo.jus.br/BuscaProcesso?PaginaAtual=2&Paginacao=true&PosicaoPaginaAtual=0&PassoBusca=1
+
 ## CONTEXTO ATUAL:
 ${params.clienteId ? `CLIENTE SELECIONADO: ID ${params.clienteId} — Busque com buscar_cliente para dados completos` : 'Nenhum cliente selecionado'}
 ${params.processoId ? `PROCESSO SELECIONADO: ID ${params.processoId} — Busque com buscar_processo para dados completos` : 'Nenhum processo selecionado'}

@@ -133,17 +133,17 @@ function getPageContext(path: string): PageContext {
       modo: "chat",
       icone: BookOpen,
     },
-    "/agente": {
-      titulo: "Agente IA Completo",
-      descricao: "Modo avançado com todas as capacidades. Análise técnica, peticionamento, cálculos, estratégias e execução de ações no sistema.",
+    "/conectores": {
+      titulo: "Conectores & PROJUDI",
+      descricao: "Painel de integrações. Posso verificar status das APIs (DataJud, JusBrasil, JusConsig), monitorar o PROJUDI e alimentar dados automaticamente.",
       sugestoes: [
-        "Análise técnica do processo mais recente",
-        "Diagnóstico completo do escritório",
-        "Gerar estratégia processual avançada",
-        "Calcular atualização monetária",
+        "Verificar publicações pendentes no PROJUDI",
+        "Consultar movimentações via DataJud",
+        "Status de todas as APIs integradas",
+        "Checar processos parados há mais de 30 dias",
       ],
       modo: "analise",
-      icone: Brain,
+      icone: Zap,
     },
     "/prazos": {
       titulo: "Prazos Processuais",
@@ -189,16 +189,16 @@ function getPageContext(path: string): PageContext {
       modo: "chat",
       icone: Wrench,
     },
-    "/metricas": {
-      titulo: "Métricas",
-      descricao: "Análise de desempenho do escritório. Posso calcular métricas financeiras, processuais e de produtividade.",
+    "/status": {
+      titulo: "Status do Sistema",
+      descricao: "Monitoramento da saúde da plataforma. Posso verificar APIs, banco de dados, storage e integrações.",
       sugestoes: [
-        "Métricas financeiras do escritório",
-        "Taxa de sucesso dos processos",
-        "Evolução mensal de honorários",
+        "Verificar saúde de todas as APIs",
+        "Diagnóstico do banco de dados",
+        "Status do storage S3",
       ],
       modo: "chat",
-      icone: BarChart3,
+      icone: Wrench,
     },
   };
 
