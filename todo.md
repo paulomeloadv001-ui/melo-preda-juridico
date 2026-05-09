@@ -974,3 +974,13 @@
 - [x] Remover cliente lixo 'processo completo' e processo SEM_mosnmdye do banco
 - [x] Executar 211 testes unitários - TODOS PASSANDO
 - [ ] JusBrasil pendente token real (variável jusbrasipj contém URL webhook, não token)
+
+## VARREDURA DE DADOS E DUPLICIDADES (09/05/2026)
+- [x] Varredura completa de todas as tabelas do banco
+- [x] Remover 212 movimentações duplicadas (DataJud reimportou mesmos eventos)
+- [x] Remover 32 dados financeiros duplicados (mesmo cliente sem data referência)
+- [x] Remover 10 empréstimos duplicados (mesmo banco+contrato+cliente)
+- [x] Verificar 0 duplicidades restantes após limpeza
+- [x] Verificar fluxo lógico via navegador: Painel, Importar, Clientes, Petições, Prazos, Relatórios, Conectores
+- [x] Confirmar agente IA flutuante funcional em todas as páginas
+- [x] Confirmar 19 APIs JusBrasil documentadas no painel de Conectores
