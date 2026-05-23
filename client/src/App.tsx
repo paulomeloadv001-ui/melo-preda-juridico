@@ -23,6 +23,7 @@ import CompletarPerfil from "./pages/CompletarPerfil";
 import AdminUploads from "./pages/AdminUploads";
 import StatusSistema from "./pages/StatusSistema";
 import Conectores from "./pages/Conectores";
+import Integracoes from "./pages/Integracoes";
 
 function Router() {
   return (
@@ -53,6 +54,7 @@ function Router() {
             <Route path="/admin-uploads" component={AdminUploads} />
             <Route path="/status" component={StatusSistema} />
             <Route path="/conectores" component={Conectores} />
+            <Route path="/integracoes" component={Integracoes} />
             <Route path="/404" component={NotFound} />
             <Route component={NotFound} />
           </Switch>

@@ -295,3 +295,55 @@ export function getStatusCronJobs(): {
     ],
   };
 }
+
+// ==================== INICIALIZAÇÃO DOS CRON JOBS ====================
+
+/**
+ * Iniciar todos os cron jobs automáticos com agendamento
+ * Chamado no startup do servidor
+ */
+export function iniciarCronJobs(): void {
+  console.log('[CRON] Inicializando jobs automáticos...');
+
+  // Job 1: Folha de Pagamento GO — Mensal (dia 10, às 6h)
+  setInterval(async () => {
+    const agora = new Date();
+    if (agora.getDate() === 10 && agora.getHours() === 6 && agora.getMinutes() === 0) {
+      await cronAtualizarFolhaPagamento();
+    }
+  }, 60000); // Verificar a cada minuto
+
+  // Job 2: Movimentações DataJud — Diário (6h)
+  setInterval(async () => {
+    const agora = new Date();
+    if (agora.getHours() === 6 && agora.getMinutes() === 0) {
+      if (process.env.DATAJUD_API_KEY) {
+        await cronAtualizarMovimentacoes();
+      }
+    }
+  }, 60000);
+
+  // Job 3: Prazos Processuais — Diário (7h)
+  setInterval(async () => {
+    const agora = new Date();
+    if (agora.getHours() === 7 && agora.getMinutes() === 0) {
+      await cronVerificarPrazos();
+    }
+  }, 60000);
+
+  // Job 4: Margem Celcoin — Semanal (segunda, 8h)
+  setInterval(async () => {
+    const agora = new Date();
+    if (agora.getDay() === 1 && agora.getHours() === 8 && agora.getMinutes() === 0) {
+      if (isCelcoinConfigurada()) {
+        await cronAtualizarMargens();
+      }
+    }
+  }, 60000);
+
+  console.log('[CRON] Jobs agendados:');
+  console.log('  - Folha GO: Dia 10 de cada mês às 6h');
+  console.log('  - Movimentações DataJud: Diário às 6h');
+  console.log('  - Prazos Processuais: Diário às 7h');
+  console.log('  - Margem Celcoin: Segunda-feira às 8h');
+}

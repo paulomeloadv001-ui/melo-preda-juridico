@@ -9,6 +9,8 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { apiRouter } from "../apiRest";
 import { uploadChunkedRouter } from "../uploadChunked";
+import { webhookRouter } from "../webhooks/webhookRoutes";
+import { iniciarCronJobs } from "../cron/cronJobs";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -41,6 +43,8 @@ async function startServer() {
   app.use('/api/v1', apiRouter);
   // Upload chunked (multipart, sem limite de tamanho)
   app.use('/api/upload', uploadChunkedRouter);
+  // Webhooks (notificações automáticas de sistemas externos)
+  app.use('/api/webhooks', webhookRouter);
   // tRPC API
   app.use(
     "/api/trpc",
@@ -65,6 +69,9 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // Iniciar cron jobs automáticos
+    iniciarCronJobs();
+    console.log(`[CronJobs] Jobs automáticos iniciados`);
   });
 }
 

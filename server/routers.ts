@@ -22,6 +22,7 @@ import {
 import { eq, like, desc, asc, and, sql, inArray } from "drizzle-orm";
 import { invokeLLM } from "./_core/llm";
 import { storagePut, storageGet } from "./storage";
+import { integracoesRouter } from "./integrations/integracoesRouter";
 import { gerarPeticaoDocx } from "./docxGenerator";
 import { executarAgenteCompleto } from "./agenteExecutor";
 import { ENV } from "./_core/env";
@@ -9514,10 +9515,12 @@ Retorne um JSON com os campos:
         }
       }
 
-      return { processados, total: input.events.length };
+            return { processados, total: input.events.length };
     }),
   }),
 
+  // ==================== INTEGRAÇÕES AUTOMÁTICAS ====================
+  integracoes: integracoesRouter,
 });
 // ==================== PROCESSADOR DE FILA DE JOBS ====================
 async function processarFilaJobs(jobIds: number[]) {
