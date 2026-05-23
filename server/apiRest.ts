@@ -28,6 +28,7 @@ import {
 } from '../drizzle/schema';
 import { eq, like, desc, sql } from 'drizzle-orm';
 import { invokeLLM } from './_core/llm';
+import { agentCache, limitarResultadoTool } from './utils/agenteCache';
 import { storagePut } from './storage';
 import { gerarPeticaoDocx } from './docxGenerator';
 

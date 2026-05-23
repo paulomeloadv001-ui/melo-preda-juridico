@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Users, FileText, DollarSign, Upload, Gavel, Calendar,
   ChevronRight, Brain, Banknote, CheckCircle2, Clock, AlertCircle,
-  RefreshCw, ArrowRight, FolderOpen, TrendingUp, Scale, Activity
+  RefreshCw, ArrowRight, FolderOpen, TrendingUp, Scale, Activity, Zap
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "wouter";
@@ -89,7 +89,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Painel</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            Melo &amp; Preda Advogados
+            Melo Advogados — Painel de Gestão
           </p>
         </div>
         <Button
@@ -197,6 +197,29 @@ export default function Dashboard() {
           <span className="text-sm font-medium">Relatórios</span>
         </Button>
       </div>
+
+      {/* Card de Integrações Automáticas - Status Rápido */}
+      <Card className="border-dashed border-blue-500/30 bg-blue-500/5 cursor-pointer hover:shadow-md transition-shadow" onClick={() => setLocation("/integracoes")}>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <Zap className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Integrações Automáticas</p>
+                <p className="text-xs text-muted-foreground">Dados Abertos GO • DataJud CNJ • Celcoin • Webhooks</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs bg-green-100 text-green-800 border-green-300">
+                <CheckCircle2 className="h-3 w-3 mr-1" /> Ativo
+              </Badge>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Honorários */}

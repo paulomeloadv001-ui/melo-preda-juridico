@@ -26,6 +26,7 @@ import {
 import { eq, like, desc, asc, and, sql } from "drizzle-orm";
 import { storagePut } from "./storage";
 import { gerarPeticaoDocx } from "./docxGenerator";
+import { agentCache, comprimirHistorico, limitarResultadoTool, deduplicarConsulta } from "./utils/agenteCache";
 
 // ==================== TOOL DEFINITIONS ====================
 export const AGENT_TOOLS: Tool[] = [
@@ -1456,8 +1457,22 @@ Responda SEMPRE em português brasileiro. Seja direto, técnico e assertivo.`;
         }
 
         console.log(`[AgenteExecutor] Executando tool: ${toolName}`, JSON.stringify(toolArgs).substring(0, 200));
-        const toolResult = await executarTool(toolName, toolArgs);
-        console.log(`[AgenteExecutor] Resultado: ${toolResult.substring(0, 200)}`);
+        
+        // OTIMIZAÇÃO: Cache de consultas repetidas
+        const cacheKey = `tool:${toolName}:${JSON.stringify(toolArgs)}`;
+        let toolResult = agentCache.get<string>(cacheKey);
+        if (!toolResult) {
+          toolResult = await deduplicarConsulta(cacheKey, () => executarTool(toolName, toolArgs));
+          // Cache consultas de leitura (não mutações)
+          const isReadOnly = ['buscar_cliente', 'buscar_processo', 'consultar_estatisticas', 'buscar_conhecimento', 'consultar_prazos', 'listar_peticoes', 'listar_duplicados', 'consultar_cumprimento_sentenca'].includes(toolName);
+          if (isReadOnly) {
+            agentCache.set(cacheKey, toolResult, 120000); // 2 min cache
+          }
+        }
+        
+        // OTIMIZAÇÃO: Limitar tamanho do resultado para não estourar contexto
+        toolResult = limitarResultadoTool(toolResult, 8000);
+        console.log(`[AgenteExecutor] Resultado (${toolResult.length} chars): ${toolResult.substring(0, 200)}`);
 
         let sucesso = true;
         try {

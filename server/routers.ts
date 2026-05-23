@@ -5142,9 +5142,12 @@ ${baseConhecimento}${configExpertise}${contextoCliente}${contextoProcesso}
 13. Pedidos: SEMPRE numerar (a,b,c), tutela primeiro, honorários no final, incluir subsidiários`;
 
         // 7. EXECUTAR AGENTE COM TOOLS (loop de execução)
+        // OTIMIZAÇÃO: Comprimir histórico longo para evitar estouro de contexto
+        const { comprimirHistorico } = await import('./utils/agenteCache');
+        const historicoOtimizado = comprimirHistorico(input.historico || [], 10, 30000);
         const executorResult = await executarAgenteCompleto({
           mensagem: input.mensagem,
-          historico: input.historico,
+          historico: historicoOtimizado as any,
           clienteId: input.clienteId,
           processoId: input.processoId,
           modo: input.modo,
@@ -5497,6 +5500,26 @@ REGRA ABSOLUTA: Não use NENHUM placeholder como [COMPLETAR], [INSERIR], [NOME],
           });
         } catch (e) {
           console.error('Erro ao salvar petição no banco:', e);
+        }
+
+        // FLUXO AUTOMÁTICO: Criar prazo de protocolo após gerar petição
+        if (input.processoId) {
+          try {
+            const prazoData = new Date();
+            prazoData.setDate(prazoData.getDate() + 5); // 5 dias úteis para protocolar
+            await db.insert(prazosProcessuais).values({
+              processoId: input.processoId,
+              clienteId: input.clienteId || null,
+              tipo: 'protocolo',
+              descricao: `Protocolar ${input.tipoPeticao} — ${nomeCliente}`,
+              dataLimite: prazoData.toISOString().split('T')[0],
+              status: 'pendente',
+              prioridade: 'alta',
+              origem: 'sistema_automatico',
+            });
+          } catch (prazoErr) {
+            console.error('[FLUXO] Erro ao criar prazo automático pós-petição:', prazoErr);
+          }
         }
 
         return {

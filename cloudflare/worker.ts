@@ -1,5 +1,5 @@
 /**
- * Melo & Preda - Cloudflare Worker
+ * Melo Advogados - Cloudflare Worker
  * 
  * Estratégia: Worker como proxy completo do Manus com autenticação integrada
  * - Serve frontend estático via Workers Assets (ou proxy Manus como fallback)
@@ -126,7 +126,7 @@ export default {
         return jsonResponse({
           VITE_APP_ID: env.VITE_APP_ID,
           VITE_OAUTH_PORTAL_URL: env.VITE_OAUTH_PORTAL_URL,
-          VITE_APP_TITLE: env.VITE_APP_TITLE || 'Melo & Preda - Sistema Jurídico Integrado',
+          VITE_APP_TITLE: env.VITE_APP_TITLE || 'Melo Advogados - Sistema Jurídico Integrado',
           VITE_APP_LOGO: env.VITE_APP_LOGO || '',
           VITE_FRONTEND_FORGE_API_URL: env.VITE_FRONTEND_FORGE_API_URL,
           VITE_FRONTEND_FORGE_API_KEY: env.VITE_FRONTEND_FORGE_API_KEY,

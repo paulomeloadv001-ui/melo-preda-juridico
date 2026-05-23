@@ -392,7 +392,7 @@ export default function DashboardLayout({
               <Scale className="h-10 w-10 text-white" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-white text-center">
-              Melo &amp; Preda Advogados
+              Melo Advogados
             </h1>
             <p className="text-sm text-gray-400 text-center max-w-sm">
               Sistema Jurídico Integrado
@@ -529,7 +529,7 @@ function DashboardLayoutContent({
                 <div className="flex items-center gap-2 min-w-0">
                   <Scale className="h-5 w-5 text-[oklch(0.75_0.12_85)] shrink-0" />
                   <span className="font-semibold tracking-tight truncate text-sidebar-foreground text-sm">
-                    Melo &amp; Preda
+                    Melo Advogados
                   </span>
                 </div>
               ) : null}
