@@ -60,7 +60,7 @@ export default function CompletarPerfil() {
   const salvarMutation = trpc.meuPerfil.salvar.useMutation({
     onSuccess: () => {
       toast.success("Perfil salvo com sucesso!", {
-        description: "Bem-vindo ao Melo & Preda!",
+        description: "Bem-vindo ao Melo Advogados!",
       });
       // Refresh auth para atualizar profileCompleted
       refresh();
@@ -137,7 +137,7 @@ export default function CompletarPerfil() {
           </div>
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white">
-              Bem-vindo ao Melo & Preda
+              Bem-vindo ao Melo Advogados
             </h1>
             <p className="text-gray-400 mt-1">
               Complete seu perfil para começar a usar o sistema

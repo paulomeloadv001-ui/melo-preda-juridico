@@ -116,7 +116,7 @@ describe("relatorios", () => {
     expect(result.url).toBeDefined();
     expect(result.dados).toBeDefined();
     expect(result.dados.titulo).toContain("Cadastrais");
-    expect(result.dados.escritorio).toBe("Melo & Preda Advogados");
+    expect(result.dados.escritorio).toBe("Melo Advogados");
     expect(result.dados.clientes).toBeDefined();
     expect(Array.isArray(result.dados.clientes)).toBe(true);
   });

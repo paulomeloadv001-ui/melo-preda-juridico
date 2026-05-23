@@ -295,7 +295,7 @@ async function autoUpdateRelatorioCadastral(db: any) {
   const relatorioData = {
     titulo: "Relat\u00f3rio de Dados Cadastrais - Clientes Pessoa F\u00edsica",
     dataGeracao: new Date().toISOString(),
-    escritorio: "Melo & Preda Advogados",
+    escritorio: "Melo Advogados",
     resumo: {
       totalClientesPF: clientesPF.length,
       totalClientesGeral: allClientes.length,
@@ -908,7 +908,7 @@ export const appRouter = router({
 Analise o texto extraído de um processo judicial e extraia TODOS os dados estruturados possíveis.
 
 REGRAS CRÍTICAS PARA IDENTIFICAÇÃO DO CLIENTE:
-- O escritório é MELO & PREDA ADVOGADOS, do Dr. PAULO DA SILVA MELO FILHO (OAB/GO 40.559)
+- O escritório é Melo Advogados, do Dr. PAULO DA SILVA MELO FILHO (OAB/GO 40.559)
 - O CLIENTE é SEMPRE a parte que o Dr. Paulo Melo representa no processo
 - Para identificar o cliente: procure quem outorgou procuração ao Dr. Paulo Melo ou quem ele representa como advogado
 - O cliente NUNCA é um banco (Bradesco, Itaú, Santander, Caixa, Inter, Pan, Safra, BB, BRB, etc.)
@@ -1396,7 +1396,7 @@ ${textoExtraido}`;
 
         // 11.5. ANÁLISE PROFUNDA: Gerar estudo completo do processo para o banco de conhecimentos
         try {
-          const analiseProfundaPrompt = `Você é um advogado sênior expert do escritório MELO & PREDA ADVOGADOS.
+          const analiseProfundaPrompt = `Você é um advogado sênior expert do escritório Melo Advogados.
 Faça uma ANÁLISE PROFUNDA E COMPLETA do processo abaixo. Esta análise será usada como base de conhecimento para gerar petições, estratégias e qualquer ação futura.
 
 RETORNE UM JSON com esta estrutura:
@@ -2746,7 +2746,7 @@ ${textoExtraido}`;
       const relatorioData = {
         titulo: "Relat\u00f3rio de Dados Cadastrais - Clientes Pessoa F\u00edsica",
         dataGeracao: new Date().toISOString(),
-        escritorio: "Melo & Preda Advogados",
+        escritorio: "Melo Advogados",
         resumo: {
           totalClientesPF: clientesPF.length,
           totalClientesGeral: totalClientes,
@@ -3076,7 +3076,7 @@ ${textoExtraido}`;
       const relatorioData = {
         titulo: 'Relatório de Margem Consignável',
         dataGeracao: new Date().toISOString(),
-        escritorio: 'Melo & Preda Advogados',
+        escritorio: 'Melo Advogados',
         totalClientes: dadosMargem.length,
         clientes: dadosMargem,
       };
@@ -3220,7 +3220,7 @@ ${textoExtraido}`;
 
       const relatorioData = {
         titulo: 'Panorama Processual', dataGeracao: new Date().toISOString(),
-        escritorio: 'Melo & Preda Advogados', totalProcessos: allProcessos.length, processos: processosData,
+        escritorio: 'Melo Advogados', totalProcessos: allProcessos.length, processos: processosData,
       };
 
       const storageKey = `relatorios/panorama/PANORAMA_PROCESSUAL_${new Date().toISOString().split('T')[0].replace(/-/g, '')}.json`;
@@ -4914,7 +4914,7 @@ Retorne JSON: { "movimentacoesFinanceiras": [ { "tipo": "...", "status": "...", 
         const totalParcelasEmprestimos = emprestimosAtivos.reduce((acc, e) => acc + Number(e.valorParcela || 0), 0);
 
         const panoramaGlobal = `
-=== PANORAMA DO ESCRITÓRIO MELO & PREDA ===
+=== PANORAMA DO ESCRITÓRIO Melo Advogados ===
 RESUMO: ${todosClientes.length} clientes | ${todosProcessos.length} processos | ${todasEstrategias.length} estratégias | ${todosConhecimentos.length} conhecimentos | ${todasPeticoes.length} petições
 Valor causas: R$ ${totalValorCausas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | Honorários: R$ ${totalHonorarios.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
 ${emprestimosAtivos.length} empréstimos ativos (R$ ${totalParcelasEmprestimos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês) | ${prazosUrgentes.length} prazos pendentes
@@ -5105,7 +5105,7 @@ ESTRUTURA OBRIGATÓRIA:
           calculo: 'Realize CÁLCULOS JURÍDICOS precisos. CORREÇÃO MONETÁRIA: INPC mensal sobre principal (desde vencimento ou sentença). JUROS MORA: 1% a.m. (art. 406 CC + art. 161 §1º CTN) desde citação. MULTA: 10% sobre débito total após 15 dias (art. 523 §1º CPC). HONORÁRIOS: 10% sobre débito. Apresente DEMONSTRATIVO completo (art. 524 CPC): Principal → Correção → Juros → Multa → Honorários → TOTAL. Use valores reais dos processos.',
         };
 
-        const systemPrompt = `${config.system_prompt || 'Você é o Agente Jurídico Expert do escritório Melo & Preda Advogados.'}
+        const systemPrompt = `${config.system_prompt || 'Você é o Agente Jurídico Expert do escritório Melo Advogados.'}
 
 VOCÊ ESTUDOU TODOS OS PROCESSOS DO ESCRITÓRIO. Você conhece cada cliente, cada processo, cada valor, cada estratégia, cada prazo, cada empréstimo. Responda qualquer pergunta com base nos dados reais que você estudou.
 
@@ -5385,7 +5385,7 @@ ${conhecimentosProc.length > 0 ? conhecimentosProc.map(c => `[${c.categoria}] ${
         const estiloModel = todosConhecimentos.find(c => c.titulo?.includes('ESTILO') && c.categoria === 'Modelo');
         const instrucoesModel = todosConhecimentos.find(c => c.titulo?.includes('INSTRUÇÕES') && c.categoria === 'Modelo');
 
-        const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
+        const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo Advogados (OAB/GO 40.559).
 Advogado: PAULO DA SILVA MELO FILHO
 
 Gere a petição completa do tipo "${input.tipoPeticao}" seguindo RIGOROSAMENTE o padrão do escritório.
@@ -5905,7 +5905,7 @@ REGRA ABSOLUTA: Não use NENHUM placeholder como [COMPLETAR], [INSERIR], [NOME],
         const configExpertise = configRows.find(c => c.chave === 'expertise_juridica');
         const configEstilo = configRows.find(c => c.chave === 'estilo_redacao');
 
-        const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
+        const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo Advogados (OAB/GO 40.559).
 Advogado: PAULO DA SILVA MELO FILHO
 Você ESTUDOU todos os processos do escritório e conhece profundamente cada caso.
 
@@ -6364,7 +6364,7 @@ ${pet.conteudoTexto || ''}
         const configRows = await db.select().from(agenteIaConfig);
         const configExpertise = configRows.find(c => c.chave === 'expertise_juridica');
 
-        const analysisPrompt = `Você é o Agente Jurídico Expert do escritório Melo & Preda Advogados.
+        const analysisPrompt = `Você é o Agente Jurídico Expert do escritório Melo Advogados.
 Você recebeu um novo documento (${input.nomeArquivo}) para o cliente ${cliente?.nomeCompleto || 'Desconhecido'}.
 
 PROCESSOS EXISTENTES DO CLIENTE:
@@ -6584,7 +6584,7 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
 
         const result = await invokeLLM({
           messages: [
-            { role: 'system', content: config.system_prompt || 'Você é o Agente Jurídico Expert do escritório Melo & Preda Advogados.' },
+            { role: 'system', content: config.system_prompt || 'Você é o Agente Jurídico Expert do escritório Melo Advogados.' },
             { role: 'user', content: prompt }
           ]
         });
@@ -9630,7 +9630,7 @@ async function processarJobImportacaoPdf(jobId: number, inputData: any) {
 Analise o texto extraído de um processo judicial e extraia TODOS os dados estruturados possíveis.
 
 REGRAS CRÍTICAS PARA IDENTIFICAÇÃO DO CLIENTE:
-- O escritório é MELO & PREDA ADVOGADOS, do Dr. PAULO DA SILVA MELO FILHO (OAB/GO 40.559)
+- O escritório é Melo Advogados, do Dr. PAULO DA SILVA MELO FILHO (OAB/GO 40.559)
 - O CLIENTE é SEMPRE a parte que o Dr. Paulo Melo representa no processo
 - Para identificar o cliente: procure quem outorgou procuração ao Dr. Paulo Melo ou quem ele representa como advogado
 - O cliente NUNCA é um banco (Bradesco, Itaú, Santander, Caixa, Inter, Pan, Safra, BB, BRB, etc.)
@@ -10191,7 +10191,7 @@ ${textoTruncado}`;
     await updateProgress(88, 'Gerando análise profunda do processo...');
     // 11.5. ANÁLISE PROFUNDA: Gerar estudo completo do processo
     try {
-      const analiseProfundaPromptJob = `Você é um advogado sênior expert do escritório MELO & PREDA ADVOGADOS.
+      const analiseProfundaPromptJob = `Você é um advogado sênior expert do escritório Melo Advogados.
 Faça uma ANÁLISE PROFUNDA E COMPLETA do processo abaixo. Esta análise será usada como base de conhecimento para gerar petições, estratégias e qualquer ação futura.
 
 RETORNE UM JSON com esta estrutura:

@@ -1,5 +1,5 @@
 /**
- * AGENTE EXECUTOR — Melo & Preda Advogados
+ * AGENTE EXECUTOR — Melo Advogados
  * 
  * Loop de execução com tool_choice: o LLM recebe funções executáveis
  * e pode chamá-las para executar ações reais no sistema (banco de dados,
@@ -158,7 +158,7 @@ export const AGENT_TOOLS: Tool[] = [
     type: "function",
     function: {
       name: "gerar_peticao",
-      description: "Gera uma petição jurídica completa com timbrado do escritório Melo & Preda. Salva em Markdown e DOCX no S3 e registra no banco.",
+      description: "Gera uma petição jurídica completa com timbrado do escritório Melo Advogados. Salva em Markdown e DOCX no S3 e registra no banco.",
       parameters: {
         type: "object",
         properties: {
@@ -879,7 +879,7 @@ CONHECIMENTOS RELEVANTES: ${relevantes.slice(0, 10).map(c => `[${c.categoria}] $
     messages: [
       {
         role: 'system',
-        content: `Você é um advogado expert do escritório Melo & Preda. Realize uma ANÁLISE TÉCNICA APROFUNDADA e EXAUSTIVA do processo.
+        content: `Você é um advogado expert do escritório Melo Advogados. Realize uma ANÁLISE TÉCNICA APROFUNDADA e EXAUSTIVA do processo.
 ${args.focoAnalise ? `FOCO DA ANÁLISE: ${args.focoAnalise}` : ''}
 
 Sua análise DEVE conter:
@@ -1004,7 +1004,7 @@ Movimentações: ${movs.map(m => `${m.data}: ${m.evento}`).join('\n')}`;
   const estrats = ordenados.filter(c => c.categoria === 'Estrategia').slice(0, 10).map(e => `- ${e.titulo}: ${e.conteudo?.substring(0, 200)}`).join('\n');
   const legs = ordenados.filter(c => c.categoria === 'Legislacao').slice(0, 15).map(l => `- ${l.titulo}: ${l.conteudo?.substring(0, 200)}`).join('\n');
 
-  const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
+  const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo Advogados (OAB/GO 40.559).
 Advogado: PAULO DA SILVA MELO FILHO
 
 Gere a petição completa do tipo "${args.tipoPeticao}".
@@ -1216,7 +1216,7 @@ async function toolEditarPeticao(args: any): Promise<string> {
   if (!novoTexto && args.instrucoes) {
     const editResult = await invokeLLM({
       messages: [
-        { role: 'system', content: `Você é o PETICIONADOR EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
+        { role: 'system', content: `Você é o PETICIONADOR EXPERT do escritório Melo Advogados (OAB/GO 40.559).
 Edite a petição abaixo conforme as instruções do advogado. Mantenha o mesmo estilo, formatação e qualidade.
 Retorne APENAS o texto completo da petição editada, sem comentários.` },
         { role: 'user', content: `PETIÇÃO ATUAL:\n${pet.conteudoTexto}\n\nINSTRUÇÕES DE EDIÇÃO: ${args.instrucoes}` }
@@ -1343,7 +1343,7 @@ export async function executarAgenteCompleto(params: {
   const MAX_ITERATIONS = 5; // Máximo de ciclos de tool calling (otimizado para evitar timeout)
 
   // System prompt PROATIVO — sempre consulta o banco antes de responder
-  const systemPrompt = `Você é o Agente Jurídico Expert EXECUTOR do escritório Melo & Preda Advogados.
+  const systemPrompt = `Você é o Agente Jurídico Expert EXECUTOR do escritório Melo Advogados.
 Advogado: PAULO DA SILVA MELO FILHO — OAB/GO 40.559
 
 ## REGRA ABSOLUTA — NUNCA QUEBRE ESTAS REGRAS:

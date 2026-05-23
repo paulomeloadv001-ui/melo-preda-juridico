@@ -49,7 +49,7 @@ function gerarPdfHtml(titulo: string, subtitulo: string, conteudo: string): void
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>${titulo} - Melo & Preda Advogados</title>
+  <title>${titulo} - Melo Advogados</title>
   <style>
     @page { margin: 2cm; size: A4; }
     body { font-family: 'Times New Roman', serif; font-size: 11pt; line-height: 1.5; color: #1a1a1a; }
@@ -83,13 +83,13 @@ function gerarPdfHtml(titulo: string, subtitulo: string, conteudo: string): void
 </head>
 <body>
   <div class="header">
-    <h1>MELO & PREDA ADVOGADOS</h1>
+    <h1>Melo Advogados</h1>
     <h2>${titulo}</h2>
     <div class="date">${subtitulo} — Gerado em: ${new Date().toLocaleString('pt-BR')}</div>
   </div>
   ${conteudo}
   <div class="footer">
-    <p>MELO & PREDA ADVOGADOS — Sistema Jurídico Integrado</p>
+    <p>Melo Advogados — Sistema Jurídico Integrado</p>
     <p>Documento gerado automaticamente em ${new Date().toLocaleString('pt-BR')}</p>
   </div>
 </body>

@@ -1,12 +1,12 @@
 /**
- * Gerador de Petições DOCX com Timbrado Melo & Preda Advogados
+ * Gerador de Petições DOCX com Timbrado Melo Advogados
  * 
  * Gera documentos .docx profissionais com:
  * - Cabeçalho: brasão dourado + nome do escritório + barra vertical dourada
  * - Rodapé: endereço + barras dourada e preta + numeração de páginas
  * - Formatação: Times New Roman 13pt, espaçamento 1.5, recuo 2cm primeira linha
  * - Suporte completo: headings, parágrafos, citações, tabelas, listas, assinaturas
- * - Estilo assertivo e combativo do escritório Melo & Preda
+ * - Estilo assertivo e combativo do escritório Melo Advogados
  */
 
 import {
@@ -369,7 +369,7 @@ function createHeader(brasaoBuffer: Buffer): Header {
                   children: [
                     new Paragraph({
                       children: [new TextRun({
-                        text: 'MELO & PREDA',
+                        text: 'Melo Advogados',
                         bold: true,
                         font: 'Times New Roman',
                         size: 44,
@@ -400,7 +400,7 @@ function createHeader(brasaoBuffer: Buffer): Header {
     children: [
       new Paragraph({
         children: [new TextRun({
-          text: 'MELO & PREDA ADVOGADOS',
+          text: 'Melo Advogados',
           bold: true,
           font: 'Times New Roman',
           size: 36,
@@ -475,9 +475,9 @@ export async function gerarPeticaoDocx(
   const contentParagraphs = markdownToParagraphs(conteudoMarkdown);
 
   const doc = new Document({
-    title: titulo || 'Petição - Melo & Preda Advogados',
-    creator: 'Melo & Preda Advogados - OAB/GO 40.559',
-    description: 'Petição gerada pelo Sistema Jurídico Integrado Melo & Preda',
+    title: titulo || 'Petição - Melo Advogados',
+    creator: 'Melo Advogados - OAB/GO 40.559',
+    description: 'Petição gerada pelo Sistema Jurídico Integrado Melo Advogados',
     styles: {
       default: {
         document: {
@@ -593,9 +593,9 @@ export async function gerarPeticaoDocxFromJson(
   }
 
   const doc = new Document({
-    title: titulo || 'Petição - Melo & Preda Advogados',
-    creator: 'Melo & Preda Advogados - OAB/GO 40.559',
-    description: 'Petição gerada pelo Sistema Jurídico Integrado Melo & Preda',
+    title: titulo || 'Petição - Melo Advogados',
+    creator: 'Melo Advogados - OAB/GO 40.559',
+    description: 'Petição gerada pelo Sistema Jurídico Integrado Melo Advogados',
     styles: {
       default: {
         document: {

@@ -204,7 +204,7 @@ function getPageContext(path: string): PageContext {
 
   return contexts[path] || {
     titulo: "Agente IA Jurídico",
-    descricao: "Agente completo do escritório Melo & Preda. Posso analisar processos, gerar petições, buscar dados e executar ações no sistema.",
+    descricao: "Agente completo do escritório Melo Advogados. Posso analisar processos, gerar petições, buscar dados e executar ações no sistema.",
     sugestoes: [
       "Diagnóstico do banco de dados",
       "Buscar cliente por nome",
@@ -347,7 +347,7 @@ export default function FloatingAgent() {
       <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 z-50 w-16 h-16 rounded-full shadow-2xl hover:shadow-amber-500/25 hover:scale-110 transition-all flex items-center justify-center group overflow-hidden"
-        title="Agente IA Jurídico — Melo & Preda"
+        title="Agente IA Jurídico — Melo Advogados"
         style={{
           background: 'linear-gradient(135deg, #b8860b 0%, #daa520 50%, #b8860b 100%)',
         }}
@@ -379,7 +379,7 @@ export default function FloatingAgent() {
               <Scale className="h-4.5 w-4.5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold leading-tight tracking-wide">MELO & PREDA</h3>
+              <h3 className="text-sm font-bold leading-tight tracking-wide">Melo Advogados</h3>
               <p className="text-[10px] opacity-75 font-medium">Agente IA Jurídico Expert</p>
             </div>
           </div>

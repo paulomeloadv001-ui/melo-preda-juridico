@@ -253,7 +253,7 @@ export default function StatusSistema() {
             <div className="space-y-2">
               <div className="flex justify-between p-2 rounded bg-muted/30">
                 <span className="text-muted-foreground">Plataforma</span>
-                <span className="font-medium">Melo & Preda - Sistema Jurídico Integrado</span>
+                <span className="font-medium">Melo Advogados - Sistema Jurídico Integrado</span>
               </div>
               <div className="flex justify-between p-2 rounded bg-muted/30">
                 <span className="text-muted-foreground">Versão</span>

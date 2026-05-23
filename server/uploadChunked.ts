@@ -1,5 +1,5 @@
 /**
- * Upload Chunked - Melo & Preda Advogados
+ * Upload Chunked - Melo Advogados
  * 
  * Sistema de upload em partes para arquivos de qualquer tamanho.
  * O arquivo é dividido em chunks de 4MB no frontend, enviados via multipart/form-data,

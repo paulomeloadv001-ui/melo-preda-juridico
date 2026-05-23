@@ -1,5 +1,5 @@
 /**
- * API REST Pública do Agente IA - Melo & Preda Advogados
+ * API REST Pública do Agente IA - Melo Advogados
  * 
  * Endpoints para consumo externo por outras plataformas, agentes e servidores.
  * Autenticação via API Key no header: Authorization: Bearer <JUSCONSIG_API_KEY>
@@ -93,9 +93,9 @@ apiRouter.use(authMiddleware);
 // ============================================================
 apiRouter.get('/docs', (_req: Request, res: Response) => {
   res.json({
-    titulo: 'API REST - Agente IA Melo & Preda Advogados',
+    titulo: 'API REST - Agente IA Melo Advogados',
     versao: '1.0.0',
-    descricao: 'API para integração com o Agente Jurídico IA do escritório Melo & Preda Advogados. Permite consultas, análises técnicas, geração de petições e acesso à base de conhecimentos jurídicos.',
+    descricao: 'API para integração com o Agente Jurídico IA do escritório Melo Advogados. Permite consultas, análises técnicas, geração de petições e acesso à base de conhecimentos jurídicos.',
     autenticacao: {
       tipo: 'Bearer Token',
       header: 'Authorization: Bearer <JUSCONSIG_API_KEY>',
@@ -230,7 +230,7 @@ apiRouter.get('/agente/status', async (_req: Request, res: Response) => {
     res.json({
       status: 'online',
       versao: '1.0.0',
-      escritorio: 'Melo & Preda Advogados',
+      escritorio: 'Melo Advogados',
       advogado: 'PAULO DA SILVA MELO FILHO - OAB/GO 40.559',
       estatisticas: {
         clientes: Number(clientesCount?.count || 0),
@@ -289,7 +289,7 @@ apiRouter.post('/agente/chat', async (req: Request, res: Response) => {
     const tesesResumo = todosConhecimentos.filter(c => c.categoria === 'Tese').map(t => `- ${t.titulo}`).join('\n');
 
     const modoAtual = modo || 'chat';
-    const systemPrompt = `${config['system_prompt'] || 'Você é o agente jurídico expert do escritório Melo & Preda Advogados (OAB/GO 40.559).'}\n\nModo: ${modoAtual}\nTeses disponíveis:\n${tesesResumo}\n${contexto}`;
+    const systemPrompt = `${config['system_prompt'] || 'Você é o agente jurídico expert do escritório Melo Advogados (OAB/GO 40.559).'}\n\nModo: ${modoAtual}\nTeses disponíveis:\n${tesesResumo}\n${contexto}`;
 
     const result = await invokeLLM({
       messages: [
@@ -346,7 +346,7 @@ apiRouter.post('/agente/analise', async (req: Request, res: Response) => {
     const todosConhecimentos = await db.select().from(conhecimentos);
     const tesesTxt = todosConhecimentos.filter(c => c.categoria === 'Tese').map(t => `- ${t.titulo}: ${t.conteudo?.substring(0, 200)}`).join('\n');
 
-    const systemPrompt = `Você é o ANALISTA PROCESSUAL EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
+    const systemPrompt = `Você é o ANALISTA PROCESSUAL EXPERT do escritório Melo Advogados (OAB/GO 40.559).
 Advogado: PAULO DA SILVA MELO FILHO
 
 Realize uma ANÁLISE TÉCNICA APROFUNDADA seguindo o WORKFLOW DE 5 FASES:
@@ -466,7 +466,7 @@ apiRouter.post('/agente/peticao', async (req: Request, res: Response) => {
     const jurispTxt = todosConhecimentos.filter(c => c.categoria === 'Jurisprudencia').map(j => `- ${j.titulo}: ${j.conteudo?.substring(0, 200)}`).join('\n');
     const legTxt = todosConhecimentos.filter(c => c.categoria === 'Legislacao').map(l => `- ${l.titulo}: ${l.conteudo?.substring(0, 200)}`).join('\n');
 
-    const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo & Preda Advogados (OAB/GO 40.559).
+    const systemPrompt = `Você é o PETICIONADOR EXPERT do escritório Melo Advogados (OAB/GO 40.559).
 Advogado: PAULO DA SILVA MELO FILHO
 
 Gere a petição completa do tipo "${tipoPeticao}" seguindo RIGOROSAMENTE o padrão do escritório.

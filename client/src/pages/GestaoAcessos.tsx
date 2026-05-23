@@ -77,7 +77,7 @@ export function SolicitarAcesso() {
           </div>
           <CardTitle className="text-xl">Solicitar Acesso</CardTitle>
           <CardDescription>
-            Melo & Preda Advogados — Sistema Jurídico Integrado
+            Melo Advogados — Sistema Jurídico Integrado
           </CardDescription>
         </CardHeader>
         <CardContent>
