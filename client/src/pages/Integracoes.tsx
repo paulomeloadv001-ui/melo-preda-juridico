@@ -1,70 +1,53 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { RefreshCw, Play, CheckCircle, XCircle, Clock, Zap, Database, Globe, Shield } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 export default function Integracoes() {
-  const { toast } = useToast();
   const [executando, setExecutando] = useState<string | null>(null);
 
   // Buscar status das integrações
-  const { data: status, isLoading, refetch } = useQuery({
-    queryKey: ["integracoes-status"],
-    queryFn: () => trpc.integracoes.status.query(),
-    refetchInterval: 30000, // Atualizar a cada 30s
+  const { data: status, isLoading, refetch } = trpc.integracoes.status.useQuery(undefined, {
+    refetchInterval: 30000,
   });
 
-  // Buscar histórico de execuções
-  const { data: historico, refetch: refetchHistorico } = useQuery({
-    queryKey: ["integracoes-historico"],
-    queryFn: () => trpc.integracoes.cronHistorico.query(),
-  });
-
-  // Mutation: Executar todos os cron jobs
-  const executarTodos = useMutation({
-    mutationFn: () => trpc.integracoes.cronExecutarTodos.mutate(),
-    onSuccess: (data) => {
-      toast({ title: "Jobs executados", description: `${data.resultados.length} jobs processados com sucesso.` });
+  // Mutation: Atualizar folha GO (todos os clientes)
+  const consultarFolha = trpc.integracoes.folhaGO.atualizarTodos.useMutation({
+    onSuccess: (data: any) => {
+      toast.success(`Folha atualizada: ${data.atualizados || 0} servidores`);
       refetch();
-      refetchHistorico();
       setExecutando(null);
     },
     onError: (err: any) => {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast.error(err.message || "Erro ao consultar folha");
       setExecutando(null);
-    },
-  });
-
-  // Mutation: Consultar folha GO
-  const consultarFolha = useMutation({
-    mutationFn: (nome: string) => trpc.integracoes.dadosAbertosGO.consultarFolha.mutate({ nomeServidor: nome }),
-    onSuccess: (data) => {
-      if (data.encontrado) {
-        toast({ title: "Servidor encontrado!", description: `${data.servidor?.nome} - R$ ${data.servidor?.valorLiquido?.toFixed(2)}` });
-      } else {
-        toast({ title: "Não encontrado", description: data.mensagem, variant: "destructive" });
-      }
     },
   });
 
   // Mutation: Atualizar movimentações DataJud
-  const atualizarDatajud = useMutation({
-    mutationFn: () => trpc.integracoes.cronAtualizarMovimentacoes.mutate(),
-    onSuccess: (data) => {
-      toast({ title: "Movimentações atualizadas", description: data.resumo });
-      refetchHistorico();
+  const atualizarDatajud = trpc.integracoes.datajud.atualizarTodos.useMutation({
+    onSuccess: (data: any) => {
+      toast.success(`Movimentações atualizadas: ${data.totalNovas || 0} novas`);
+      refetch();
       setExecutando(null);
     },
     onError: (err: any) => {
-      toast({ title: "Erro DataJud", description: err.message, variant: "destructive" });
+      toast.error(err.message || "Erro ao atualizar movimentações");
       setExecutando(null);
     },
   });
+
+  // Função para executar todos os jobs
+  const handleExecutarTodos = () => {
+    setExecutando("todos");
+    consultarFolha.mutate();
+    atualizarDatajud.mutate();
+    toast.success("Executando todos os jobs...");
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -77,13 +60,13 @@ export default function Integracoes() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => { refetch(); refetchHistorico(); }}>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Atualizar
           </Button>
           <Button
             size="sm"
-            onClick={() => { setExecutando("todos"); executarTodos.mutate(); }}
+            onClick={handleExecutarTodos}
             disabled={executando !== null}
           >
             <Play className="h-4 w-4 mr-2" />
@@ -121,11 +104,11 @@ export default function Integracoes() {
               variant="outline"
               size="sm"
               className="w-full mt-3"
-              onClick={() => { setExecutando("folha"); consultarFolha.mutate("TESTE"); }}
+              onClick={() => { setExecutando("folha"); consultarFolha.mutate(); }}
               disabled={executando !== null}
             >
               <Zap className="h-3 w-3 mr-1" />
-              Testar Conexão
+              Atualizar Folha
             </Button>
           </CardContent>
         </Card>
@@ -162,7 +145,7 @@ export default function Integracoes() {
               size="sm"
               className="w-full mt-3"
               onClick={() => { setExecutando("datajud"); atualizarDatajud.mutate(); }}
-              disabled={executando !== null || !status?.integracoes?.datajud?.configurada}
+              disabled={executando !== null}
             >
               <Zap className="h-3 w-3 mr-1" />
               Atualizar Movimentações
@@ -225,7 +208,6 @@ export default function Integracoes() {
                   <th className="text-left py-2 px-3 font-medium">Frequência</th>
                   <th className="text-left py-2 px-3 font-medium">Status</th>
                   <th className="text-left py-2 px-3 font-medium">Última Execução</th>
-                  <th className="text-left py-2 px-3 font-medium">Resultado</th>
                 </tr>
               </thead>
               <tbody>
@@ -243,56 +225,20 @@ export default function Integracoes() {
                     <td className="py-2 px-3 text-muted-foreground text-xs">
                       {job.ultimaExecucao?.fim ? new Date(job.ultimaExecucao.fim).toLocaleString('pt-BR') : 'Nunca executado'}
                     </td>
-                    <td className="py-2 px-3 text-xs">
-                      {job.ultimaExecucao?.sucesso === true && (
-                        <span className="text-green-600 flex items-center gap-1">
-                          <CheckCircle className="h-3 w-3" /> {job.ultimaExecucao.resumo}
-                        </span>
-                      )}
-                      {job.ultimaExecucao?.sucesso === false && (
-                        <span className="text-red-600 flex items-center gap-1">
-                          <XCircle className="h-3 w-3" /> {job.ultimaExecucao.resumo}
-                        </span>
-                      )}
-                      {!job.ultimaExecucao && <span className="text-muted-foreground">—</span>}
-                    </td>
                   </tr>
                 ))}
+                {!status?.cronJobs?.jobs?.length && (
+                  <tr>
+                    <td colSpan={4} className="py-4 text-center text-muted-foreground">
+                      Carregando status dos jobs...
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
-
-      {/* Histórico de Execuções */}
-      {historico && historico.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Histórico de Execuções</CardTitle>
-            <CardDescription>Últimas execuções dos cron jobs</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {historico.slice(-10).reverse().map((exec: any, idx: number) => (
-                <div key={idx} className="flex items-center justify-between py-2 px-3 rounded border text-sm">
-                  <div className="flex items-center gap-2">
-                    {exec.sucesso ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <XCircle className="h-4 w-4 text-red-500" />
-                    )}
-                    <span className="font-medium">{exec.job}</span>
-                  </div>
-                  <span className="text-muted-foreground text-xs">{exec.resumo}</span>
-                  <span className="text-muted-foreground text-xs">
-                    {new Date(exec.fim).toLocaleString('pt-BR')} ({exec.duracao}ms)
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Webhooks */}
       <Card>
@@ -326,15 +272,15 @@ export default function Integracoes() {
                 </tr>
                 <tr className="border-b hover:bg-muted/50">
                   <td className="py-2 px-3 font-mono text-xs">POST /api/webhooks/banco</td>
-                  <td className="py-2 px-3">Banco do Brasil / Caixa</td>
+                  <td className="py-2 px-3">BB / Caixa / C6</td>
                   <td className="py-2 px-3">Depósito judicial</td>
-                  <td className="py-2 px-3 text-xs text-muted-foreground">Registra financeiro + notificação</td>
+                  <td className="py-2 px-3 text-xs text-muted-foreground">Registra depósito + notificação financeira</td>
                 </tr>
                 <tr className="border-b hover:bg-muted/50">
                   <td className="py-2 px-3 font-mono text-xs">POST /api/webhooks/intimacao</td>
-                  <td className="py-2 px-3">PJe / PROJUDI / ESAJ</td>
+                  <td className="py-2 px-3">PJe / PROJUDI</td>
                   <td className="py-2 px-3">Intimação eletrônica</td>
-                  <td className="py-2 px-3 text-xs text-muted-foreground">Registra + calcula prazo + alerta urgente</td>
+                  <td className="py-2 px-3 text-xs text-muted-foreground">Registra movimentação + prazo + alerta urgente</td>
                 </tr>
               </tbody>
             </table>

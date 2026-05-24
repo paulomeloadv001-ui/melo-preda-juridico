@@ -76,10 +76,11 @@ async function handleMargemAlterada(payload: any): Promise<WebhookResult> {
 
   // Criar notificação
   await db.insert(notificacoes).values({
-    tipo: "margem_alterada",
+    tipo: "sistema" as const,
     titulo: `Margem alterada: ${cliente.nomeCompleto}`,
     mensagem: `Margem disponível atualizada para R$ ${payload.margemDisponivel?.toFixed(2) || '0.00'}`,
     clienteId: cliente.id,
+    prioridade: "normal" as const,
     lida: 0,
   });
 
@@ -117,7 +118,7 @@ async function handleNovaMovimentacao(payload: any): Promise<WebhookResult> {
   const isUrgente = eventoLower.includes('intimação') || eventoLower.includes('citação') || eventoLower.includes('sentença');
 
   await db.insert(notificacoes).values({
-    tipo: isUrgente ? "prazo_urgente" : "movimentacao",
+    tipo: isUrgente ? "prazo_vencendo" as const : "sistema" as const,
     titulo: `${isUrgente ? '⚠️ ' : ''}Movimentação: ${processo.numeroCnj}`,
     mensagem: payload.evento || "Nova movimentação registrada",
     processoId: processo.id,
@@ -157,7 +158,7 @@ async function handleDepositoJudicial(payload: any): Promise<WebhookResult> {
 
   // Notificação
   await db.insert(notificacoes).values({
-    tipo: "financeiro",
+    tipo: "sistema" as const,
     titulo: `💰 ${tipo}: ${processo.numeroCnj}`,
     mensagem: `Valor: R$ ${payload.valor?.toFixed(2) || '0.00'} - ${payload.banco || 'Banco não identificado'}`,
     processoId: processo.id,
@@ -186,7 +187,8 @@ async function handleIntimacao(payload: any): Promise<WebhookResult> {
   if (!processo) {
     // Processo não cadastrado — registrar notificação genérica
     await db.insert(notificacoes).values({
-      tipo: "prazo_urgente",
+      tipo: "prazo_vencendo" as const,
+      prioridade: "urgente" as const,
       titulo: `⚠️ INTIMAÇÃO: ${payload.numeroProcesso}`,
       mensagem: `Intimação recebida para processo não cadastrado. Teor: ${payload.teor?.substring(0, 200) || 'N/I'}`,
       lida: 0,
@@ -207,7 +209,8 @@ async function handleIntimacao(payload: any): Promise<WebhookResult> {
 
   // Notificação urgente
   await db.insert(notificacoes).values({
-    tipo: "prazo_urgente",
+    tipo: "prazo_vencendo" as const,
+    prioridade: "urgente" as const,
     titulo: `⚠️ INTIMAÇÃO: ${processo.numeroCnj}`,
     mensagem: `Prazo: ${prazoFinal.toLocaleDateString('pt-BR')} (${payload.prazoDias || 15} dias). Teor: ${payload.teor?.substring(0, 200) || 'N/I'}`,
     processoId: processo.id,

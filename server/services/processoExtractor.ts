@@ -155,7 +155,8 @@ export async function extrairDadosProcesso(pdfBuffer: Buffer): Promise<Resultado
       ],
     });
 
-    const content = result.choices?.[0]?.message?.content || '';
+    const rawContent = result.choices?.[0]?.message?.content || '';
+    const content = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent);
     
     // 3. Parsear JSON da resposta
     const jsonMatch = content.match(/\{[\s\S]*\}/);

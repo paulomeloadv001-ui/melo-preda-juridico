@@ -234,6 +234,7 @@ export async function processarProcessoPdf(input: {
     // Criar cliente apenas com nome
     const [inserted] = await db.insert(clientes).values({
       nomeCompleto: nome,
+      cpfCnpj: `PENDENTE_${Date.now()}`,
       tipoPessoa: "PF",
     }).$returningId();
     clienteId = inserted.id;

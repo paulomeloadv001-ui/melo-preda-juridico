@@ -5509,13 +5509,12 @@ REGRA ABSOLUTA: Não use NENHUM placeholder como [COMPLETAR], [INSERIR], [NOME],
             prazoData.setDate(prazoData.getDate() + 5); // 5 dias úteis para protocolar
             await db.insert(prazosProcessuais).values({
               processoId: input.processoId,
-              clienteId: input.clienteId || null,
-              tipo: 'protocolo',
-              descricao: `Protocolar ${input.tipoPeticao} — ${nomeCliente}`,
-              dataLimite: prazoData.toISOString().split('T')[0],
+              clienteId: input.clienteId || 0,
+              tipo: 'outro',
+              titulo: `Protocolar ${input.tipoPeticao} — ${nomeCliente}`,
+              descricao: `Prazo automático gerado após criação de petição. PRIORIDADE ALTA.`,
+              dataVencimento: prazoData,
               status: 'pendente',
-              prioridade: 'alta',
-              origem: 'sistema_automatico',
             });
           } catch (prazoErr) {
             console.error('[FLUXO] Erro ao criar prazo automático pós-petição:', prazoErr);

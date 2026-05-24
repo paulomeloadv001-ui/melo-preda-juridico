@@ -38,7 +38,7 @@ class AgentCache {
   set<T>(key: string, data: T, ttlMs: number = 300000): void { // default 5 min
     // Evict se estiver cheio
     if (this.cache.size >= this.maxEntries) {
-      const oldest = [...this.cache.entries()].sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
+      const oldest = Array.from(this.cache.entries()).sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
       if (oldest) this.cache.delete(oldest[0]);
     }
     this.cache.set(key, { data, timestamp: Date.now(), ttl: ttlMs });
@@ -48,11 +48,13 @@ class AgentCache {
    * Invalidar cache por padrão
    */
   invalidate(pattern: string): void {
-    for (const key of this.cache.keys()) {
+    const keysToDelete: string[] = [];
+    this.cache.forEach((_, key) => {
       if (key.includes(pattern)) {
-        this.cache.delete(key);
+        keysToDelete.push(key);
       }
-    }
+    });
+    keysToDelete.forEach(key => this.cache.delete(key));
   }
 
   /**

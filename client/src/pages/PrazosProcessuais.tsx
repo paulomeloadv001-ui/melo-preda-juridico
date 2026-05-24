@@ -197,7 +197,15 @@ export default function PrazosProcessuais() {
             <p className="text-sm text-muted-foreground">Controle de prazos com calendário e alertas automáticos</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => prazosQuery.refetch()}
+          >
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Atualizar
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -206,6 +214,20 @@ export default function PrazosProcessuais() {
           >
             {verificarMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Bell className="h-4 w-4 mr-1" />}
             Verificar Vencimentos
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const csv = prazosFiltrados.map((p: any) => `${p.titulo},${p.tipo},${p.dataVencimento},${p.status}`).join('\n');
+              const blob = new Blob([`Titulo,Tipo,Vencimento,Status\n${csv}`], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url; a.download = 'prazos_processuais.csv'; a.click();
+              toast.success('Prazos exportados com sucesso');
+            }}
+          >
+            Exportar CSV
           </Button>
           <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => setShowCriarDialog(true)}>
             <Plus className="h-4 w-4 mr-1" />Novo Prazo

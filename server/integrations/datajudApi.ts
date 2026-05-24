@@ -168,7 +168,7 @@ export async function atualizarMovimentacoesProcesso(processoId: number): Promis
   const [processo] = await db.select().from(processos).where(eq(processos.id, processoId)).limit(1);
   if (!processo) return { atualizado: false, novasMovimentacoes: 0, mensagem: "Processo não encontrado" };
 
-  const numeroCNJ = processo.numeroProcesso;
+  const numeroCNJ = processo.numeroCnj;
   if (!numeroCNJ) return { atualizado: false, novasMovimentacoes: 0, mensagem: "Número CNJ não disponível" };
 
   // Consultar DataJud
@@ -204,7 +204,7 @@ export async function atualizarMovimentacoesProcesso(processoId: number): Promis
     const ultimaMov = resultado.processo.movimentos[0];
     const faseAtual = classificarFase(ultimaMov.nome, ultimaMov.codigo);
     if (faseAtual) {
-      await db.update(processos).set({ fase: faseAtual }).where(eq(processos.id, processoId));
+      await db.update(processos).set({ faseAtual }).where(eq(processos.id, processoId));
     }
   }
 
@@ -334,7 +334,7 @@ export async function verificarPrazosProcessuais(): Promise<{
           alertas.push({
             processoId: proc.id,
             numeroProcesso: proc.numeroCnj || '',
-            cliente: proc.nomeCliente || '',
+            cliente: proc.numeroCnj || '',
             tipo: mov.descricao || 'Movimentação',
             prazo: dataLimite.toISOString().split('T')[0],
             diasRestantes,
