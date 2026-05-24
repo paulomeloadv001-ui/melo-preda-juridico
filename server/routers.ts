@@ -6852,6 +6852,26 @@ PRODUZA UMA ANÁLISE COMPLETA COM:
         return { success: true };
       }),
 
+    // Excluir publicação (item tratado sai da lista)
+    excluirPublicacao: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error('DB indisponível');
+        await db.delete(publicacoes).where(eq(publicacoes.id, input.id));
+        return { success: true };
+      }),
+
+    // Limpar publicações tratadas antigas (mais de 30 dias)
+    limparTratadas: protectedProcedure.mutation(async () => {
+      const db = await getDb();
+      if (!db) throw new Error('DB indisponível');
+      const resultado = await db.delete(publicacoes).where(
+        sql`${publicacoes.tratada} = 1 AND ${publicacoes.tratadaEm} < DATE_SUB(NOW(), INTERVAL 30 DAY)`
+      );
+      return { removidas: (resultado as any)[0]?.affectedRows || 0 };
+    }),
+
     // Gerar prazo automaticamente a partir de publicação
     gerarPrazo: protectedProcedure
       .input(z.object({

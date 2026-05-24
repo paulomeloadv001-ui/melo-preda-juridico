@@ -126,4 +126,51 @@ export const integracoesRouter = router({
         }
       }),
   }),
+
+  // ==================== EXPORTAÇÃO COMPLETA ====================
+  exportarBancoCompleto: protectedProcedure.mutation(async () => {
+    const { exportarBancoCompleto } = await import("./exportacaoCompleta");
+    return await exportarBancoCompleto();
+  }),
+
+  exportarConhecimentos: protectedProcedure.mutation(async () => {
+    const { exportarBancoConhecimentos } = await import("./exportacaoCompleta");
+    return await exportarBancoConhecimentos();
+  }),
+
+  relatorioIntegridade: protectedProcedure.query(async () => {
+    const { gerarRelatorioIntegridade } = await import("./exportacaoCompleta");
+    return await gerarRelatorioIntegridade();
+  }),
+
+  exportarPastaCliente: protectedProcedure
+    .input(z.object({ clienteId: z.number() }))
+    .mutation(async ({ input }) => {
+      const { exportarPastaCliente } = await import("./exportacaoCompleta");
+      return await exportarPastaCliente(input.clienteId);
+    }),
+
+  // ==================== IMPORTAÇÃO GMAIL/PROJUDI ====================
+  importarGmailProjudi: protectedProcedure
+    .input(z.object({ diasAtras: z.number().default(7) }).optional())
+    .mutation(async ({ input }) => {
+      const { importarPublicacoesProjudiGmail } = await import("./gmailProjudiImporter");
+      return await importarPublicacoesProjudiGmail(input?.diasAtras || 7);
+    }),
+
+  statusGmail: protectedProcedure.query(async () => {
+    const { statusGmailProjudi } = await import("./gmailProjudiImporter");
+    return statusGmailProjudi();
+  }),
+
+  // ==================== STATUS GERAL INTEGRAÇÕES ====================
+  statusIntegracoes: protectedProcedure.query(async () => {
+    const { statusGmailProjudi } = await import("./gmailProjudiImporter");
+    const { gerarRelatorioIntegridade } = await import("./exportacaoCompleta");
+    const cronStatus = getStatusCronJobs();
+    const celcoinStatus = statusIntegracaoCelcoin();
+    const gmailStatus = statusGmailProjudi();
+    const integridade = await gerarRelatorioIntegridade();
+    return { cronStatus, celcoinStatus, gmailStatus, integridade };
+  }),
 });

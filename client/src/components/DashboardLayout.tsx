@@ -29,7 +29,7 @@ import {
   Bell, Clock, AlertTriangle, DollarSign, FileText, CheckCircle, X, Trash2,
   Gavel, Calendar, Settings, ChevronDown, ChevronRight, Shield, Download,
   BookOpen, ShieldCheck, ListChecks,
-  FileBarChart, FolderOpen, BarChart3, Activity, Plug, Zap
+  FileBarChart, FolderOpen, BarChart3, Activity, Plug, Zap, Package
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -39,6 +39,7 @@ import { Button } from "./ui/button";
 // ==================== MENU STRUCTURE ====================
 // Fluxo simplificado: 6 itens principais + Configurações colapsável
 const menuItems = [
+  { icon: Scale, label: "Visão Geral", path: "/visao-geral" },
   { icon: LayoutDashboard, label: "Painel", path: "/" },
   { icon: Upload, label: "Importar", path: "/upload" },
   { icon: Users, label: "Clientes", path: "/clientes" },
@@ -57,6 +58,7 @@ const configItems = [
   { icon: Activity, label: "Status Sistema", path: "/status" },
   { icon: Plug, label: "Conectores", path: "/conectores" },
   { icon: Zap, label: "Integrações", path: "/integracoes" },
+  { icon: Package, label: "Deploy & Exportação", path: "/deploy" },
 ];
 
 // Flat list for route matching (includes all routes, even hidden ones)

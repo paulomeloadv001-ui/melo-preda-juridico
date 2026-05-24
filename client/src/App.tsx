@@ -24,6 +24,8 @@ import AdminUploads from "./pages/AdminUploads";
 import StatusSistema from "./pages/StatusSistema";
 import Conectores from "./pages/Conectores";
 import Integracoes from "./pages/Integracoes";
+import PainelDeploy from "./pages/PainelDeploy";
+import VisaoGeral from "./pages/VisaoGeral";
 
 function Router() {
   return (
@@ -55,6 +57,8 @@ function Router() {
             <Route path="/status" component={StatusSistema} />
             <Route path="/conectores" component={Conectores} />
             <Route path="/integracoes" component={Integracoes} />
+            <Route path="/deploy" component={PainelDeploy} />
+            <Route path="/visao-geral" component={VisaoGeral} />
             <Route path="/404" component={NotFound} />
             <Route component={NotFound} />
           </Switch>
