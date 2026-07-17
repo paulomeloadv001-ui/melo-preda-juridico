@@ -53,11 +53,3 @@ declare module "multer" {
   const multer: MulterFactory;
   export default multer;
 }
-
-declare global {
-  namespace Express {
-    interface Request {
-      file?: import("multer").File;
-    }
-  }
-}
