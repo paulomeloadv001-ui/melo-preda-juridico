@@ -32,6 +32,7 @@ declare module "multer" {
       | ((req: Request, file: File, cb: FileNameCallback) => void);
   }
 
+  // Minimal shape for the APIs used in this codebase.
   export interface StorageEngine {}
 
   export interface Options {
