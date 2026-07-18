@@ -41,6 +41,24 @@ export default function Integracoes() {
     },
   });
 
+  const manusUrl = status?.integracoes?.manus?.url;
+  const manusUrlSegura = (() => {
+    if (!manusUrl) return null;
+
+    try {
+      const url = new URL(manusUrl);
+      const host = url.hostname.toLowerCase();
+      const dominiosPermitidos = ["manus.space", "manus.computer", "manus.im"];
+      const dominioValido = dominiosPermitidos.some(
+        (dominio) => host === dominio || host.endsWith(`.${dominio}`)
+      );
+
+      return url.protocol === "https:" && dominioValido ? url.toString() : null;
+    } catch {
+      return null;
+    }
+  })();
+
   // Função para executar todos os jobs
   const handleExecutarTodos = () => {
     setExecutando("todos");
@@ -104,14 +122,14 @@ export default function Integracoes() {
             <div className="text-xs text-muted-foreground space-y-1">
               <p><strong>OAuth:</strong> {status?.integracoes?.manus?.configurada ? "Configurado" : "Pendente"}</p>
               <p><strong>Forge:</strong> {status?.integracoes?.manus?.forgeConfigurada ? "Configurada" : "Pendente"}</p>
-              <p className="break-all"><strong>URL:</strong> {status?.integracoes?.manus?.url || "Não informada"}</p>
+              <p className="break-all"><strong>URL:</strong> {manusUrlSegura || manusUrl || "Não informada"}</p>
             </div>
             <Button
               variant="outline"
               size="sm"
               className="w-full mt-3"
-              onClick={() => status?.integracoes?.manus?.url && window.open(status.integracoes.manus.url, "_blank", "noopener,noreferrer")}
-              disabled={!status?.integracoes?.manus?.url}
+              onClick={() => manusUrlSegura && window.open(manusUrlSegura, "_blank", "noopener,noreferrer")}
+              disabled={!manusUrlSegura}
             >
               <Globe className="h-3 w-3 mr-1" />
               Abrir Manus

@@ -31,10 +31,21 @@ export function getPlatformOverview(): PlatformOverview {
   const ambiente = ENV.isProduction
     ? "Produção"
     : "Desenvolvimento local";
+  const versao =
+    process.env.APP_VERSION ||
+    process.env.npm_package_version ||
+    DEFAULT_APP_VERSION;
+  let manusMensagem = "Configure OAuth Manus, owner e sessão do aplicativo";
+
+  if (oauthConfigurado) {
+    manusMensagem = manusUrlConfigurada
+      ? "OAuth Manus, owner e sessão do aplicativo configurados"
+      : "OAuth Manus configurado usando a URL padrão documentada da plataforma";
+  }
 
   return {
     nome: "Melo Advogados - Sistema Jurídico Integrado",
-    versao: DEFAULT_APP_VERSION,
+    versao,
     ambiente,
     arquitetura:
       "Operação jurídica conectada ao Manus com autenticação e serviços compartilhados",
@@ -51,11 +62,7 @@ export function getPlatformOverview(): PlatformOverview {
     manus: {
       url: manusUrl,
       status: oauthConfigurado ? "online" : "nao_configurado",
-      mensagem: oauthConfigurado
-        ? manusUrlConfigurada
-          ? "OAuth Manus, owner e sessão do aplicativo configurados"
-          : "OAuth Manus configurado usando a URL padrão documentada da plataforma"
-        : "Configure OAuth Manus, owner e sessão do aplicativo",
+      mensagem: manusMensagem,
       oauthConfigurado,
       forgeConfigurado,
     },

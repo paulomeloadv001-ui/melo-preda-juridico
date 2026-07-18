@@ -72,6 +72,8 @@ export default function PainelDeploy() {
 
   const plataforma = healthCheck.data?.plataforma;
   const manusConectado = plataforma?.manus.status === "online";
+  const manusCor = manusConectado ? "text-emerald-600" : "text-amber-600";
+  const manusRotulo = manusConectado ? "Conectado" : "Pendente";
 
   return (
     <div className="space-y-6 p-6">
@@ -126,12 +128,10 @@ export default function PainelDeploy() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <Cloud className={`h-8 w-8 ${manusConectado ? "text-emerald-600" : "text-amber-600"}`} />
+            <Cloud className={`h-8 w-8 ${manusCor}`} />
             <div>
               <p className="text-sm text-muted-foreground">Conexão Manus</p>
-              <p className={`text-lg font-bold ${manusConectado ? "text-emerald-600" : "text-amber-600"}`}>
-                {manusConectado ? "Conectado" : "Pendente"}
-              </p>
+              <p className={`text-lg font-bold ${manusCor}`}>{manusRotulo}</p>
             </div>
           </CardContent>
         </Card>
@@ -151,7 +151,7 @@ export default function PainelDeploy() {
           <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
             <div className="rounded-lg border p-3 bg-muted/30">
               <p className="text-muted-foreground">Status</p>
-              <p className={`font-medium mt-1 ${manusConectado ? "text-emerald-600" : "text-amber-600"}`}>
+              <p className={`font-medium mt-1 ${manusCor}`}>
                 {plataforma.manus.mensagem}
               </p>
             </div>
