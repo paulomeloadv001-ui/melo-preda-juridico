@@ -48,12 +48,12 @@ export default function Integracoes() {
     try {
       const url = new URL(manusUrl);
       const host = url.hostname.toLowerCase();
-      const dominiosPermitidos = ["manus.space", "manus.computer", "manus.im"];
-      const dominioValido = dominiosPermitidos.some(
+      const allowedDomains = ["manus.space", "manus.computer", "manus.im"];
+      const isDomainValid = allowedDomains.some(
         (dominio) => host === dominio || host.endsWith(`.${dominio}`)
       );
 
-      return url.protocol === "https:" && dominioValido ? url.toString() : null;
+      return url.protocol === "https:" && isDomainValid ? url.toString() : null;
     } catch {
       return null;
     }

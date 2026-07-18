@@ -1,6 +1,6 @@
 import { ENV } from "./env";
 
-const DEFAULT_MANUS_URL = "https://melopreda-4imsnkhw.manus.space";
+const DEFAULT_MANUS_URL = "https://manus.space";
 const DEFAULT_APP_VERSION = "1.0.0";
 
 export type PlatformOverview = {
