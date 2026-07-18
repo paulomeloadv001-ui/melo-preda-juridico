@@ -70,7 +70,7 @@ export default function PainelDeploy() {
     });
   };
 
-  const plataforma = healthCheck.data?.plataforma ?? integridade.data?.plataforma;
+  const plataforma = healthCheck.data?.plataforma;
   const manusConectado = plataforma?.manus.status === "online";
 
   return (
