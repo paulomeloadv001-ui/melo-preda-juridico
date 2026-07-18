@@ -26,6 +26,7 @@ import { integracoesRouter } from "./integrations/integracoesRouter";
 import { gerarPeticaoDocx } from "./docxGenerator";
 import { executarAgenteCompleto } from "./agenteExecutor";
 import { ENV } from "./_core/env";
+import { getPlatformOverview } from "./_core/platformOverview";
 
 // Helper: sanitize name for folder path
 function sanitizeName(name: string): string {
@@ -8940,6 +8941,7 @@ Retorne um JSON com os campos:
   statusSistema: router({
     healthCheck: protectedProcedure.query(async () => {
       const db = await getDb();
+      const plataforma = getPlatformOverview();
       const results: Array<{
         servico: string;
         categoria: string;
@@ -9029,7 +9031,17 @@ Retorne um JSON com os campos:
         });
       }
 
-      // 4. DataJud API
+      // 4. Integração Manus
+      results.push({
+        servico: 'Integração Manus',
+        categoria: 'Infraestrutura',
+        status: plataforma.manus.status,
+        latencia: null,
+        mensagem: plataforma.manus.mensagem,
+        ultimaVerificacao: now,
+      });
+
+      // 5. DataJud API
       const datajudStart = Date.now();
       try {
         if (!ENV.datajudApiKey) throw new Error('N\u00e3o configurado');
@@ -9062,7 +9074,7 @@ Retorne um JSON com os campos:
         });
       }
 
-      // 5. JusConsig API
+      // 6. JusConsig API
       const jusconsigStart = Date.now();
       try {
         if (!ENV.jusconsigApiKey) throw new Error('N\u00e3o configurado');
@@ -9085,7 +9097,7 @@ Retorne um JSON com os campos:
         });
       }
 
-      // 6. OAuth (Manus Auth)
+      // 7. OAuth (Manus Auth)
       const oauthStart = Date.now();
       try {
         if (!ENV.oAuthServerUrl) throw new Error('N\u00e3o configurado');
@@ -9112,7 +9124,7 @@ Retorne um JSON com os campos:
         });
       }
 
-      // 7. M\u00e9tricas do banco de dados
+      // 8. M\u00e9tricas do banco de dados
       let metricas = { clientes: 0, processos: 0, documentos: 0, conhecimentos: 0, jobs: 0, jobsPendentes: 0 };
       if (db) {
         try {
@@ -9146,6 +9158,7 @@ Retorne um JSON com os campos:
         statusGeral,
         servicos: results,
         metricas,
+        plataforma,
         resumo: { totalServicos, online, degradado, offline },
         verificadoEm: now,
       };
