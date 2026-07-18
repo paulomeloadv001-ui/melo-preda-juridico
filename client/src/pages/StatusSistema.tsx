@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getManusStatusLabel } from "@/lib/manus";
 import {
   Activity, RefreshCw, Database, Cloud, Brain, Globe, Shield, Server,
   CheckCircle2, AlertTriangle, XCircle, HelpCircle, Clock, Wifi,
@@ -114,8 +115,7 @@ export default function StatusSistema() {
     );
   }
 
-  const manusStatusLabel =
-    data.plataforma.manus.status === "online" ? "Conectado" : "Pendente";
+  const manusStatusLabel = getManusStatusLabel(data.plataforma.manus.status);
 
   // Agrupar serviços por categoria
   const categorias = data.servicos.reduce((acc, s) => {

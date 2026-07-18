@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getManusStatusColor, getManusStatusLabel } from "@/lib/manus";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -71,9 +72,10 @@ export default function PainelDeploy() {
   };
 
   const plataforma = healthCheck.data?.plataforma;
-  const manusConectado = plataforma?.manus.status === "online";
-  const manusCor = manusConectado ? "text-emerald-600" : "text-amber-600";
-  const manusRotulo = manusConectado ? "Conectado" : "Pendente";
+  const manusStatus = plataforma?.manus.status;
+  const manusConectado = manusStatus === "online";
+  const manusCor = getManusStatusColor(manusStatus);
+  const manusRotulo = getManusStatusLabel(manusStatus);
 
   return (
     <div className="space-y-6 p-6">

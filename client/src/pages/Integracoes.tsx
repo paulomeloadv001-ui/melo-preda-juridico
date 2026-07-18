@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { getSafeManusUrl } from "@/lib/manus";
 import { RefreshCw, Play, CheckCircle, Clock, Zap, Database, Globe, Shield, Cloud } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,22 +43,7 @@ export default function Integracoes() {
   });
 
   const manusUrl = status?.integracoes?.manus?.url;
-  const manusUrlSegura = (() => {
-    if (!manusUrl) return null;
-
-    try {
-      const url = new URL(manusUrl);
-      const host = url.hostname.toLowerCase();
-      const allowedDomains = ["manus.space", "manus.computer", "manus.im"];
-      const isDomainValid = allowedDomains.some(
-        (dominio) => host === dominio || host.endsWith(`.${dominio}`)
-      );
-
-      return url.protocol === "https:" && isDomainValid ? url.toString() : null;
-    } catch {
-      return null;
-    }
-  })();
+  const manusUrlSegura = getSafeManusUrl(manusUrl);
 
   // Função para executar todos os jobs
   const handleExecutarTodos = () => {

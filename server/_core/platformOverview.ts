@@ -35,13 +35,11 @@ export function getPlatformOverview(): PlatformOverview {
     process.env.APP_VERSION ||
     process.env.npm_package_version ||
     DEFAULT_APP_VERSION;
-  let manusMensagem = "Configure OAuth Manus, owner e sessão do aplicativo";
-
-  if (oauthConfigurado) {
-    manusMensagem = manusUrlConfigurada
+  const manusMensagem = oauthConfigurado
+    ? manusUrlConfigurada
       ? "OAuth Manus, owner e sessão do aplicativo configurados"
-      : "OAuth Manus configurado usando a URL padrão documentada da plataforma";
-  }
+      : "OAuth Manus configurado usando a URL padrão documentada da plataforma"
+    : "Configure OAuth Manus, owner e sessão do aplicativo";
 
   return {
     nome: "Melo Advogados - Sistema Jurídico Integrado",
