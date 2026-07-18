@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getManusStatusLabel } from "@/lib/manus";
 import {
   Activity, RefreshCw, Database, Cloud, Brain, Globe, Shield, Server,
   CheckCircle2, AlertTriangle, XCircle, HelpCircle, Clock, Wifi,
@@ -113,6 +114,8 @@ export default function StatusSistema() {
       </div>
     );
   }
+
+  const manusStatusLabel = getManusStatusLabel(data.plataforma.manus.status);
 
   // Agrupar serviços por categoria
   const categorias = data.servicos.reduce((acc, s) => {
@@ -240,6 +243,33 @@ export default function StatusSistema() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Globe className="w-5 h-5 text-sky-600" />
+            Conexão com Manus
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">Status</p>
+              <div className="mt-2">
+                <StatusBadge status={data.plataforma.manus.status} />
+              </div>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">Resumo</p>
+              <p className="mt-2 text-sm font-medium">{data.plataforma.manus.mensagem}</p>
+            </div>
+            <div className="rounded-lg border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">URL da plataforma</p>
+              <p className="mt-2 break-all text-sm font-medium">{data.plataforma.manus.url}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Informações do Sistema */}
       <Card>
         <CardHeader className="pb-3">
@@ -253,25 +283,37 @@ export default function StatusSistema() {
             <div className="space-y-2">
               <div className="flex justify-between p-2 rounded bg-muted/30">
                 <span className="text-muted-foreground">Plataforma</span>
-                <span className="font-medium">Melo Advogados - Sistema Jurídico Integrado</span>
+                <span className="font-medium">{data.plataforma.nome}</span>
               </div>
               <div className="flex justify-between p-2 rounded bg-muted/30">
                 <span className="text-muted-foreground">Versão</span>
-                <span className="font-medium">2.0.0</span>
+                <span className="font-medium">{data.plataforma.versao}</span>
               </div>
               <div className="flex justify-between p-2 rounded bg-muted/30">
                 <span className="text-muted-foreground">Ambiente</span>
-                <span className="font-medium">Produção (Cloud Run)</span>
+                <span className="font-medium">{data.plataforma.ambiente}</span>
+              </div>
+              <div className="flex justify-between gap-4 p-2 rounded bg-muted/30">
+                <span className="text-muted-foreground">Arquitetura</span>
+                <span className="font-medium text-right">{data.plataforma.arquitetura}</span>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between p-2 rounded bg-muted/30">
+                <span className="text-muted-foreground">Deploy</span>
+                <span className="font-medium">{data.plataforma.deploy}</span>
+              </div>
+              <div className="flex justify-between p-2 rounded bg-muted/30">
                 <span className="text-muted-foreground">Banco de Dados</span>
-                <span className="font-medium">TiDB Serverless</span>
+                <span className="font-medium">{data.plataforma.banco}</span>
               </div>
               <div className="flex justify-between p-2 rounded bg-muted/30">
                 <span className="text-muted-foreground">Storage</span>
-                <span className="font-medium">AWS S3 + CloudFront CDN</span>
+                <span className="font-medium">{data.plataforma.storage}</span>
+              </div>
+              <div className="flex justify-between p-2 rounded bg-muted/30">
+                <span className="text-muted-foreground">Manus</span>
+                <span className="font-medium">{manusStatusLabel}</span>
               </div>
               <div className="flex justify-between p-2 rounded bg-muted/30">
                 <span className="text-muted-foreground">Auto-refresh</span>

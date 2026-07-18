@@ -3,11 +3,12 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getManusStatusColor, getManusStatusLabel } from "@/lib/manus";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import {
   Database, Download, FileText, BookOpen, Shield, RefreshCw,
-  CheckCircle2, AlertTriangle, HardDrive, Package, Loader2, FolderArchive
+  CheckCircle2, AlertTriangle, HardDrive, Package, Loader2, FolderArchive, Cloud
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -17,6 +18,9 @@ export default function PainelDeploy() {
 
   // Query de integridade do banco
   const integridade = trpc.integracoes.statusIntegracoes.useQuery(undefined, {
+    refetchInterval: 30000,
+  });
+  const healthCheck = trpc.statusSistema.healthCheck.useQuery(undefined, {
     refetchInterval: 30000,
   });
 
@@ -66,6 +70,12 @@ export default function PainelDeploy() {
       onSettled: () => clearInterval(interval),
     });
   };
+
+  const plataforma = healthCheck.data?.plataforma;
+  const manusStatus = plataforma?.manus.status;
+  const manusConectado = manusStatus === "online";
+  const manusCor = getManusStatusColor(manusStatus);
+  const manusRotulo = getManusStatusLabel(manusStatus);
 
   return (
     <div className="space-y-6 p-6">
@@ -120,14 +130,44 @@ export default function PainelDeploy() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+            <Cloud className={`h-8 w-8 ${manusCor}`} />
             <div>
-              <p className="text-sm text-muted-foreground">TypeScript</p>
-              <p className="text-lg font-bold text-emerald-600">0 Erros</p>
+              <p className="text-sm text-muted-foreground">Conexão Manus</p>
+              <p className={`text-lg font-bold ${manusCor}`}>{manusRotulo}</p>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {plataforma && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Cloud className="h-5 w-5 text-sky-600" />
+              Conexão prática com o Manus
+            </CardTitle>
+            <CardDescription>
+              A plataforma reflete o status real do OAuth, da sessão e dos serviços compartilhados
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+            <div className="rounded-lg border p-3 bg-muted/30">
+              <p className="text-muted-foreground">Status</p>
+              <p className={`font-medium mt-1 ${manusCor}`}>
+                {plataforma.manus.mensagem}
+              </p>
+            </div>
+            <div className="rounded-lg border p-3 bg-muted/30">
+              <p className="text-muted-foreground">URL Manus</p>
+              <p className="font-medium mt-1 break-all">{plataforma.manus.url}</p>
+            </div>
+            <div className="rounded-lg border p-3 bg-muted/30">
+              <p className="text-muted-foreground">Arquitetura</p>
+              <p className="font-medium mt-1">{plataforma.arquitetura}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Exportação Completa */}
       <Card>
@@ -228,6 +268,7 @@ export default function PainelDeploy() {
               { nome: "Frontend (React + TailwindCSS)", status: "ativo", cor: "green" },
               { nome: "Banco de Dados (MySQL/TiDB)", status: "ativo", cor: "green" },
               { nome: "Agente IA (GPT-4 + Tools)", status: "ativo", cor: "green" },
+              { nome: "OAuth + Sessão Manus", status: manusConectado ? "ativo" : "configurar", cor: manusConectado ? "green" : "yellow" },
               { nome: "Integração Dados Abertos GO", status: "configurar", cor: "yellow" },
               { nome: "Integração DataJud CNJ", status: "configurar", cor: "yellow" },
               { nome: "Integração Celcoin (Margem)", status: "configurar", cor: "yellow" },
@@ -268,15 +309,15 @@ export default function PainelDeploy() {
             </div>
             <div>
               <p className="text-muted-foreground">Backend</p>
-              <p className="font-medium">tRPC + Express + Drizzle</p>
+              <p className="font-medium">{plataforma?.backend || "tRPC + Express + Drizzle"}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Deploy</p>
-              <p className="font-medium">Cloudflare Workers</p>
+              <p className="font-medium">{plataforma?.deploy || "Cloudflare Workers"}</p>
             </div>
             <div>
               <p className="text-muted-foreground">Banco</p>
-              <p className="font-medium">MySQL / TiDB Serverless</p>
+              <p className="font-medium">{plataforma?.banco || "MySQL / TiDB Serverless"}</p>
             </div>
           </div>
         </CardContent>
