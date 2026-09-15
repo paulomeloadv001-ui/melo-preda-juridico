@@ -11,6 +11,7 @@ import { consultarFolhaPagamentoGO, atualizarDadosClienteViaFolha, atualizarTodo
 import { consultarProcessoDataJud, atualizarMovimentacoesProcesso, atualizarTodosProcessosDataJud, verificarPrazosProcessuais } from "./datajudApi";
 import { consultarMargemCelcoin, consultarContratosCelcoin, atualizarMargemCliente, statusIntegracaoCelcoin } from "./celcoinApi";
 import { cronAtualizarFolhaPagamento, cronAtualizarMovimentacoes, cronVerificarPrazos, cronAtualizarMargens, executarTodosCronJobs, getStatusCronJobs, getHistoricoCron } from "../cron/cronJobs";
+import { getPlatformOverview } from "../_core/platformOverview";
 
 export const integracoesRouter = router({
 
@@ -18,13 +19,22 @@ export const integracoesRouter = router({
   status: protectedProcedure.query(async () => {
     const cronStatus = getStatusCronJobs();
     const celcoinStatus = statusIntegracaoCelcoin();
+    const plataforma = getPlatformOverview();
     return {
       integracoes: {
+        manus: {
+          configurada: plataforma.manus.oauthConfigurado,
+          descricao: "OAuth, sessão e serviços conectados à plataforma Manus",
+          url: plataforma.manus.url,
+          forgeConfigurada: plataforma.manus.forgeConfigurado,
+          mensagem: plataforma.manus.mensagem,
+        },
         dadosAbertosGO: { configurada: true, descricao: "Folha de pagamento pública do Estado de Goiás" },
         datajud: { configurada: !!process.env.DATAJUD_API_KEY, descricao: "Movimentações processuais via CNJ" },
         celcoin: { ...celcoinStatus, descricao: "Margem consignável em tempo real" },
       },
       cronJobs: cronStatus,
+      plataforma,
     };
   }),
 
@@ -171,6 +181,7 @@ export const integracoesRouter = router({
     const celcoinStatus = statusIntegracaoCelcoin();
     const gmailStatus = statusGmailProjudi();
     const integridade = await gerarRelatorioIntegridade();
-    return { cronStatus, celcoinStatus, gmailStatus, integridade };
+    const plataforma = getPlatformOverview();
+    return { cronStatus, celcoinStatus, gmailStatus, integridade, plataforma };
   }),
 });

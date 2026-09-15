@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { RefreshCw, Play, CheckCircle, XCircle, Clock, Zap, Database, Globe, Shield } from "lucide-react";
+import { getSafeManusUrl } from "@/lib/manus";
+import { RefreshCw, Play, CheckCircle, Clock, Zap, Database, Globe, Shield, Cloud } from "lucide-react";
 import { toast } from "sonner";
 
 export default function Integracoes() {
@@ -40,6 +41,9 @@ export default function Integracoes() {
       setExecutando(null);
     },
   });
+
+  const manusUrl = status?.integracoes?.manus?.url;
+  const manusUrlSegura = getSafeManusUrl(manusUrl);
 
   // Função para executar todos os jobs
   const handleExecutarTodos = () => {
@@ -78,7 +82,47 @@ export default function Integracoes() {
       <Separator />
 
       {/* Cards de Status das Integrações */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {/* Manus Platform */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Cloud className="h-4 w-4 text-sky-500" />
+                Manus Platform
+              </CardTitle>
+              <Badge
+                variant={status?.integracoes?.manus?.configurada ? "default" : "secondary"}
+                className={status?.integracoes?.manus?.configurada ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}
+              >
+                {status?.integracoes?.manus?.configurada ? (
+                  <><CheckCircle className="h-3 w-3 mr-1" />Ativo</>
+                ) : (
+                  <><Clock className="h-3 w-3 mr-1" />Pendente</>
+                )}
+              </Badge>
+            </div>
+            <CardDescription>Autenticação, sessão e serviços compartilhados com o Manus</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p><strong>OAuth:</strong> {status?.integracoes?.manus?.configurada ? "Configurado" : "Pendente"}</p>
+              <p><strong>Forge:</strong> {status?.integracoes?.manus?.forgeConfigurada ? "Configurada" : "Pendente"}</p>
+              <p className="break-all"><strong>URL:</strong> {manusUrlSegura || manusUrl || "Não informada"}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-3"
+              onClick={() => manusUrlSegura && window.open(manusUrlSegura, "_blank", "noopener,noreferrer")}
+              disabled={!manusUrlSegura}
+            >
+              <Globe className="h-3 w-3 mr-1" />
+              Abrir Manus
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Dados Abertos GO */}
         <Card>
           <CardHeader className="pb-3">

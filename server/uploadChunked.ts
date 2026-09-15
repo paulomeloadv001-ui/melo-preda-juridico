@@ -46,6 +46,10 @@ interface UploadSession {
   clienteId?: number;
 }
 
+type ChunkUploadRequest = Request & {
+  file?: import('multer').File;
+};
+
 const sessions = new Map<string, UploadSession>();
 
 // Limpar sessões expiradas a cada 10 minutos
@@ -107,7 +111,7 @@ router.post('/iniciar', (req: Request, res: Response) => {
  * Multipart: file (chunk binary) + uploadId + chunkIndex
  * Retorna: { received, total, progress }
  */
-router.post('/chunk', upload.single('chunk'), (req: Request, res: Response) => {
+router.post('/chunk', upload.single('chunk'), (req: ChunkUploadRequest, res: Response) => {
   try {
     const { uploadId, chunkIndex } = req.body;
     const file = req.file;
