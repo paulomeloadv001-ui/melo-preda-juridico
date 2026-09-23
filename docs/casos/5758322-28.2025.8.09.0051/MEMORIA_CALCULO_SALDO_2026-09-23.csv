@@ -1,0 +1,16 @@
+ordem;rubrica;valor;tratamento;fonte
+1;Base atualizada pelo Bradesco até julho/2026;60930,46;premissa inicial;Evento 167
+2;INPC agosto/2026;-0,32%;fator oficial;IBGE
+3;Base corrigida até agosto/2026;60735,48;resultado;memorial 23/09/2026
+4;Crédito do título a 15%;91103,22;principal executivo;acórdão dos autos principais
+5;Primeiro valor levantado da Caixa;19765,92;abatimento integral;autos
+6;Segundo valor levantado da Caixa;12119,17;abatimento integral;Evento 158
+7;Saldo judicial Santander em 22/09/2026;12582,25;abatimento antecipado e alvará pendente;Evento 173
+8;Saldo judicial Bradesco em 22/09/2026;20466,01;abatimento antecipado e alvará pendente;Evento 173
+9;Total de abatimentos;64933,35;somatório;itens 5 a 8
+10;Principal remanescente;26169,87;crédito menos abatimentos;itens 4 e 9
+11;Multa do art. 523 10%;2616,99;incide sobre o restante;CPC art. 523 §2
+12;Honorários executivos do art. 523 10%;2616,99;incide sobre o restante;CPC art. 523 §2
+13;Saldo para nova penhora;31403,85;principal mais encargos;itens 10 a 12
+14;Depósitos pendentes de alvará;33048,26;não somar ao saldo de penhora;Evento 173
+15;Antiga constrição do Evento 47;51460,16;sem efeito e não abatida;Eventos 98 159 e 170
